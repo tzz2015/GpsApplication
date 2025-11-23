@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\LYF\\.ohos\\config\\default_AiApplication_AFsUFAaGG4rUwDlQOi48TEoWYiT_ZtcqpqgN8RahBAk=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BF8CF25A9FD1319F95BB9EB9674EC13BF468D54F29896247DC1BAF4C1333112B74AF80E7361FE28",
+          "profile": "C:\\Users\\LYF\\.ohos\\config\\default_AiApplication_AFsUFAaGG4rUwDlQOi48TEoWYiT_ZtcqpqgN8RahBAk=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\LYF\\.ohos\\config\\default_AiApplication_AFsUFAaGG4rUwDlQOi48TEoWYiT_ZtcqpqgN8RahBAk=.p12",
+          "storePassword": "0000001B3048F0CE9DD211898B84A373E122999EFC0D74EFD7555A8C94BF0C3327E6555E9F0D2EAC46ABDD"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

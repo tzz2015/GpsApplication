@@ -45,6 +45,18 @@
           }
         ],
       }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.LOCATION",
+        "reason": "$string:location_des",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.APPROXIMATELY_LOCATION",
+        "reason": "$string:location_des",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      }
     ]
   }
 }
