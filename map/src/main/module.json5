@@ -1,0 +1,26 @@
+{
+  "module": {
+    "name": "map",
+    "type": "feature",
+    "description": "$string:module_desc",
+    "mainElement": "MapAbility",
+    "deviceTypes": [
+      "phone"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    "abilities": [
+      {
+        "name": "MapAbility",
+        "srcEntry": "./ets/mapability/MapAbility.ets",
+        "description": "$string:MapAbility_desc",
+        "icon": "$media:layered_image",
+        "label": "$string:MapAbility_label",
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true
+      }
+    ]
+  }
+}

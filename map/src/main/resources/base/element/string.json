@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "MapAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "MapAbility_label",
+      "value": "label"
+    }
+  ]
+}

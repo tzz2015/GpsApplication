@@ -1,0 +1,11 @@
+{
+  "module": {
+    "name": "location_test",
+    "type": "feature",
+    "deviceTypes": [
+      "phone"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "LocationAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "LocationAbility_label",
+      "value": "label"
+    }
+  ]
+}

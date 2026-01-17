@@ -1,0 +1,11 @@
+{
+  "module": {
+    "name": "map_test",
+    "type": "feature",
+    "deviceTypes": [
+      "phone"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false
+  }
+}

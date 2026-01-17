@@ -62,6 +62,30 @@
           ]
         }
       ]
+    },
+    {
+      "name": "map",
+      "srcPath": "./map",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "location",
+      "srcPath": "./location",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
     }
   ]
 }
