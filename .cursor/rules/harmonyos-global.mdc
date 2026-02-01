@@ -24,11 +24,13 @@ alwaysApply: true
 ## 三、代码风格与类型安全
 
 - 使用 ArkTS/TypeScript 进行类型标注。
-- 避免使用 `any` 类型，优先使用明确的类型定义。
+- **ArkTS 不支持 `any` 与 `unknown` 类型**：禁止使用 `any`、`unknown`，一律使用明确的类型定义（如 `interface`、具体类型或泛型约束）。
 - 使用 `interface` 定义对象类型。
 - 启用严格模式检查。
 - 使用明确的类型注解和泛型提高代码复用性。
 - 界面与业务逻辑使用 **ArkTS**（`.ets`），勿用纯 TypeScript/JavaScript 写 UI。
+- **ArkTS 不支持对象展开运算符**：禁止使用 `...` 展开对象或数组（如 `{ ...obj }`、`{ ...a, ...b }`、`[...arr]`）。对象合并应改为逐字段赋值或使用 `Object.assign`；数组合并使用 `concat`、`slice` 或逐项赋值。新建对象时显式列出每个属性，避免 `...existing` 的写法。
+- **ArkTS 不支持 TypeScript Utility Type**：禁止使用 `Partial<T>`、`Required<T>`、`Pick<T, K>`、`Omit<T, K>`、`Record<K, V>` 等工具类型。需用显式 `interface` 定义替代，例如“部分字段可选”时单独定义一份所有属性均为可选的接口（如 `TrackUpdate`）供更新入参使用。
 
 ## 四、组件与页面开发规范
 

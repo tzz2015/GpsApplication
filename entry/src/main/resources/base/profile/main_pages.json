@@ -1,6 +1,16 @@
 {
   "src": [
+    "pages/Login",
+    "pages/Main",
     "pages/Index",
-    "pages/Map"
+    "pages/Map",
+    "pages/CreateOrEditTrack",
+    "pages/TrackRecord",
+    "pages/TrackDetail",
+    "pages/TombSpotDetail",
+    "pages/ProfileEdit",
+    "pages/PrivacyPolicy",
+    "pages/UserAgreement",
+    "pages/About"
   ]
 }

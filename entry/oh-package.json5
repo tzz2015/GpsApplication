@@ -1,10 +1,14 @@
 {
   "name": "entry",
   "version": "1.0.0",
-  "description": "Please describe the basic information.",
+  "description": "轨迹 App 主入口模块",
   "main": "",
   "author": "",
   "license": "",
-  "dependencies": {}
+  "dependencies": {
+    "@hw-agconnect/auth-ohos": "^1.9.1",
+    "@hw-agconnect/clouddb-ohos": "^1.9.1",
+    "@hw-agconnect/storage-ohos": "^1.9.1"
+  }
 }
 

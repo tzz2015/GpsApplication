@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\LYF\\.ohos\\config\\default_AiApplication_AFsUFAaGG4rUwDlQOi48TEoWYiT_ZtcqpqgN8RahBAk=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001BF2A2D86F030155DB27F8D25A5884221D3FD6F720D30DF978AA18993FE0096D5CFE1167ECBCBC1E",
-          "profile": "C:\\Users\\LYF\\.ohos\\config\\default_AiApplication_AFsUFAaGG4rUwDlQOi48TEoWYiT_ZtcqpqgN8RahBAk=.p7b",
+          "storeFile": "D:/code/hm/deployed/signingConfigs/keystore.p12",
+          "storePassword": "0000001AB135CB1D7BD328DAC7E81CC025D7733C0D1B41897FA48BA7489162929492CFE456D66FF3AC40",
+          "keyAlias": "lyy",
+          "keyPassword": "0000001AEB1B482FDE0893D201CD71E54E0DE636A38103AB2130E8D3379946A8CF586532FD0257A5BC71",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\LYF\\.ohos\\config\\default_AiApplication_AFsUFAaGG4rUwDlQOi48TEoWYiT_ZtcqpqgN8RahBAk=.p12",
-          "storePassword": "0000001B8F5275700F452DFC4D8B0EFA0A21424EAF5F5A9453CD697252E3C15B1DFA6FFF831EFBD3663D05"
+          "profile": "D:/code/hm/deployed/signingConfigs/ai_aplication_profileDebug.p7b",
+          "certpath": "D:/code/hm/deployed/signingConfigs/apyou_debug.cer"
         }
       }
     ],

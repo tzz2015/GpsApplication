@@ -2,19 +2,243 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "轨迹 - 记录扫墓轨迹，守护家族记忆"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "轨迹 App 主入口"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "轨迹"
     },
     {
       "name": "location_des",
-      "value": "用于获取模糊定位信息"
+      "value": "用于记录扫墓轨迹和墓地点位置，仅在前台使用"
+    },
+    {
+      "name": "app_name",
+      "value": "轨迹"
+    },
+    {
+      "name": "app_tagline",
+      "value": "记录每一段值得珍藏的路程"
+    },
+    {
+      "name": "login_agree_prefix",
+      "value": "已阅读并同意"
+    },
+    {
+      "name": "login_agree_privacy",
+      "value": "《隐私政策》"
+    },
+    {
+      "name": "login_agree_and",
+      "value": "与"
+    },
+    {
+      "name": "login_agree_user_agreement",
+      "value": "《用户协议》"
+    },
+    {
+      "name": "login_button",
+      "value": "华为帐号一键登录"
+    },
+    {
+      "name": "tab_home",
+      "value": "首页"
+    },
+    {
+      "name": "tab_profile",
+      "value": "我的"
+    },
+    {
+      "name": "tab_my_tracks",
+      "value": "我的轨迹"
+    },
+    {
+      "name": "tab_all_tracks",
+      "value": "所有轨迹"
+    },
+    {
+      "name": "home_new_track",
+      "value": "新建"
+    },
+    {
+      "name": "empty_my_tracks_title",
+      "value": "暂无轨迹"
+    },
+    {
+      "name": "empty_my_tracks_hint",
+      "value": "点击右上角「新建」创建第一条扫墓轨迹"
+    },
+    {
+      "name": "empty_my_tracks_action",
+      "value": "去创建"
+    },
+    {
+      "name": "empty_all_tracks_title",
+      "value": "暂无公开轨迹"
+    },
+    {
+      "name": "empty_all_tracks_hint",
+      "value": "切换到「我的轨迹」创建并发布轨迹"
+    },
+    {
+      "name": "profile_edit",
+      "value": "编辑个人信息"
+    },
+    {
+      "name": "profile_about",
+      "value": "关于轨迹"
+    },
+    {
+      "name": "profile_privacy",
+      "value": "隐私政策与用户协议"
+    },
+    {
+      "name": "profile_logout",
+      "value": "退出帐号"
+    },
+    {
+      "name": "create_track_title_hint",
+      "value": "轨迹名称（必填）"
+    },
+    {
+      "name": "create_track_desc_hint",
+      "value": "轨迹简介（选填）"
+    },
+    {
+      "name": "create_track_desc_tip",
+      "value": "建议说明本次扫墓的地区、主要祖先、日期等"
+    },
+    {
+      "name": "create_track_save",
+      "value": "保存并开始记录"
+    },
+    {
+      "name": "track_record_map_placeholder",
+      "value": "地图区域"
+    },
+    {
+      "name": "track_record_map_hint",
+      "value": "此处展示当前位置与已记录轨迹线"
+    },
+    {
+      "name": "track_record_segment",
+      "value": "第 %d 段"
+    },
+    {
+      "name": "track_record_recording",
+      "value": "录制中"
+    },
+    {
+      "name": "track_record_idle",
+      "value": "未开始"
+    },
+    {
+      "name": "track_record_set_start",
+      "value": "设置起点"
+    },
+    {
+      "name": "track_record_reset_start",
+      "value": "重新设置起点"
+    },
+    {
+      "name": "track_record_end_segment",
+      "value": "结束本段"
+    },
+    {
+      "name": "track_record_end_track",
+      "value": "结束整条轨迹"
+    },
+    {
+      "name": "track_detail_share",
+      "value": "分享轨迹"
+    },
+    {
+      "name": "track_detail_delete",
+      "value": "删除轨迹"
+    },
+    {
+      "name": "track_detail_map_hint",
+      "value": "整条轨迹线与墓地点标记"
+    },
+    {
+      "name": "tomb_spot_content",
+      "value": "图文内容"
+    },
+    {
+      "name": "tomb_spot_content_hint",
+      "value": "文字说明"
+    },
+    {
+      "name": "tomb_spot_edit",
+      "value": "编辑图文"
+    },
+    {
+      "name": "tomb_spot_delete",
+      "value": "删除图文"
+    },
+    {
+      "name": "profile_edit_avatar_hint",
+      "value": "点击更换头像"
+    },
+    {
+      "name": "profile_edit_nickname_hint",
+      "value": "请输入昵称"
+    },
+    {
+      "name": "profile_edit_save",
+      "value": "保存"
+    },
+    {
+      "name": "privacy_title",
+      "value": "隐私政策"
+    },
+    {
+      "name": "user_agreement_title",
+      "value": "用户协议"
+    },
+    {
+      "name": "nav_back",
+      "value": "返回"
+    },
+    {
+      "name": "confirm_delete_track",
+      "value": "确定删除这条轨迹？删除后无法恢复。"
+    },
+    {
+      "name": "confirm_delete_post",
+      "value": "确定删除该图文内容？"
+    },
+    {
+      "name": "confirm_logout",
+      "value": "确定退出当前帐号？"
+    },
+    {
+      "name": "dialog_cancel",
+      "value": "取消"
+    },
+    {
+      "name": "dialog_confirm",
+      "value": "确定"
+    },
+    {
+      "name": "loading",
+      "value": "加载中…"
+    },
+    {
+      "name": "error_network",
+      "value": "网络异常，请检查后重试"
+    },
+    {
+      "name": "retry",
+      "value": "重试"
+    },
+    {
+      "name": "about_content",
+      "value": "轨迹 v1.0\n记录扫墓轨迹，守护家族记忆。"
     }
   ]
 }

@@ -3,6 +3,66 @@
     {
       "name": "start_window_background",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "app_background",
+      "value": "#F2F2F7"
+    },
+    {
+      "name": "card_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "primary",
+      "value": "#007AFF"
+    },
+    {
+      "name": "label_primary",
+      "value": "#000000"
+    },
+    {
+      "name": "label_secondary",
+      "value": "#3C3C43"
+    },
+    {
+      "name": "label_tertiary",
+      "value": "#8E8E93"
+    },
+    {
+      "name": "separator",
+      "value": "#C6C6C8"
+    },
+    {
+      "name": "destructive",
+      "value": "#FF3B30"
+    },
+    {
+      "name": "link",
+      "value": "#007AFF"
+    },
+    {
+      "name": "tab_bar_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "login_background",
+      "value": "#F2F2F7"
+    },
+    {
+      "name": "button_primary_bg",
+      "value": "#007AFF"
+    },
+    {
+      "name": "button_primary_text",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "empty_state_text",
+      "value": "#8E8E93"
+    },
+    {
+      "name": "nav_bar_background",
+      "value": "#FFFFFF"
     }
   ]
 }
