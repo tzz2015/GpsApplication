@@ -82,7 +82,7 @@ export class Config {
   /**
    * GPS 采集配置
    */
-  static readonly GPS_INTERVAL: number = 3;              // 定位间隔（秒）
-  static readonly GPS_MIN_DISTANCE: number = 3;          // 最小移动距离（米）
-  static readonly GPS_ACCURACY_THRESHOLD: number = 50;   // 精度阈值（米）
+  static readonly GPS_INTERVAL: number = 2;              // 定位间隔（秒）
+  static readonly GPS_MIN_DISTANCE: number = 2;          // 最小移动距离（米）
+  static readonly GPS_ACCURACY_THRESHOLD: number = 30;   // 精度阈值（米）
 }

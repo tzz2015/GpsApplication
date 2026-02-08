@@ -18,12 +18,12 @@ struct Splash {
     // 延迟显示底部提示文字
     setTimeout(() => {
       this.showHint = true;
-    }, 800);
+    }, 500);
 
-    // 2.5 秒后自动跳转
+    // 1 秒后自动跳转
     this.timerId = setTimeout(() => {
       this.navigateNext();
-    }, 2500);
+    }, 1000);
   }
 
   aboutToDisappear(): void {
