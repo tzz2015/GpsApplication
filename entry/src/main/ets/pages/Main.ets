@@ -1,11 +1,16 @@
-
 import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { authentication } from '@kit.AccountKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
+import { AuthStore, type AuthUser } from '../common/AuthStore';
+
+const LOG_DOMAIN = 0x0000;
+const LOG_TAG = 'Main';
 
 /**
- * P1-0 首页 + P3-1 个人中心：我的轨迹从本地存储加载并展示。
+ * P1-0 首页 + P3-1 个人中心：我的轨迹从本地存储加载并展示；显示登录用户头像与昵称。
  */
 @Entry
 @Component
@@ -15,6 +20,7 @@ struct Main {
   @State myTracks: TrackModel.Track[] = [];
   @State isLoadingMyTracks: boolean = false;
   @State hasErrorMyTracks: boolean = false;
+  @State currentUser: AuthUser | null = null;
 
   private loadMyTracks(): void {
     this.isLoadingMyTracks = true;
@@ -28,17 +34,53 @@ struct Main {
     });
   }
 
+  private loadCurrentUser(): void {
+    const context = this.getUIContext().getHostContext() as common.Context;
+    AuthStore.getCurrentUser(context).then((user: AuthUser | null) => {
+      this.currentUser = user;
+    }).catch(() => {
+      this.currentUser = null;
+    });
+  }
+
   aboutToAppear(): void {
     this.loadMyTracks();
+    this.loadCurrentUser();
   }
 
   onPageShow(): void {
     this.loadMyTracks();
+    this.loadCurrentUser();
   }
 
   @Builder
   HomeTabContent() {
     Column() {
+      // 首页顶部：登录用户头像与昵称
+      Row({ space: 12 }) {
+        if (this.currentUser && this.currentUser.avatarUrl.length > 0) {
+          Image(this.currentUser.avatarUrl)
+            .width(40)
+            .height(40)
+            .borderRadius(20)
+            .objectFit(ImageFit.Cover);
+        } else {
+          Image($r('app.media.startIcon'))
+            .width(40)
+            .height(40)
+            .borderRadius(20)
+            .objectFit(ImageFit.Cover);
+        }
+        Text(this.currentUser && this.currentUser.displayName.length > 0 ?
+          this.currentUser.displayName : '轨迹用户')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.label_primary'));
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 12, bottom: 8 })
+      .alignItems(VerticalAlign.Center);
+
       Tabs({ barPosition: BarPosition.Start, index: this.currentTopIndex }) {
         TabContent() {
           this.MyTracksList();
@@ -193,12 +235,21 @@ struct Main {
   ProfileTabContent() {
     Column() {
       Column({ space: 12 }) {
-        Image($r('app.media.startIcon'))
-          .width(72)
-          .height(72)
-          .borderRadius(36)
-          .objectFit(ImageFit.Cover);
-        Text('昵称')
+        if (this.currentUser && this.currentUser.avatarUrl.length > 0) {
+          Image(this.currentUser.avatarUrl)
+            .width(72)
+            .height(72)
+            .borderRadius(36)
+            .objectFit(ImageFit.Cover);
+        } else {
+          Image($r('app.media.startIcon'))
+            .width(72)
+            .height(72)
+            .borderRadius(36)
+            .objectFit(ImageFit.Cover);
+        }
+        Text(this.currentUser && this.currentUser.displayName.length > 0 ?
+          this.currentUser.displayName : '轨迹用户')
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.label_primary'));
@@ -225,6 +276,7 @@ struct Main {
         .height(56)
         .padding({ left: 16, right: 16 })
         .onClick(() => {
+          const ctx = this.getUIContext().getHostContext() as common.Context;
           AlertDialog.show({
             title: '退出帐号',
             message: '确定退出当前帐号？',
@@ -233,7 +285,45 @@ struct Main {
               value: '确定',
               fontColor: $r('app.color.destructive'),
               action: () => {
-                router.replaceUrl({ url: 'pages/Login' });
+                // authentication.signOut();
+                AuthStore.clearUser(ctx).then(() => {
+                  router.replaceUrl({ url: 'pages/Login' });
+                });
+              }
+            }
+          });
+        });
+        Row() {
+          Text($r('app.string.profile_delete_account'))
+            .fontSize(17)
+            .fontColor($r('app.color.destructive'));
+          Blank();
+        }
+        .width('100%')
+        .height(56)
+        .padding({ left: 16, right: 16 })
+        .onClick(() => {
+          const ctx = this.getUIContext().getHostContext() as common.Context;
+          AlertDialog.show({
+            title: '注销账号',
+            message: '注销后账号数据将无法恢复，确定继续？',
+            primaryButton: { value: '取消', action: () => {} },
+            secondaryButton: {
+              value: '确定注销',
+              fontColor: $r('app.color.destructive'),
+              action: () => {
+                // authentication.deleteUser().then(() => {
+                //   hilog.info(LOG_DOMAIN, LOG_TAG, '账号已注销');
+                //   AuthStore.clearUser(ctx).then(() => {
+                //     router.replaceUrl({ url: 'pages/Login' });
+                //   });
+                // }).catch((err) => {
+                //   hilog.error(LOG_DOMAIN, LOG_TAG, '注销失败: %{public}s', JSON.stringify(err));
+                // });
+                hilog.info(LOG_DOMAIN, LOG_TAG, '账号已注销（模拟）');
+                AuthStore.clearUser(ctx).then(() => {
+                  router.replaceUrl({ url: 'pages/Login' });
+                });
               }
             }
           });

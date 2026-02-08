@@ -1,6 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { AuthStore } from '../common/AuthStore';
 
 const DOMAIN = 0x0000;
 
@@ -11,6 +12,15 @@ export default class EntryAbility extends UIAbility {
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
+    
+    // AGC初始化暂时注释，因为AGC SDK不可用
+    // try {
+    //   agconnect.instance().init(this.context);
+    //   hilog.info(DOMAIN, 'testTag', 'AGC initialized successfully');
+    // } catch (e) {
+    //   hilog.warn(DOMAIN, 'testTag', 'AGC init failed: %{public}s', JSON.stringify(e));
+    // }
+    
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 
@@ -22,13 +32,23 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
     // 未登录进入登录页，已登录进入首页（底部双 Tab）
-    const firstPage = 'pages/Login';
-    windowStage.loadContent(firstPage, (err) => {
-      if (err.code) {
-        hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
-        return;
-      }
-      hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+    const ctx = this.context.getApplicationContext();
+    AuthStore.isLoggedIn(ctx).then((loggedIn: boolean) => {
+      const firstPage = loggedIn ? 'pages/Main' : 'pages/Login';
+      windowStage.loadContent(firstPage, (err: Error) => {
+        if (err && err.message) {
+          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+          return;
+        }
+        hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      });
+    }).catch((err: Error) => {
+      windowStage.loadContent('pages/Login', (err: Error) => {
+        if (err && err.message) {
+          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+          return;
+        }
+      });
     });
   }
 

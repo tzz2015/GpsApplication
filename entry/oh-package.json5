@@ -6,9 +6,5 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "@hw-agconnect/auth-ohos": "^1.9.1",
-    "@hw-agconnect/clouddb-ohos": "^1.9.1",
-    "@hw-agconnect/storage-ohos": "^1.9.1"
   }
 }
-
