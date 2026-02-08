@@ -20,7 +20,7 @@ export default class EntryAbility extends UIAbility {
     // } catch (e) {
     //   hilog.warn(DOMAIN, 'testTag', 'AGC init failed: %{public}s', JSON.stringify(e));
     // }
-    
+
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 

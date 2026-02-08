@@ -14,23 +14,55 @@
     },
     {
       "name": "primary",
-      "value": "#007AFF"
+      "value": "#3478F6"
+    },
+    {
+      "name": "primary_dark",
+      "value": "#2860D8"
+    },
+    {
+      "name": "primary_light",
+      "value": "#EBF2FF"
+    },
+    {
+      "name": "accent",
+      "value": "#FF6B35"
+    },
+    {
+      "name": "accent_light",
+      "value": "#FFF0E8"
+    },
+    {
+      "name": "success",
+      "value": "#34C759"
+    },
+    {
+      "name": "success_light",
+      "value": "#E8F9EE"
+    },
+    {
+      "name": "warning",
+      "value": "#FF9500"
+    },
+    {
+      "name": "warning_light",
+      "value": "#FFF5E6"
     },
     {
       "name": "label_primary",
-      "value": "#000000"
+      "value": "#1A1A2E"
     },
     {
       "name": "label_secondary",
-      "value": "#3C3C43"
+      "value": "#6B7280"
     },
     {
       "name": "label_tertiary",
-      "value": "#8E8E93"
+      "value": "#9CA3AF"
     },
     {
       "name": "separator",
-      "value": "#C6C6C8"
+      "value": "#E5E7EB"
     },
     {
       "name": "destructive",
@@ -38,7 +70,7 @@
     },
     {
       "name": "link",
-      "value": "#007AFF"
+      "value": "#3478F6"
     },
     {
       "name": "tab_bar_background",
@@ -50,7 +82,7 @@
     },
     {
       "name": "button_primary_bg",
-      "value": "#007AFF"
+      "value": "#3478F6"
     },
     {
       "name": "button_primary_text",
@@ -58,11 +90,19 @@
     },
     {
       "name": "empty_state_text",
-      "value": "#8E8E93"
+      "value": "#9CA3AF"
     },
     {
       "name": "nav_bar_background",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "recording_dot",
+      "value": "#FF3B30"
+    },
+    {
+      "name": "track_line",
+      "value": "#FF6B35"
     }
   ]
 }

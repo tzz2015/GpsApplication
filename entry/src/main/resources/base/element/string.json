@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "轨迹 - 记录扫墓轨迹，守护家族记忆"
+      "value": "遨游轨迹 - 记录扫墓轨迹，守护家族记忆"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "轨迹 App 主入口"
+      "value": "遨游轨迹 App 主入口"
     },
     {
       "name": "EntryAbility_label",
-      "value": "轨迹"
+      "value": "遨游轨迹"
     },
     {
       "name": "location_des",
@@ -18,11 +18,11 @@
     },
     {
       "name": "app_name",
-      "value": "轨迹"
+      "value": "遨游轨迹"
     },
     {
       "name": "app_tagline",
-      "value": "记录每一段值得珍藏的路程"
+      "value": "记录扫墓轨迹，守护家族记忆"
     },
     {
       "name": "login_agree_prefix",
@@ -58,23 +58,23 @@
     },
     {
       "name": "tab_all_tracks",
-      "value": "所有轨迹"
+      "value": "公开轨迹"
     },
     {
       "name": "home_new_track",
-      "value": "新建"
+      "value": "+ 新建轨迹"
     },
     {
       "name": "empty_my_tracks_title",
-      "value": "暂无轨迹"
+      "value": "还没有轨迹"
     },
     {
       "name": "empty_my_tracks_hint",
-      "value": "点击右上角「新建」创建第一条扫墓轨迹"
+      "value": "点击下方按钮创建第一条扫墓轨迹\n记录祖先墓地位置，让后代也能找到"
     },
     {
       "name": "empty_my_tracks_action",
-      "value": "去创建"
+      "value": "创建第一条轨迹"
     },
     {
       "name": "empty_all_tracks_title",
@@ -82,7 +82,7 @@
     },
     {
       "name": "empty_all_tracks_hint",
-      "value": "切换到「我的轨迹」创建并发布轨迹"
+      "value": "将你的轨迹设为公开，让更多人看到"
     },
     {
       "name": "profile_edit",
@@ -90,7 +90,7 @@
     },
     {
       "name": "profile_about",
-      "value": "关于轨迹"
+      "value": "关于遨游轨迹"
     },
     {
       "name": "profile_privacy",
@@ -121,26 +121,6 @@
       "value": "保存并开始记录"
     },
     {
-      "name": "track_record_map_placeholder",
-      "value": "地图区域"
-    },
-    {
-      "name": "track_record_map_hint",
-      "value": "此处展示当前位置与已记录轨迹线"
-    },
-    {
-      "name": "track_record_segment",
-      "value": "第 %d 段"
-    },
-    {
-      "name": "track_record_recording",
-      "value": "录制中"
-    },
-    {
-      "name": "track_record_idle",
-      "value": "未开始"
-    },
-    {
       "name": "track_record_set_start",
       "value": "设置起点"
     },
@@ -149,12 +129,28 @@
       "value": "重新设置起点"
     },
     {
-      "name": "track_record_end_segment",
-      "value": "结束本段"
+      "name": "track_record_add_spot",
+      "value": "设置打卡点"
     },
     {
-      "name": "track_record_end_track",
-      "value": "结束整条轨迹"
+      "name": "track_record_set_end",
+      "value": "设置终点"
+    },
+    {
+      "name": "track_record_pause",
+      "value": "暂停"
+    },
+    {
+      "name": "track_record_resume",
+      "value": "继续"
+    },
+    {
+      "name": "track_record_recording",
+      "value": "录制中"
+    },
+    {
+      "name": "track_record_paused",
+      "value": "已暂停"
     },
     {
       "name": "track_detail_share",
@@ -165,16 +161,16 @@
       "value": "删除轨迹"
     },
     {
-      "name": "track_detail_map_hint",
-      "value": "整条轨迹线与墓地点标记"
+      "name": "track_detail_continue",
+      "value": "继续记录"
     },
     {
       "name": "tomb_spot_content",
-      "value": "图文内容"
+      "value": "图文记录"
     },
     {
       "name": "tomb_spot_content_hint",
-      "value": "文字说明"
+      "value": "记录墓地相关的人物信息、故事、文字说明…"
     },
     {
       "name": "tomb_spot_edit",
@@ -185,12 +181,24 @@
       "value": "删除图文"
     },
     {
+      "name": "tomb_spot_person_info",
+      "value": "人物信息"
+    },
+    {
       "name": "profile_edit_avatar_hint",
       "value": "点击更换头像"
     },
     {
       "name": "profile_edit_nickname_hint",
       "value": "请输入昵称"
+    },
+    {
+      "name": "profile_edit_family_hint",
+      "value": "请输入家族/姓氏"
+    },
+    {
+      "name": "profile_edit_signature_hint",
+      "value": "一句话介绍自己"
     },
     {
       "name": "profile_edit_save",
@@ -242,7 +250,79 @@
     },
     {
       "name": "about_content",
-      "value": "轨迹 v1.0\n记录扫墓轨迹，守护家族记忆。"
+      "value": "遨游轨迹 v1.0\n记录扫墓轨迹，守护家族记忆。\n让祭祖文化更容易延续。"
+    },
+    {
+      "name": "status_editing",
+      "value": "编辑中"
+    },
+    {
+      "name": "status_done",
+      "value": "已完成"
+    },
+    {
+      "name": "visibility_private",
+      "value": "私有"
+    },
+    {
+      "name": "visibility_public",
+      "value": "公开"
+    },
+    {
+      "name": "interrupt_title",
+      "value": "中断记录"
+    },
+    {
+      "name": "interrupt_message",
+      "value": "当前轨迹正在记录中，是否暂时退出？退出后可在轨迹详情页继续记录。"
+    },
+    {
+      "name": "interrupt_continue",
+      "value": "继续录制"
+    },
+    {
+      "name": "interrupt_exit",
+      "value": "暂时退出"
+    },
+    {
+      "name": "set_point_title",
+      "value": "设置打卡点"
+    },
+    {
+      "name": "set_point_hint",
+      "value": "请为此墓地点命名"
+    },
+    {
+      "name": "set_endpoint_title",
+      "value": "设置终点"
+    },
+    {
+      "name": "set_endpoint_hint",
+      "value": "请输入终点名称"
+    },
+    {
+      "name": "track_not_finished",
+      "value": "轨迹尚未完成"
+    },
+    {
+      "name": "track_not_finished_hint",
+      "value": "请继续记录并设置终点来完成此轨迹"
+    },
+    {
+      "name": "spots_added",
+      "value": "已添加打卡点"
+    },
+    {
+      "name": "route_detail",
+      "value": "路线详情"
+    },
+    {
+      "name": "start_point",
+      "value": "起点"
+    },
+    {
+      "name": "end_point",
+      "value": "终点"
     }
   ]
 }

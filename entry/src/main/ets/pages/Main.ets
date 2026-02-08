@@ -1,16 +1,15 @@
 import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
-import { authentication } from '@kit.AccountKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
-import { AuthStore, type AuthUser } from '../common/AuthStore';
+import { AuthStore, AuthUser } from '../common/AuthStore';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'Main';
 
 /**
- * P1-0 首页 + P3-1 个人中心：我的轨迹从本地存储加载并展示；显示登录用户头像与昵称。
+ * P1-0 首页（顶部 Tab：我的轨迹 | 公开轨迹）+ P3-1 个人中心
  */
 @Entry
 @Component
@@ -18,79 +17,111 @@ struct Main {
   @State currentBottomIndex: number = 0;
   @State currentTopIndex: number = 0;
   @State myTracks: TrackModel.Track[] = [];
-  @State isLoadingMyTracks: boolean = false;
-  @State hasErrorMyTracks: boolean = false;
+  @State publicTracks: TrackModel.Track[] = [];
+  @State isLoading: boolean = false;
   @State currentUser: AuthUser | null = null;
 
-  private loadMyTracks(): void {
-    this.isLoadingMyTracks = true;
-    const context = this.getUIContext().getHostContext() as common.Context;
-    TrackStore.getTracks(context).then((tracks: TrackModel.Track[]) => {
-      this.myTracks = tracks;
-      this.isLoadingMyTracks = false;
-    }).catch(() => {
-      this.hasErrorMyTracks = true;
-      this.isLoadingMyTracks = false;
-    });
-  }
-
-  private loadCurrentUser(): void {
-    const context = this.getUIContext().getHostContext() as common.Context;
-    AuthStore.getCurrentUser(context).then((user: AuthUser | null) => {
-      this.currentUser = user;
-    }).catch(() => {
-      this.currentUser = null;
-    });
-  }
-
   aboutToAppear(): void {
-    this.loadMyTracks();
-    this.loadCurrentUser();
+    this.loadAllData();
   }
 
   onPageShow(): void {
-    this.loadMyTracks();
-    this.loadCurrentUser();
+    this.loadAllData();
   }
 
+  private loadAllData(): void {
+    this.isLoading = true;
+    const context = this.getUIContext().getHostContext() as common.Context;
+
+    AuthStore.getCurrentUser(context).then((user: AuthUser | null) => {
+      this.currentUser = user;
+    });
+
+    TrackStore.getTracks(context).then((tracks: TrackModel.Track[]) => {
+      if (this.currentUser) {
+        this.myTracks = tracks.filter((t: TrackModel.Track) => t.ownerUserId === this.currentUser!.userId);
+      } else {
+        this.myTracks = tracks;
+      }
+      this.publicTracks = tracks.filter((t: TrackModel.Track) =>
+        t.visibility === TrackModel.VISIBILITY_PUBLIC && t.status === TrackModel.TRACK_STATUS_DONE
+      );
+      this.isLoading = false;
+    }).catch(() => {
+      this.isLoading = false;
+    });
+  }
+
+  /** 计算统计 */
+  private getTrackCount(): number {
+    return this.myTracks.length;
+  }
+
+  private getSpotCount(): number {
+    let count = 0;
+    for (let i = 0; i < this.myTracks.length; i++) {
+      count += 1; // 每条轨迹至少统计自身
+    }
+    return count;
+  }
+
+  private getTotalDistance(): string {
+    let total = 0;
+    for (let i = 0; i < this.myTracks.length; i++) {
+      total += this.myTracks[i].totalDistance;
+    }
+    return TrackModel.formatDistance(total);
+  }
+
+  build() {
+    Tabs({ barPosition: BarPosition.End, index: this.currentBottomIndex }) {
+      TabContent() {
+        this.HomeTabContent();
+      }
+      .tabBar(this.BottomTabItem(0, '首页', '🏠'));
+
+      TabContent() {
+        this.ProfileTabContent();
+      }
+      .tabBar(this.BottomTabItem(1, '我的', '👤'));
+    }
+    .barMode(BarMode.Fixed)
+    .barHeight(56)
+    .barBackgroundColor($r('app.color.tab_bar_background'))
+    .onChange((index: number) => {
+      this.currentBottomIndex = index;
+    })
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.app_background'));
+  }
+
+  // ==================== 首页 Tab ====================
   @Builder
   HomeTabContent() {
     Column() {
-      // 首页顶部：登录用户头像与昵称
+      // 顶部标题
       Row({ space: 12 }) {
-        if (this.currentUser && this.currentUser.avatarUrl.length > 0) {
-          Image(this.currentUser.avatarUrl)
-            .width(40)
-            .height(40)
-            .borderRadius(20)
-            .objectFit(ImageFit.Cover);
-        } else {
-          Image($r('app.media.startIcon'))
-            .width(40)
-            .height(40)
-            .borderRadius(20)
-            .objectFit(ImageFit.Cover);
-        }
-        Text(this.currentUser && this.currentUser.displayName.length > 0 ?
-          this.currentUser.displayName : '轨迹用户')
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
+        Text('遨游轨迹')
+          .fontSize(24)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.label_primary'));
+        Blank();
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 12, bottom: 8 })
-      .alignItems(VerticalAlign.Center);
+      .padding({ left: 20, right: 20, top: 12, bottom: 4 });
 
+      // 顶部 Tab 切换
       Tabs({ barPosition: BarPosition.Start, index: this.currentTopIndex }) {
         TabContent() {
           this.MyTracksList();
         }
-        .tabBar($r('app.string.tab_my_tracks'));
+        .tabBar(this.TopTabItem(0, '我的轨迹'));
 
         TabContent() {
-          this.AllTracksList();
+          this.PublicTracksList();
         }
-        .tabBar($r('app.string.tab_all_tracks'));
+        .tabBar(this.TopTabItem(1, '公开轨迹'));
       }
       .barMode(BarMode.Fixed)
       .barHeight(44)
@@ -105,105 +136,128 @@ struct Main {
   }
 
   @Builder
+  TopTabItem(index: number, title: string) {
+    Column() {
+      Text(title)
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.currentTopIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
+      if (this.currentTopIndex === index) {
+        Column()
+          .width(24)
+          .height(3)
+          .backgroundColor($r('app.color.primary'))
+          .borderRadius(1.5)
+          .margin({ top: 6 });
+      }
+    }
+    .padding({ top: 8, bottom: 4 });
+  }
+
+  @Builder
+  BottomTabItem(index: number, title: string, icon: string) {
+    Column({ space: 2 }) {
+      Text(icon)
+        .fontSize(22);
+      Text(title)
+        .fontSize(10)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.currentBottomIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
+    }
+    .padding({ top: 6, bottom: 6 })
+    .layoutWeight(1);
+  }
+
+  // ==================== 我的轨迹列表 ====================
+  @Builder
   MyTracksList() {
     Column() {
-      Row() {
-        Blank();
-        Button($r('app.string.home_new_track'))
-          .fontSize(17)
-          .fontColor($r('app.color.primary'))
-          .backgroundColor(Color.Transparent)
-          .height(36)
-          .onClick(() => {
-            router.pushUrl({ url: 'pages/CreateOrEditTrack' });
-          });
-      }
-      .width('100%')
-      .padding({ left: 16, right: 16, top: 8, bottom: 8 });
+      if (this.myTracks.length > 0) {
+        List({ space: 12 }) {
+          // 统计卡片
+          ListItem() {
+            Row() {
+              this.StatsItem(this.getTrackCount().toString(), '轨迹');
+              Column().width(1).height(30).backgroundColor('#33FFFFFF');
+              this.StatsItem(this.getTotalDistance(), '总里程');
+            }
+            .width('100%')
+            .padding(16)
+            .linearGradient({
+              angle: 135,
+              colors: [['#3478F6', 0], ['#5B8FF9', 1]]
+            })
+            .borderRadius(12)
+            .margin({ left: 16, right: 16 });
+          }
 
-      if (this.hasErrorMyTracks) {
-        Column() {
-          Text('网络异常，请检查后重试')
-            .fontSize(15)
-            .fontColor($r('app.color.label_secondary'));
-          Button('重试')
-            .fontSize(17)
-            .fontColor($r('app.color.primary'))
-            .backgroundColor(Color.Transparent)
-            .margin({ top: 16 })
+          // 新建按钮
+          ListItem() {
+            Row({ space: 6 }) {
+              Text('+')
+                .fontSize(18)
+                .fontColor($r('app.color.primary'));
+              Text('新建扫墓轨迹')
+                .fontSize(15)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.primary'));
+            }
+            .width('100%')
+            .height(48)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor($r('app.color.card_background'))
+            .borderRadius(12)
+            .borderWidth(2)
+            .borderColor($r('app.color.primary'))
+            .borderStyle(BorderStyle.Dashed)
+            .margin({ left: 16, right: 16 })
             .onClick(() => {
-              this.hasErrorMyTracks = false;
-              this.loadMyTracks();
+              router.pushUrl({ url: 'pages/CreateOrEditTrack' });
             });
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center);
-      } else if (this.isLoadingMyTracks) {
-        Column() {
-          Text('加载中…')
-            .fontSize(15)
-            .fontColor($r('app.color.label_tertiary'));
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center);
-      } else if (this.myTracks.length > 0) {
-        List({ space: 8 }) {
+          }
+
+          // 轨迹卡片列表
           ForEach(this.myTracks, (item: TrackModel.Track) => {
             ListItem() {
-              Row() {
-                Column({ space: 4 }) {
-                  Text(item.title)
-                    .fontSize(17)
-                    .fontColor($r('app.color.label_primary'));
-                  Text(item.status === 'done' ? '已完成' : '编辑中')
-                    .fontSize(13)
-                    .fontColor($r('app.color.label_tertiary'));
-                }
-                .alignItems(HorizontalAlign.Start)
-                .layoutWeight(1);
-                Text('›')
-                  .fontSize(20)
-                  .fontColor($r('app.color.label_tertiary'));
-              }
-              .width('100%')
-              .padding(16)
-              .backgroundColor($r('app.color.card_background'))
-              .borderRadius(12)
-              .onClick(() => {
-                router.pushUrl({
-                  url: 'pages/TrackDetail',
-                  params: { trackId: item.trackId, title: item.title }
-                });
-              });
+              this.TrackCard(item);
             }
             .margin({ left: 16, right: 16 });
           }, (item: TrackModel.Track) => item.trackId);
         }
         .layoutWeight(1)
         .width('100%')
-        .padding({ top: 8, bottom: 16 })
+        .padding({ top: 12, bottom: 16 })
         .scrollBar(BarState.Off);
       } else {
-        Column() {
-          Text($r('app.string.empty_my_tracks_title'))
+        // 空状态
+        Column({ space: 12 }) {
+          Text('📍')
+            .fontSize(48);
+          Text('还没有轨迹')
             .fontSize(17)
+            .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.label_primary'));
-          Text($r('app.string.empty_my_tracks_hint'))
+          Text('点击下方按钮创建第一条扫墓轨迹\n记录祖先墓地位置，让后代也能找到')
             .fontSize(14)
-            .fontColor($r('app.color.empty_state_text'))
-            .margin({ top: 8 })
-            .textAlign(TextAlign.Center);
-          Button($r('app.string.empty_my_tracks_action'))
+            .fontColor($r('app.color.label_tertiary'))
+            .textAlign(TextAlign.Center)
+            .lineHeight(22);
+          Button('创建第一条轨迹')
             .fontSize(17)
-            .fontColor($r('app.color.primary'))
-            .backgroundColor(Color.Transparent)
-            .margin({ top: 24 })
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Color.White)
+            .backgroundColor($r('app.color.primary'))
+            .height(48)
+            .padding({ left: 32, right: 32 })
+            .borderRadius(24)
+            .margin({ top: 8 })
             .onClick(() => {
               router.pushUrl({ url: 'pages/CreateOrEditTrack' });
             });
         }
         .layoutWeight(1)
-        .justifyContent(FlexAlign.Center);
+        .justifyContent(FlexAlign.Center)
+        .width('100%');
       }
     }
     .width('100%')
@@ -211,29 +265,140 @@ struct Main {
   }
 
   @Builder
-  AllTracksList() {
+  StatsItem(value: string, label: string) {
+    Column({ space: 2 }) {
+      Text(value)
+        .fontSize(24)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Color.White);
+      Text(label)
+        .fontSize(11)
+        .fontColor('#CCFFFFFF');
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center);
+  }
+
+  @Builder
+  TrackCard(item: TrackModel.Track) {
     Column() {
-      Column() {
-        Text($r('app.string.empty_all_tracks_title'))
-          .fontSize(17)
-          .fontColor($r('app.color.label_primary'));
-        Text($r('app.string.empty_all_tracks_hint'))
-          .fontSize(14)
-          .fontColor($r('app.color.empty_state_text'))
-          .margin({ top: 8 })
-          .textAlign(TextAlign.Center);
+      Row({ space: 8 }) {
+        Text(item.title)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.label_primary'))
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+        if (item.status === TrackModel.TRACK_STATUS_DONE) {
+          Text('已完成')
+            .fontSize(11)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.success'))
+            .backgroundColor($r('app.color.success_light'))
+            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+            .borderRadius(10);
+        } else {
+          Text('编辑中')
+            .fontSize(11)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.warning'))
+            .backgroundColor($r('app.color.warning_light'))
+            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+            .borderRadius(10);
+        }
       }
-      .layoutWeight(1)
-      .justifyContent(FlexAlign.Center);
+      .width('100%');
+
+      Text(TrackModel.formatDate(item.createdAt))
+        .fontSize(12)
+        .fontColor($r('app.color.label_tertiary'))
+        .margin({ top: 4 });
+
+      if (item.description.length > 0) {
+        Text(item.description)
+          .fontSize(13)
+          .fontColor($r('app.color.label_secondary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4 });
+      }
+
+      Row({ space: 16 }) {
+        Text('📍 ' + TrackModel.formatDistance(item.totalDistance))
+          .fontSize(12)
+          .fontColor($r('app.color.label_secondary'));
+        if (item.maxAltitude > 0) {
+          Text('⛰ ' + item.maxAltitude.toString() + 'm')
+            .fontSize(12)
+            .fontColor($r('app.color.label_secondary'));
+        }
+        if (item.totalDuration > 0) {
+          Text('⏱ ' + TrackModel.formatDuration(item.totalDuration))
+            .fontSize(12)
+            .fontColor($r('app.color.label_secondary'));
+        }
+      }
+      .width('100%')
+      .margin({ top: 8 });
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor($r('app.color.card_background'))
+    .borderRadius(12)
+    .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
+    .onClick(() => {
+      router.pushUrl({
+        url: 'pages/TrackDetail',
+        params: { trackId: item.trackId, title: item.title }
+      });
+    });
+  }
+
+  // ==================== 公开轨迹列表 ====================
+  @Builder
+  PublicTracksList() {
+    Column() {
+      if (this.publicTracks.length > 0) {
+        List({ space: 12 }) {
+          ForEach(this.publicTracks, (item: TrackModel.Track) => {
+            ListItem() {
+              this.TrackCard(item);
+            }
+            .margin({ left: 16, right: 16 });
+          }, (item: TrackModel.Track) => item.trackId);
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .padding({ top: 12, bottom: 16 })
+        .scrollBar(BarState.Off);
+      } else {
+        Column({ space: 12 }) {
+          Text('🌍')
+            .fontSize(48);
+          Text('暂无公开轨迹')
+            .fontSize(17)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.label_primary'));
+          Text('将你的轨迹设为公开，让更多人看到')
+            .fontSize(14)
+            .fontColor($r('app.color.label_tertiary'));
+        }
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .width('100%');
+      }
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.app_background'));
   }
 
+  // ==================== 个人中心 ====================
   @Builder
   ProfileTabContent() {
     Column() {
+      // 头部
       Column({ space: 12 }) {
         if (this.currentUser && this.currentUser.avatarUrl.length > 0) {
           Image(this.currentUser.avatarUrl)
@@ -242,154 +407,157 @@ struct Main {
             .borderRadius(36)
             .objectFit(ImageFit.Cover);
         } else {
-          Image($r('app.media.startIcon'))
-            .width(72)
-            .height(72)
-            .borderRadius(36)
-            .objectFit(ImageFit.Cover);
+          Column() {
+            Text('👤')
+              .fontSize(32);
+          }
+          .width(72)
+          .height(72)
+          .borderRadius(36)
+          .backgroundColor('#E8E8ED')
+          .justifyContent(FlexAlign.Center);
         }
         Text(this.currentUser && this.currentUser.displayName.length > 0 ?
           this.currentUser.displayName : '轨迹用户')
           .fontSize(20)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.label_primary'));
-      }
-      .padding({ top: 24, bottom: 24 });
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Color.White);
+        if (this.currentUser && this.currentUser.familyName.length > 0) {
+          Text(this.currentUser.familyName)
+            .fontSize(13)
+            .fontColor('#BBFFFFFF');
+        }
 
-      Column() {
-        this.ProfileRow($r('app.string.profile_edit'), () => {
-          router.pushUrl({ url: 'pages/ProfileEdit' });
-        });
-        this.ProfileRow($r('app.string.profile_about'), () => {
-          router.pushUrl({ url: 'pages/About' });
-        });
-        this.ProfileRow($r('app.string.profile_privacy'), () => {
-          router.pushUrl({ url: 'pages/PrivacyPolicy' });
-        });
+        // 统计
         Row() {
-          Text($r('app.string.profile_logout'))
-            .fontSize(17)
-            .fontColor($r('app.color.destructive'));
-          Blank();
+          Column({ space: 2 }) {
+            Text(this.getTrackCount().toString())
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Color.White);
+            Text('轨迹')
+              .fontSize(11)
+              .fontColor('#AAFFFFFF');
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center);
+
+          Column().width(1).height(30).backgroundColor('#33FFFFFF');
+
+          Column({ space: 2 }) {
+            Text(this.getTotalDistance())
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Color.White);
+            Text('总里程')
+              .fontSize(11)
+              .fontColor('#AAFFFFFF');
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center);
         }
         .width('100%')
-        .height(56)
-        .padding({ left: 16, right: 16 })
-        .onClick(() => {
-          const ctx = this.getUIContext().getHostContext() as common.Context;
-          AlertDialog.show({
-            title: '退出帐号',
-            message: '确定退出当前帐号？',
-            primaryButton: { value: '取消', action: () => {} },
-            secondaryButton: {
-              value: '确定',
-              fontColor: $r('app.color.destructive'),
-              action: () => {
-                // authentication.signOut();
-                AuthStore.clearUser(ctx).then(() => {
-                  router.replaceUrl({ url: 'pages/Login' });
-                });
-              }
-            }
-          });
-        });
-        Row() {
-          Text($r('app.string.profile_delete_account'))
-            .fontSize(17)
-            .fontColor($r('app.color.destructive'));
-          Blank();
-        }
-        .width('100%')
-        .height(56)
-        .padding({ left: 16, right: 16 })
-        .onClick(() => {
-          const ctx = this.getUIContext().getHostContext() as common.Context;
-          AlertDialog.show({
-            title: '注销账号',
-            message: '注销后账号数据将无法恢复，确定继续？',
-            primaryButton: { value: '取消', action: () => {} },
-            secondaryButton: {
-              value: '确定注销',
-              fontColor: $r('app.color.destructive'),
-              action: () => {
-                // authentication.deleteUser().then(() => {
-                //   hilog.info(LOG_DOMAIN, LOG_TAG, '账号已注销');
-                //   AuthStore.clearUser(ctx).then(() => {
-                //     router.replaceUrl({ url: 'pages/Login' });
-                //   });
-                // }).catch((err) => {
-                //   hilog.error(LOG_DOMAIN, LOG_TAG, '注销失败: %{public}s', JSON.stringify(err));
-                // });
-                hilog.info(LOG_DOMAIN, LOG_TAG, '账号已注销（模拟）');
-                AuthStore.clearUser(ctx).then(() => {
-                  router.replaceUrl({ url: 'pages/Login' });
-                });
-              }
-            }
-          });
-        });
+        .padding(12)
+        .backgroundColor('#22FFFFFF')
+        .borderRadius(12)
+        .margin({ top: 8 });
       }
       .width('100%')
-      .backgroundColor($r('app.color.card_background'))
-      .borderRadius(12)
-      .margin({ left: 16, right: 16 })
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start);
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.app_background'))
-    .alignItems(HorizontalAlign.Center);
-  }
+      .padding({ top: 32, bottom: 24, left: 20, right: 20 })
+      .linearGradient({
+        angle: 135,
+        colors: [['#3478F6', 0], ['#1E56CC', 1]]
+      })
+      .alignItems(HorizontalAlign.Center);
 
-  @Builder
-  ProfileRow(title: ResourceStr, onClick: () => void) {
-    Row() {
-      Text(title)
-        .fontSize(17)
-        .fontColor($r('app.color.label_primary'));
-      Blank();
-      Text('›')
-        .fontSize(20)
-        .fontColor($r('app.color.label_tertiary'));
-    }
-    .width('100%')
-    .height(56)
-    .padding({ left: 16, right: 16 })
-    .onClick(onClick);
-  }
+      // 菜单
+      Column({ space: 12 }) {
+        Column() {
+          this.MenuItem('👤', '编辑个人信息', '', () => {
+            router.pushUrl({ url: 'pages/ProfileEdit' });
+          });
+          Divider().color($r('app.color.separator')).margin({ left: 52 });
+          this.MenuItem('🔒', '隐私设置', '', () => {});
+        }
+        .backgroundColor($r('app.color.card_background'))
+        .borderRadius(12)
+        .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 });
 
-  build() {
-    Tabs({ barPosition: BarPosition.End, index: this.currentBottomIndex }) {
-      TabContent() {
-        this.HomeTabContent();
+        Column() {
+          this.MenuItem('📄', '隐私政策与用户协议', '', () => {
+            router.pushUrl({ url: 'pages/PrivacyPolicy' });
+          });
+          Divider().color($r('app.color.separator')).margin({ left: 52 });
+          this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', () => {
+            router.pushUrl({ url: 'pages/About' });
+          });
+          Divider().color($r('app.color.separator')).margin({ left: 52 });
+          this.MenuItem('💬', '意见反馈', '', () => {});
+        }
+        .backgroundColor($r('app.color.card_background'))
+        .borderRadius(12)
+        .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 });
+
+        Button('退出登录')
+          .width('100%')
+          .height(48)
+          .fontSize(15)
+          .fontColor($r('app.color.destructive'))
+          .backgroundColor($r('app.color.card_background'))
+          .borderRadius(12)
+          .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
+          .onClick(() => {
+            AlertDialog.show({
+              title: '退出帐号',
+              message: '确定退出当前帐号？',
+              primaryButton: { value: '取消', action: () => {} },
+              secondaryButton: {
+                value: '确定',
+                fontColor: $r('app.color.destructive'),
+                action: () => {
+                  const ctx = this.getUIContext().getHostContext() as common.Context;
+                  AuthStore.clearUser(ctx).then(() => {
+                    router.replaceUrl({ url: 'pages/Login' });
+                  });
+                }
+              }
+            });
+          });
       }
-      .tabBar(this.TabBarItem(0, $r('app.string.tab_home')));
-
-      TabContent() {
-        this.ProfileTabContent();
-      }
-      .tabBar(this.TabBarItem(1, $r('app.string.tab_profile')));
+      .width('100%')
+      .padding(16)
+      .layoutWeight(1);
     }
-    .barMode(BarMode.Fixed)
-    .barHeight(56)
-    .barBackgroundColor($r('app.color.tab_bar_background'))
-    .onChange((index: number) => {
-      this.currentBottomIndex = index;
-    })
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.app_background'));
   }
 
   @Builder
-  TabBarItem(index: number, title: ResourceStr) {
-    Column() {
+  MenuItem(icon: string, title: string, value: string, onClick: () => void) {
+    Row() {
+      Text(icon)
+        .fontSize(18)
+        .width(36)
+        .textAlign(TextAlign.Center);
       Text(title)
-        .fontSize(10)
-        .fontColor(this.currentBottomIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
+        .fontSize(15)
+        .fontColor($r('app.color.label_primary'))
+        .layoutWeight(1)
+        .margin({ left: 8 });
+      if (value.length > 0) {
+        Text(value)
+          .fontSize(13)
+          .fontColor($r('app.color.label_tertiary'))
+          .margin({ right: 8 });
+      }
+      Text('›')
+        .fontSize(18)
+        .fontColor($r('app.color.label_tertiary'));
     }
-    .padding({ top: 6, bottom: 6 })
-    .layoutWeight(1);
+    .width('100%')
+    .height(52)
+    .padding({ left: 12, right: 16 })
+    .onClick(onClick);
   }
 }

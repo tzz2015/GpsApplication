@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storeFile": "D:/code/hm/deployed/signingConfigs/keystore.p12",
-          "storePassword": "0000001AB135CB1D7BD328DAC7E81CC025D7733C0D1B41897FA48BA7489162929492CFE456D66FF3AC40",
-          "keyAlias": "lyy",
-          "keyPassword": "0000001AEB1B482FDE0893D201CD71E54E0DE636A38103AB2130E8D3379946A8CF586532FD0257A5BC71",
+          "certpath": "/Users/lyf/.ohos/config/default_GpsApplication__UTIqBClQyDl0PsdQmctN24epMMpmsbdUdGh8F48joc=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B4FC39C81D5D3893401003B3AEEBAB8AD7ECA8E3061F9A61D56A6B83F33221A8DE68C6D6B45587C",
+          "profile": "/Users/lyf/.ohos/config/default_GpsApplication__UTIqBClQyDl0PsdQmctN24epMMpmsbdUdGh8F48joc=.p7b",
           "signAlg": "SHA256withECDSA",
-          "profile": "D:/code/hm/deployed/signingConfigs/ai_aplication_profileDebug.p7b",
-          "certpath": "D:/code/hm/deployed/signingConfigs/apyou_debug.cer"
+          "storeFile": "/Users/lyf/.ohos/config/default_GpsApplication__UTIqBClQyDl0PsdQmctN24epMMpmsbdUdGh8F48joc=.p12",
+          "storePassword": "0000001B1E42D62B78A908DF76EAA1CB55202723D0B63CFB687D07B950CC46EA4197D0A14E66966C655A75"
         }
       }
     ],

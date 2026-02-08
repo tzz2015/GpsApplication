@@ -1,77 +1,165 @@
 import { router } from '@kit.ArkUI';
+import { common } from '@kit.AbilityKit';
 import { NavBar } from '../common/NavBar';
+import { AuthStore } from '../common/AuthStore';
 
 /**
- * P3-2 个人信息编辑页：iOS 风格，头像、昵称。
+ * P3-2 个人信息编辑页：头像、昵称、家族、签名
  */
 @Entry
 @Component
 struct ProfileEdit {
-  @State nickname: string = '昵称';
+  @State nickname: string = '';
+  @State familyName: string = '';
+  @State signature: string = '';
+  @State avatarUrl: string = '';
+  @State isSaving: boolean = false;
+
+  aboutToAppear(): void {
+    this.loadUserInfo();
+  }
+
+  private async loadUserInfo(): Promise<void> {
+    const context = this.getUIContext().getHostContext() as common.Context;
+    const user = await AuthStore.getCurrentUser(context);
+    if (user) {
+      this.nickname = user.displayName;
+      this.familyName = user.familyName;
+      this.signature = user.signature;
+      this.avatarUrl = user.avatarUrl;
+    }
+  }
+
+  private async saveUserInfo(): Promise<void> {
+    this.isSaving = true;
+    const context = this.getUIContext().getHostContext() as common.Context;
+    await AuthStore.updateUser(context, {
+      displayName: this.nickname,
+      familyName: this.familyName,
+      signature: this.signature,
+      avatarUrl: this.avatarUrl
+    });
+    this.isSaving = false;
+    router.back();
+  }
 
   build() {
     Column() {
-      NavBar({ title: $r('app.string.profile_edit'), showBack: true });
+      NavBar({ title: '编辑个人信息', showBack: true });
 
       Scroll() {
-        Column({ space: 24 }) {
+        Column() {
+          // 头像区域
           Column({ space: 12 }) {
-            Image($r('app.media.startIcon'))
+            if (this.avatarUrl.length > 0) {
+              Image(this.avatarUrl)
+                .width(80)
+                .height(80)
+                .borderRadius(40)
+                .objectFit(ImageFit.Cover);
+            } else {
+              Column() {
+                Text('👤')
+                  .fontSize(36);
+              }
               .width(80)
               .height(80)
               .borderRadius(40)
-              .objectFit(ImageFit.Cover)
-              .onClick(() => {
-                // TODO: 选择图片上传为头像
-              });
-            Text($r('app.string.profile_edit_avatar_hint'))
+              .backgroundColor($r('app.color.primary_light'))
+              .justifyContent(FlexAlign.Center);
+            }
+            Text('点击更换头像')
               .fontSize(13)
               .fontColor($r('app.color.label_tertiary'));
           }
-          .padding(24);
+          .width('100%')
+          .padding(24)
+          .backgroundColor($r('app.color.card_background'))
+          .alignItems(HorizontalAlign.Center);
 
-          Column({ space: 8 }) {
-            Text('昵称')
-              .fontSize(13)
-              .fontColor($r('app.color.label_tertiary'))
-              .width('100%');
-            TextInput({ placeholder: $r('app.string.profile_edit_nickname_hint'), text: this.nickname })
-              .onChange((value: string) => {
-                this.nickname = value;
-              })
-              .width('100%')
-              .height(44)
-              .fontSize(17)
-              .backgroundColor($r('app.color.card_background'))
-              .borderRadius(10)
-              .padding({ left: 12, right: 12 });
+          Column().width('100%').height(8).backgroundColor($r('app.color.app_background'));
+
+          // 表单
+          Column({ space: 16 }) {
+            Column({ space: 6 }) {
+              Text('昵称')
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.label_secondary'));
+              TextInput({ placeholder: '请输入昵称', text: this.nickname })
+                .onChange((value: string) => {
+                  this.nickname = value;
+                })
+                .width('100%')
+                .height(44)
+                .fontSize(16)
+                .backgroundColor($r('app.color.app_background'))
+                .borderRadius(10)
+                .padding({ left: 12, right: 12 });
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start);
+
+            Column({ space: 6 }) {
+              Text('所属家族')
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.label_secondary'));
+              TextInput({ placeholder: '例如：刘氏', text: this.familyName })
+                .onChange((value: string) => {
+                  this.familyName = value;
+                })
+                .width('100%')
+                .height(44)
+                .fontSize(16)
+                .backgroundColor($r('app.color.app_background'))
+                .borderRadius(10)
+                .padding({ left: 12, right: 12 });
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start);
+
+            Column({ space: 6 }) {
+              Text('个性签名')
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.label_secondary'));
+              TextArea({ placeholder: '一句话介绍自己', text: this.signature })
+                .onChange((value: string) => {
+                  this.signature = value;
+                })
+                .width('100%')
+                .height(80)
+                .fontSize(16)
+                .backgroundColor($r('app.color.app_background'))
+                .borderRadius(10)
+                .padding(12);
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start);
           }
           .width('100%')
-          .alignItems(HorizontalAlign.Start)
-          .padding(16)
-          .backgroundColor($r('app.color.card_background'))
-          .borderRadius(12);
+          .padding(20)
+          .backgroundColor($r('app.color.card_background'));
         }
-        .width('100%')
-        .padding(16);
+        .width('100%');
       }
       .layoutWeight(1)
-      .width('100%')
       .scrollBar(BarState.Off)
       .backgroundColor($r('app.color.app_background'));
 
-      Button($r('app.string.profile_edit_save'))
+      Button(this.isSaving ? '保存中…' : '保存')
         .width('90%')
         .height(50)
         .fontSize(17)
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.button_primary_text'))
-        .backgroundColor($r('app.color.button_primary_bg'))
-        .borderRadius(12)
-        .margin({ bottom: 24 })
+        .fontColor(Color.White)
+        .backgroundColor($r('app.color.primary'))
+        .borderRadius(25)
+        .enabled(!this.isSaving)
+        .margin({ bottom: 32 })
         .onClick(() => {
-          // TODO: 写本地/Cloud DB 更新用户信息
-          router.back();
+          this.saveUserInfo();
         });
     }
     .width('100%')

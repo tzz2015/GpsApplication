@@ -1,9 +1,7 @@
 /**
  * 应用配置管理
- * 用于管理开发环境和生产环境的配置切换
  */
 
-// 定义配置接口
 interface AGCConfig {
   clientId: string;
   appId: string;
@@ -19,9 +17,14 @@ interface LogConfig {
 interface RoutesConfig {
   LOGIN: string;
   MAIN: string;
+  CREATE_TRACK: string;
+  TRACK_RECORD: string;
+  TRACK_DETAIL: string;
+  TOMB_SPOT_DETAIL: string;
   PROFILE_EDIT: string;
   PRIVACY_POLICY: string;
   USER_AGREEMENT: string;
+  ABOUT: string;
 }
 
 interface StorageConfig {
@@ -32,43 +35,25 @@ interface StorageConfig {
 export class Config {
   /**
    * 是否为开发模式
-   * 开发模式会启用模拟登录等调试功能
-   * 正式发布时应设置为false
+   * 正式发布时设置为 false
    */
   static readonly IS_DEVELOPMENT_MODE: boolean = true;
 
-  /**
-   * 应用版本信息
-   */
   static readonly APP_VERSION: string = '1.0.0';
-  static readonly BUILD_NUMBER: string = '20241201';
+  static readonly BUILD_NUMBER: string = '20260208';
 
-  /**
-   * AGC配置信息
-   */
   static readonly AGC_CONFIG: AGCConfig = {
     clientId: '6917590279469130152',
     appId: '6917590279469130152',
     packageName: 'com.lyf.aoyou'
   };
 
-  /**
-   * 华为账号授权范围配置
-   */
-  static readonly HUAWEI_AUTH_SCOPES: string[] = ['openid', 'profile'];
-
-  /**
-   * 日志配置
-   */
   static readonly LOG_CONFIG: LogConfig = {
     domain: 0x0000,
-    tag: 'TrailApp',
+    tag: 'AoYouTrail',
     level: Config.IS_DEVELOPMENT_MODE ? 'DEBUG' : 'INFO'
   };
 
-  /**
-   * 权限配置
-   */
   static readonly PERMISSIONS: string[] = [
     'ohos.permission.INTERNET',
     'ohos.permission.GET_NETWORK_INFO',
@@ -76,22 +61,28 @@ export class Config {
     'ohos.permission.APPROXIMATELY_LOCATION'
   ];
 
-  /**
-   * 页面路由配置
-   */
   static readonly ROUTES: RoutesConfig = {
     LOGIN: 'pages/Login',
     MAIN: 'pages/Main',
+    CREATE_TRACK: 'pages/CreateOrEditTrack',
+    TRACK_RECORD: 'pages/TrackRecord',
+    TRACK_DETAIL: 'pages/TrackDetail',
+    TOMB_SPOT_DETAIL: 'pages/TombSpotDetail',
     PROFILE_EDIT: 'pages/ProfileEdit',
     PRIVACY_POLICY: 'pages/PrivacyPolicy',
-    USER_AGREEMENT: 'pages/UserAgreement'
+    USER_AGREEMENT: 'pages/UserAgreement',
+    ABOUT: 'pages/About'
   };
 
-  /**
-   * 存储配置
-   */
   static readonly STORAGE_CONFIG: StorageConfig = {
     AUTH_PREFS: 'auth_prefs',
     TRACK_PREFS: 'track_prefs'
   };
+
+  /**
+   * GPS 采集配置
+   */
+  static readonly GPS_INTERVAL: number = 3;              // 定位间隔（秒）
+  static readonly GPS_MIN_DISTANCE: number = 3;          // 最小移动距离（米）
+  static readonly GPS_ACCURACY_THRESHOLD: number = 50;   // 精度阈值（米）
 }
