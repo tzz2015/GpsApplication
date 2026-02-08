@@ -28,9 +28,11 @@ struct CreateOrEditTrack {
 
     const trackId = TrackModel.generateId('track');
     const now = Date.now();
+    const displayName = user ? user.displayName : '';
     const track: TrackModel.Track = {
       trackId: trackId,
       ownerUserId: userId,
+      ownerDisplayName: displayName,
       title: this.title.trim(),
       description: this.description.trim(),
       visibility: TrackModel.VISIBILITY_PRIVATE,
@@ -44,6 +46,7 @@ struct CreateOrEditTrack {
       totalDistance: 0,
       totalDuration: 0,
       maxAltitude: 0,
+      spotCount: 0,
       coverImageUrl: '',
       createdAt: now,
       updatedAt: now

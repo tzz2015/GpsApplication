@@ -23,6 +23,8 @@ interface TrackRecordParams {
 @Entry
 @Component
 struct TrackRecord {
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
+  @StorageProp('bottomSafeHeight') bottomSafeHeight: number = 0;
   // 轨迹基础信息
   private trackId: string = '';
   private trackTitle: string = '';
@@ -57,6 +59,9 @@ struct TrackRecord {
   // 地图
   @State mapCenterLat: number = 23.7275;
   @State mapCenterLng: number = 108.3426;
+  @State showLayerPanel: boolean = false;
+  @State currentMapType: number = 1; // 1=标准, 2=卫星, 3=地形
+  @State is3DMode: boolean = false;
   private mapOptions?: mapCommon.MapOptions;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private mapController?: map.MapComponentController;
@@ -105,6 +110,14 @@ struct TrackRecord {
       const p = points[i];
       this.recordPoints.push({ latitude: p.latitude, longitude: p.longitude });
     }
+
+    // 如果地图已就绪，移动相机并绘制已有轨迹
+    if (this.mapController) {
+      this.moveCameraTo(this.mapCenterLat, this.mapCenterLng, 16);
+      if (this.recordPoints.length >= 2) {
+        this.updatePolyline();
+      }
+    }
   }
 
   private initMap(): void {
@@ -119,12 +132,56 @@ struct TrackRecord {
     this.mapCallback = async (err: Error, controller: map.MapComponentController) => {
       if (!err) {
         this.mapController = controller;
+        // 启用我的位置图层
+        try {
+          controller.setMyLocationEnabled(true);
+        } catch (e) {
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'setMyLocationEnabled: %{public}s', JSON.stringify(e));
+        }
+        // 定位到当前位置
         this.moveToCurrentLocation();
+        // 绘制已有轨迹（若 loadExistingData 已完成）
         if (this.recordPoints.length >= 2) {
           this.updatePolyline();
         }
       }
     };
+  }
+
+  /** WGS84 坐标转 GCJ02（华为地图使用 GCJ02） */
+  private async convertToGCJ02(lat: number, lng: number): Promise<mapCommon.LatLng> {
+    try {
+      const wgs84: mapCommon.LatLng = { latitude: lat, longitude: lng };
+      const gcj02: mapCommon.LatLng = await map.convertCoordinate(
+        mapCommon.CoordinateType.WGS84,
+        mapCommon.CoordinateType.GCJ02,
+        wgs84
+      );
+      return gcj02;
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'convertToGCJ02 error: %{public}s', JSON.stringify(e));
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  /** 移动地图相机到指定 WGS84 坐标（自动转换为 GCJ02） */
+  private async moveCameraTo(lat: number, lng: number, zoom: number): Promise<void> {
+    if (!this.mapController) {
+      return;
+    }
+    try {
+      const gcj02 = await this.convertToGCJ02(lat, lng);
+      const cameraPosition: mapCommon.CameraPosition = {
+        target: gcj02,
+        zoom: zoom,
+        tilt: 0,
+        bearing: 0
+      };
+      const cameraUpdate: map.CameraUpdate = map.newCameraPosition(cameraPosition);
+      this.mapController.moveCamera(cameraUpdate);
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'moveCameraTo error: %{public}s', JSON.stringify(e));
+    }
   }
 
   /** 获取当前位置并移动地图 */
@@ -133,12 +190,25 @@ struct TrackRecord {
       locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY,
       locatingTimeoutMs: 10000
     };
-    geoLocationManager.getCurrentLocation(request).then((location: geoLocationManager.Location) => {
+    geoLocationManager.getCurrentLocation(request).then(async (location: geoLocationManager.Location) => {
       this.mapCenterLat = location.latitude;
       this.mapCenterLng = location.longitude;
       this.currentAltitude = Math.round(location.altitude);
       this.lastLat = location.latitude;
       this.lastLng = location.longitude;
+
+      // 转换坐标并移动地图相机到当前位置
+      await this.moveCameraTo(location.latitude, location.longitude, 16);
+
+      // 在地图上显示当前位置标记
+      if (this.mapController) {
+        try {
+          this.mapController.setMyLocationEnabled(true);
+          this.mapController.setMyLocation(location);
+        } catch (e) {
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'setMyLocation: %{public}s', JSON.stringify(e));
+        }
+      }
     }).catch((e: Error) => {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'getCurrentLocation fail: %{public}s', JSON.stringify(e));
     });
@@ -158,10 +228,10 @@ struct TrackRecord {
       const lng = location.longitude;
       const alt = Math.round(location.altitude);
 
-      // 距离阈值过滤：至少移动3米才记录
+      // 距离阈值过滤：至少移动2米才记录
       if (this.lastLat !== 0) {
         const dist = TrackModel.calculateDistance(this.lastLat, this.lastLng, lat, lng);
-        if (dist < 3) {
+        if (dist < 2) {
           return;
         }
         this.totalDistance += dist;
@@ -200,7 +270,7 @@ struct TrackRecord {
     }
   }
 
-  /** 更新地图上的轨迹折线 */
+  /** 更新地图上的轨迹折线（WGS84 → GCJ02 转换后绘制） */
   private async updatePolyline(): Promise<void> {
     if (!this.mapController || this.recordPoints.length < 2) {
       return;
@@ -209,8 +279,17 @@ struct TrackRecord {
       if (this.currentPolyline) {
         await this.currentPolyline.remove();
       }
+      // 将 WGS84 轨迹点转换为 GCJ02
+      const gcj02Points: mapCommon.LatLng[] = [];
+      for (let i = 0; i < this.recordPoints.length; i++) {
+        const converted = await this.convertToGCJ02(
+          this.recordPoints[i].latitude,
+          this.recordPoints[i].longitude
+        );
+        gcj02Points.push(converted);
+      }
       const polylineOption: mapCommon.MapPolylineOptions = {
-        points: this.recordPoints,
+        points: gcj02Points,
         color: 0xFFFF6B35, // 橙色轨迹线
         width: 14,
         visible: true
@@ -390,6 +469,10 @@ struct TrackRecord {
     });
     if (this.mapController) {
       this.mapController.show();
+      // 恢复后重新绘制已有轨迹
+      if (this.recordPoints.length >= 2) {
+        this.updatePolyline();
+      }
     }
   }
 
@@ -401,43 +484,130 @@ struct TrackRecord {
 
   build() {
     Stack() {
-      // 地图
-      Column() {
+    Column() {
+      // 地图区域（占据底部面板以上的全部空间）
+      Stack() {
         MapComponent({
           mapOptions: this.mapOptions,
           mapCallback: this.mapCallback
         })
           .width('100%')
           .height('100%');
+
+        // 返回按钮（左上角，考虑状态栏高度）
+        Row() {
+          Button() {
+            Text('‹')
+              .fontSize(24)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.label_primary'));
+          }
+          .width(40)
+          .height(40)
+          .backgroundColor($r('app.color.card_background'))
+          .borderRadius(12)
+          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .onClick(() => {
+            if (this.isRecording) {
+              this.showInterruptDialog = true;
+            } else {
+              router.back();
+            }
+          });
+        }
+        .position({ x: 12, y: 12 + this.statusBarHeight })
+        .zIndex(10);
+
+        // 地图控制按钮（右上角）
+        Column({ space: 10 }) {
+          // 图层切换
+          Button() {
+            Text('🗺')
+              .fontSize(18);
+          }
+          .width(40)
+          .height(40)
+          .backgroundColor(this.showLayerPanel ? '#3478F6' : $r('app.color.card_background'))
+          .borderRadius(12)
+          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .onClick(() => {
+            this.showLayerPanel = !this.showLayerPanel;
+          });
+
+          // 3D 模式切换
+          Button() {
+            Text(this.is3DMode ? '3D' : '2D')
+              .fontSize(13)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.is3DMode ? Color.White : $r('app.color.label_primary'));
+          }
+          .width(40)
+          .height(40)
+          .backgroundColor(this.is3DMode ? '#3478F6' : $r('app.color.card_background'))
+          .borderRadius(12)
+          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .onClick(async () => {
+            this.is3DMode = !this.is3DMode;
+            if (this.mapController) {
+              try {
+                const tilt = this.is3DMode ? 45 : 0;
+                const lat = this.lastLat !== 0 ? this.lastLat : this.mapCenterLat;
+                const lng = this.lastLng !== 0 ? this.lastLng : this.mapCenterLng;
+                const gcj02 = await this.convertToGCJ02(lat, lng);
+                const cameraPosition: mapCommon.CameraPosition = {
+                  target: gcj02,
+                  zoom: 16,
+                  tilt: tilt,
+                  bearing: 0
+                };
+                const cameraUpdate: map.CameraUpdate = map.newCameraPosition(cameraPosition);
+                this.mapController.moveCamera(cameraUpdate);
+              } catch (e) {
+                hilog.error(LOG_DOMAIN, LOG_TAG, 'moveCamera tilt error: %{public}s', JSON.stringify(e));
+              }
+            }
+          });
+
+          // 定位按钮
+          Button() {
+            Text('📍')
+              .fontSize(18);
+          }
+          .width(40)
+          .height(40)
+          .backgroundColor($r('app.color.card_background'))
+          .borderRadius(12)
+          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .onClick(() => {
+            this.moveToCurrentLocation();
+          });
+        }
+        .position({ x: '100%', y: 12 + this.statusBarHeight })
+        .translate({ x: -52 })
+        .zIndex(10);
+
+        // 图层选择面板
+        if (this.showLayerPanel) {
+          Column() {
+            Row({ space: 12 }) {
+              this.LayerOption('标准', '#3478F6', 1);
+              this.LayerOption('卫星', '#34C759', 2);
+              this.LayerOption('地形', '#FF9500', 3);
+            }
+            .padding(16)
+            .backgroundColor($r('app.color.card_background'))
+            .borderRadius(12)
+            .shadow({ radius: 12, color: '#1A000000', offsetX: 0, offsetY: 4 });
+          }
+          .position({ x: '100%', y: 160 + this.statusBarHeight })
+          .translate({ x: -220 })
+          .zIndex(15);
+        }
       }
       .width('100%')
-      .height('100%');
+      .layoutWeight(1);
 
-      // 返回按钮（左上角）
-      Row() {
-        Button() {
-          Text('‹')
-            .fontSize(24)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.label_primary'));
-        }
-        .width(40)
-        .height(40)
-        .backgroundColor($r('app.color.card_background'))
-        .borderRadius(12)
-        .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
-        .onClick(() => {
-          if (this.isRecording) {
-            this.showInterruptDialog = true;
-          } else {
-            router.back();
-          }
-        });
-      }
-      .position({ x: 12, y: 52 })
-      .zIndex(10);
-
-      // 底部录制面板
+      // 底部录制面板（固定在底部）
       Column() {
         // 录制状态
         if (this.isRecording) {
@@ -600,103 +770,136 @@ struct TrackRecord {
         }
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 16, bottom: 40 })
+      .padding({ left: 20, right: 20, top: 16, bottom: 16 + this.bottomSafeHeight })
       .backgroundColor($r('app.color.card_background'))
       .borderRadius({ topLeft: 20, topRight: 20 })
-      .shadow({ radius: 16, color: '#1A000000', offsetX: 0, offsetY: -4 })
-      .position({ x: 0, y: '100%' })
-      .translate({ y: this.hasStartPoint ? -260 : -180 })
-      .zIndex(20);
+      .shadow({ radius: 16, color: '#1A000000', offsetX: 0, offsetY: -4 });
 
-      // ========== 弹窗们 ==========
-
-      // 设置起点弹窗
-      if (this.showStartDialog) {
-        this.DialogOverlay('设置起点', '确认当前位置为扫墓起点', '例如：山脚入口', () => {
-          this.confirmSetStart();
-        }, () => {
-          this.showStartDialog = false;
-          this.dialogInputText = '';
-        });
-      }
-
-      // 设置打卡点弹窗
-      if (this.showSpotDialog) {
-        this.DialogOverlay('设置打卡点', '已记录当前位置，请为此墓地点命名', '例如：祖父某某之墓', () => {
-          this.confirmAddSpot();
-        }, () => {
-          this.showSpotDialog = false;
-          this.dialogInputText = '';
-        });
-      }
-
-      // 设置终点弹窗
-      if (this.showEndDialog) {
-        this.DialogOverlay('设置终点', '确认结束轨迹记录？', '例如：山脚出口', () => {
-          this.confirmSetEnd();
-        }, () => {
-          this.showEndDialog = false;
-          this.dialogInputText = '';
-        });
-      }
-
-      // 中断确认弹窗
-      if (this.showInterruptDialog) {
-        Column() {
-          Column() {
-            Text('中断记录')
-              .fontSize(18)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.label_primary'))
-              .margin({ bottom: 8 });
-            Text('当前轨迹正在记录中，是否暂时退出？\n退出后可在轨迹详情页继续记录。')
-              .fontSize(14)
-              .fontColor($r('app.color.label_secondary'))
-              .textAlign(TextAlign.Center)
-              .lineHeight(22)
-              .margin({ bottom: 20 });
-            Row({ space: 12 }) {
-              Button('继续录制')
-                .layoutWeight(1)
-                .height(44)
-                .fontSize(15)
-                .fontColor($r('app.color.primary'))
-                .backgroundColor($r('app.color.primary_light'))
-                .borderRadius(22)
-                .onClick(() => {
-                  this.showInterruptDialog = false;
-                });
-              Button('暂时退出')
-                .layoutWeight(1)
-                .height(44)
-                .fontSize(15)
-                .fontColor($r('app.color.button_primary_text'))
-                .backgroundColor($r('app.color.primary'))
-                .borderRadius(22)
-                .onClick(() => {
-                  this.confirmInterrupt();
-                });
-            }
-            .width('100%');
-          }
-          .width(300)
-          .padding(24)
-          .backgroundColor($r('app.color.card_background'))
-          .borderRadius(20)
-          .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
-        }
-        .width('100%')
-        .height('100%')
-        .backgroundColor('#66000000')
-        .justifyContent(FlexAlign.Center)
-        .zIndex(100)
-        .onClick(() => {
-          this.showInterruptDialog = false;
-        });
-      }
     }
     .width('100%')
     .height('100%');
+
+    // ========== 弹窗们（全屏覆盖） ==========
+
+    // 设置起点弹窗
+    if (this.showStartDialog) {
+      this.DialogOverlay('设置起点', '确认当前位置为扫墓起点', '例如：山脚入口', () => {
+        this.confirmSetStart();
+      }, () => {
+        this.showStartDialog = false;
+        this.dialogInputText = '';
+      });
+    }
+
+    // 设置打卡点弹窗
+    if (this.showSpotDialog) {
+      this.DialogOverlay('设置打卡点', '已记录当前位置，请为此墓地点命名', '例如：祖父某某之墓', () => {
+        this.confirmAddSpot();
+      }, () => {
+        this.showSpotDialog = false;
+        this.dialogInputText = '';
+      });
+    }
+
+    // 设置终点弹窗
+    if (this.showEndDialog) {
+      this.DialogOverlay('设置终点', '确认结束轨迹记录？', '例如：山脚出口', () => {
+        this.confirmSetEnd();
+      }, () => {
+        this.showEndDialog = false;
+        this.dialogInputText = '';
+      });
+    }
+
+    // 中断确认弹窗
+    if (this.showInterruptDialog) {
+      Column() {
+        Column() {
+          Text('中断记录')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.label_primary'))
+            .margin({ bottom: 8 });
+          Text('当前轨迹正在记录中，是否暂时退出？\n退出后可在轨迹详情页继续记录。')
+            .fontSize(14)
+            .fontColor($r('app.color.label_secondary'))
+            .textAlign(TextAlign.Center)
+            .lineHeight(22)
+            .margin({ bottom: 20 });
+          Row({ space: 12 }) {
+            Button('继续录制')
+              .layoutWeight(1)
+              .height(44)
+              .fontSize(15)
+              .fontColor($r('app.color.primary'))
+              .backgroundColor($r('app.color.primary_light'))
+              .borderRadius(22)
+              .onClick(() => {
+                this.showInterruptDialog = false;
+              });
+            Button('暂时退出')
+              .layoutWeight(1)
+              .height(44)
+              .fontSize(15)
+              .fontColor($r('app.color.button_primary_text'))
+              .backgroundColor($r('app.color.primary'))
+              .borderRadius(22)
+              .onClick(() => {
+                this.confirmInterrupt();
+              });
+          }
+          .width('100%');
+        }
+        .width(300)
+        .padding(24)
+        .backgroundColor($r('app.color.card_background'))
+        .borderRadius(20)
+        .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor('#66000000')
+      .justifyContent(FlexAlign.Center)
+      .zIndex(100)
+      .onClick(() => {
+        this.showInterruptDialog = false;
+      });
+    }
+    }
+    .width('100%')
+    .height('100%');
+  }
+
+  @Builder
+  LayerOption(label: string, dotColor: string, mapType: number) {
+    Column({ space: 6 }) {
+      Column() {
+        Circle({ width: 24, height: 24 })
+          .fill(dotColor);
+      }
+      .width(52)
+      .height(52)
+      .borderRadius(10)
+      .backgroundColor(this.currentMapType === mapType ? '#EEF3FF' : '#F5F5F5')
+      .borderWidth(this.currentMapType === mapType ? 2 : 0)
+      .borderColor('#3478F6')
+      .justifyContent(FlexAlign.Center);
+      Text(label)
+        .fontSize(12)
+        .fontColor(this.currentMapType === mapType ? '#3478F6' : $r('app.color.label_secondary'));
+    }
+    .alignItems(HorizontalAlign.Center)
+    .onClick(() => {
+      this.currentMapType = mapType;
+      this.showLayerPanel = false;
+      if (this.mapController) {
+        try {
+          this.mapController.setMapType(mapType);
+        } catch (e) {
+          hilog.error(LOG_DOMAIN, LOG_TAG, 'setMapType error: %{public}s', JSON.stringify(e));
+        }
+      }
+    });
   }
 
   @Builder

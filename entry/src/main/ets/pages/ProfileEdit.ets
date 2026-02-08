@@ -51,23 +51,40 @@ struct ProfileEdit {
         Column() {
           // 头像区域
           Column({ space: 12 }) {
-            if (this.avatarUrl.length > 0) {
-              Image(this.avatarUrl)
+            Stack() {
+              if (this.avatarUrl.length > 0) {
+                Image(this.avatarUrl)
+                  .width(80)
+                  .height(80)
+                  .borderRadius(40)
+                  .objectFit(ImageFit.Cover);
+              } else {
+                Column() {
+                  Text('👤')
+                    .fontSize(36);
+                }
                 .width(80)
                 .height(80)
                 .borderRadius(40)
-                .objectFit(ImageFit.Cover);
-            } else {
-              Column() {
-                Text('👤')
-                  .fontSize(36);
+                .backgroundColor($r('app.color.primary_light'))
+                .justifyContent(FlexAlign.Center);
               }
-              .width(80)
-              .height(80)
-              .borderRadius(40)
-              .backgroundColor($r('app.color.primary_light'))
-              .justifyContent(FlexAlign.Center);
+              // 相机角标
+              Column() {
+                Text('📷')
+                  .fontSize(14);
+              }
+              .width(28)
+              .height(28)
+              .borderRadius(14)
+              .backgroundColor('#3478F6')
+              .justifyContent(FlexAlign.Center)
+              .borderWidth(2)
+              .borderColor(Color.White)
+              .position({ x: 56, y: 56 });
             }
+            .width(80)
+            .height(80);
             Text('点击更换头像')
               .fontSize(13)
               .fontColor($r('app.color.label_tertiary'));

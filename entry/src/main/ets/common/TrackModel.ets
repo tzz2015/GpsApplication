@@ -50,6 +50,7 @@ export namespace TrackModel {
   export interface Track {
     trackId: string;
     ownerUserId: string;
+    ownerDisplayName: string; // 创建者昵称（公开轨迹展示用）
     title: string;
     description: string;
     visibility: string;   // 'PRIVATE' | 'PUBLIC'
@@ -63,6 +64,7 @@ export namespace TrackModel {
     totalDistance: number; // 总里程(米)
     totalDuration: number; // 总用时(毫秒)
     maxAltitude: number;  // 最高海拔
+    spotCount: number;    // 打卡点数
     coverImageUrl: string;
     createdAt: number;
     updatedAt: number;

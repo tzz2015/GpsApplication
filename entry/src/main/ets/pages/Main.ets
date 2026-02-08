@@ -14,6 +14,8 @@ const LOG_TAG = 'Main';
 @Entry
 @Component
 struct Main {
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
+  @StorageProp('bottomSafeHeight') bottomSafeHeight: number = 0;
   @State currentBottomIndex: number = 0;
   @State currentTopIndex: number = 0;
   @State myTracks: TrackModel.Track[] = [];
@@ -60,7 +62,7 @@ struct Main {
   private getSpotCount(): number {
     let count = 0;
     for (let i = 0; i < this.myTracks.length; i++) {
-      count += 1; // 每条轨迹至少统计自身
+      count += this.myTracks[i].spotCount || 0;
     }
     return count;
   }
@@ -83,10 +85,10 @@ struct Main {
       TabContent() {
         this.ProfileTabContent();
       }
-      .tabBar(this.BottomTabItem(1, '我的', '👤'));
+      .tabBar(this.BottomTabItem(1, '个人中心', '👤'));
     }
     .barMode(BarMode.Fixed)
-    .barHeight(56)
+    .barHeight(56 + this.bottomSafeHeight)
     .barBackgroundColor($r('app.color.tab_bar_background'))
     .onChange((index: number) => {
       this.currentBottomIndex = index;
@@ -100,6 +102,11 @@ struct Main {
   @Builder
   HomeTabContent() {
     Column() {
+      // 状态栏占位
+      Row()
+        .width('100%')
+        .height(this.statusBarHeight);
+
       // 顶部标题
       Row({ space: 12 }) {
         Text('遨游轨迹')
@@ -177,7 +184,9 @@ struct Main {
           // 统计卡片
           ListItem() {
             Row() {
-              this.StatsItem(this.getTrackCount().toString(), '轨迹');
+              this.StatsItem(this.getTrackCount().toString(), '轨迹总数');
+              Column().width(1).height(30).backgroundColor('#33FFFFFF');
+              this.StatsItem(this.getSpotCount().toString(), '打卡点数');
               Column().width(1).height(30).backgroundColor('#33FFFFFF');
               this.StatsItem(this.getTotalDistance(), '总里程');
             }
@@ -363,7 +372,7 @@ struct Main {
         List({ space: 12 }) {
           ForEach(this.publicTracks, (item: TrackModel.Track) => {
             ListItem() {
-              this.TrackCard(item);
+              this.PublicTrackCard(item);
             }
             .margin({ left: 16, right: 16 });
           }, (item: TrackModel.Track) => item.trackId);
@@ -392,6 +401,84 @@ struct Main {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.app_background'));
+  }
+
+  @Builder
+  PublicTrackCard(item: TrackModel.Track) {
+    Column() {
+      Row({ space: 8 }) {
+        Text(item.title)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.label_primary'))
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text('公开')
+          .fontSize(11)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#3478F6')
+          .backgroundColor('#EEF3FF')
+          .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+          .borderRadius(10);
+      }
+      .width('100%');
+
+      // 作者信息
+      Row({ space: 4 }) {
+        Text('👤')
+          .fontSize(11);
+        Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : '轨迹用户')
+          .fontSize(12)
+          .fontColor($r('app.color.label_secondary'));
+        Text('·')
+          .fontSize(12)
+          .fontColor($r('app.color.label_tertiary'));
+        Text(TrackModel.formatDate(item.createdAt))
+          .fontSize(12)
+          .fontColor($r('app.color.label_tertiary'));
+      }
+      .width('100%')
+      .margin({ top: 4 });
+
+      if (item.description.length > 0) {
+        Text(item.description)
+          .fontSize(13)
+          .fontColor($r('app.color.label_secondary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4 });
+      }
+
+      Row({ space: 16 }) {
+        Text('📍 ' + TrackModel.formatDistance(item.totalDistance))
+          .fontSize(12)
+          .fontColor($r('app.color.label_secondary'));
+        if (item.spotCount > 0) {
+          Text('🏁 ' + item.spotCount.toString() + '个打卡点')
+            .fontSize(12)
+            .fontColor($r('app.color.label_secondary'));
+        }
+        if (item.maxAltitude > 0) {
+          Text('⛰ ' + item.maxAltitude.toString() + 'm')
+            .fontSize(12)
+            .fontColor($r('app.color.label_secondary'));
+        }
+      }
+      .width('100%')
+      .margin({ top: 8 });
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor($r('app.color.card_background'))
+    .borderRadius(12)
+    .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
+    .onClick(() => {
+      router.pushUrl({
+        url: 'pages/TrackDetail',
+        params: { trackId: item.trackId, title: item.title, isPublicView: true }
+      });
+    });
   }
 
   // ==================== 个人中心 ====================
@@ -445,6 +532,20 @@ struct Main {
           Column().width(1).height(30).backgroundColor('#33FFFFFF');
 
           Column({ space: 2 }) {
+            Text(this.getSpotCount().toString())
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Color.White);
+            Text('打卡点')
+              .fontSize(11)
+              .fontColor('#AAFFFFFF');
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center);
+
+          Column().width(1).height(30).backgroundColor('#33FFFFFF');
+
+          Column({ space: 2 }) {
             Text(this.getTotalDistance())
               .fontSize(22)
               .fontWeight(FontWeight.Bold)
@@ -463,36 +564,36 @@ struct Main {
         .margin({ top: 8 });
       }
       .width('100%')
-      .padding({ top: 32, bottom: 24, left: 20, right: 20 })
+      .padding({ top: 32 + this.statusBarHeight, bottom: 24, left: 20, right: 20 })
       .linearGradient({
-        angle: 135,
-        colors: [['#3478F6', 0], ['#1E56CC', 1]]
+        angle: 160,
+        colors: [['#263238', 0], ['#37474f', 0.5], ['#455a64', 1]]
       })
       .alignItems(HorizontalAlign.Center);
 
       // 菜单
       Column({ space: 12 }) {
         Column() {
-          this.MenuItem('👤', '编辑个人信息', '', () => {
+          this.MenuItem('👤', '编辑个人信息', '', '#3478F6', () => {
             router.pushUrl({ url: 'pages/ProfileEdit' });
           });
-          Divider().color($r('app.color.separator')).margin({ left: 52 });
-          this.MenuItem('🔒', '隐私设置', '', () => {});
+          Divider().color($r('app.color.separator')).margin({ left: 56 });
+          this.MenuItem('🔒', '隐私设置', '', '#FF9500', () => {});
         }
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)
         .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 });
 
         Column() {
-          this.MenuItem('📄', '隐私政策与用户协议', '', () => {
+          this.MenuItem('📄', '隐私政策与用户协议', '', '#34C759', () => {
             router.pushUrl({ url: 'pages/PrivacyPolicy' });
           });
-          Divider().color($r('app.color.separator')).margin({ left: 52 });
-          this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', () => {
+          Divider().color($r('app.color.separator')).margin({ left: 56 });
+          this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', '#5856D6', () => {
             router.pushUrl({ url: 'pages/About' });
           });
-          Divider().color($r('app.color.separator')).margin({ left: 52 });
-          this.MenuItem('💬', '意见反馈', '', () => {});
+          Divider().color($r('app.color.separator')).margin({ left: 56 });
+          this.MenuItem('💬', '意见反馈', '', '#FF3B30', () => {});
         }
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)
@@ -534,17 +635,22 @@ struct Main {
   }
 
   @Builder
-  MenuItem(icon: string, title: string, value: string, onClick: () => void) {
+  MenuItem(icon: string, title: string, value: string, iconBgColor: string, onClick: () => void) {
     Row() {
-      Text(icon)
-        .fontSize(18)
-        .width(36)
-        .textAlign(TextAlign.Center);
+      Column() {
+        Text(icon)
+          .fontSize(16);
+      }
+      .width(32)
+      .height(32)
+      .borderRadius(8)
+      .backgroundColor(iconBgColor)
+      .justifyContent(FlexAlign.Center);
       Text(title)
         .fontSize(15)
         .fontColor($r('app.color.label_primary'))
         .layoutWeight(1)
-        .margin({ left: 8 });
+        .margin({ left: 12 });
       if (value.length > 0) {
         Text(value)
           .fontSize(13)

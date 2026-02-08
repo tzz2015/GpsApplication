@@ -336,18 +336,23 @@ html, body {
 }
 .btn-hw-login {
   width: 100%;
-  padding: 16px;
-  background: #fff;
-  color: var(--primary);
+  padding: 0;
+  height: 48px;
+  background: #CF0A2C;
+  color: #fff;
   border: none;
-  border-radius: var(--radius-lg);
-  font-size: 17px; font-weight: 700;
+  border-radius: 24px;
+  font-size: 16px; font-weight: 500;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: all 0.2s;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 16px rgba(207,10,44,0.3);
+  letter-spacing: 0.5px;
 }
-.btn-hw-login:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,0,0,0.2); }
+.btn-hw-login:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(207,10,44,0.4); }
+.btn-hw-login:active { transform: scale(0.98); background: #B0081F; }
+/* 华为账号 Logo SVG 样式 */
+.hw-logo { width: 20px; height: 20px; flex-shrink: 0; }
 .login-agreement {
   position: absolute;
   bottom: calc(var(--safe-bottom) + 20px);
@@ -1277,9 +1282,15 @@ html, body {
       <div class="login-desc">记录扫墓轨迹，守护家族记忆<br>让祭祖文化更容易延续</div>
       <div class="login-btn-area">
         <button class="btn-hw-login" onclick="goPage('home')">
-          <span style="font-size:20px">&#127380;</span>
-          华为帐号一键登录
+          <svg class="hw-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 1.5c4.69 0 8.5 3.81 8.5 8.5s-3.81 8.5-8.5 8.5S3.5 16.69 3.5 12 7.31 3.5 12 3.5z" fill="#fff"/>
+            <path d="M7.5 8.5C7.5 8.5 9 11 12 11s4.5-2.5 4.5-2.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M12 11v5.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M9 14.5l3 2 3-2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          华为账号一键登录
         </button>
+        <div style="text-align:center;margin-top:12px;font-size:12px;color:rgba(255,255,255,0.5);">首次登录将自动创建账户</div>
       </div>
     </div>
     <div class="login-agreement">

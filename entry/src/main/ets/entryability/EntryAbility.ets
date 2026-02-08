@@ -1,6 +1,6 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { window } from '@kit.ArkUI';
+import { window, display } from '@kit.ArkUI';
 import { AuthStore } from '../common/AuthStore';
 
 const DOMAIN = 0x0000;
@@ -31,24 +31,43 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
-    // 未登录进入登录页，已登录进入首页（底部双 Tab）
-    const ctx = this.context.getApplicationContext();
-    AuthStore.isLoggedIn(ctx).then((loggedIn: boolean) => {
-      const firstPage = loggedIn ? 'pages/Main' : 'pages/Login';
-      windowStage.loadContent(firstPage, (err: Error) => {
-        if (err && err.message) {
-          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
-          return;
-        }
-        hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+    // 设置沉浸式状态栏
+    windowStage.getMainWindow().then((windowClass: window.Window) => {
+      // 全屏布局（内容延伸到状态栏和导航条区域）
+      windowClass.setWindowLayoutFullScreen(true).catch((e: Error) => {
+        hilog.error(DOMAIN, 'testTag', 'setWindowLayoutFullScreen fail: %{public}s', JSON.stringify(e));
       });
-    }).catch((err: Error) => {
-      windowStage.loadContent('pages/Login', (err: Error) => {
-        if (err && err.message) {
-          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
-          return;
-        }
-      });
+
+      // 获取安全区域高度并存入 AppStorage
+      try {
+        const avoidTop = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+        const avoidBottom = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
+        const screenDensity = display.getDefaultDisplaySync().densityPixels;
+        const statusBarH = avoidTop.topRect.height / screenDensity;
+        const bottomNavH = avoidBottom.bottomRect.height / screenDensity;
+
+        AppStorage.setOrCreate<number>('statusBarHeight', statusBarH);
+        AppStorage.setOrCreate<number>('bottomSafeHeight', bottomNavH);
+
+        hilog.info(DOMAIN, 'testTag',
+          'Safe areas: statusBar=%{public}f, bottomNav=%{public}f',
+          statusBarH, bottomNavH);
+      } catch (e) {
+        hilog.error(DOMAIN, 'testTag', 'getWindowAvoidArea fail: %{public}s', JSON.stringify(e));
+        AppStorage.setOrCreate<number>('statusBarHeight', 36);
+        AppStorage.setOrCreate<number>('bottomSafeHeight', 28);
+      }
+    }).catch((e: Error) => {
+      hilog.error(DOMAIN, 'testTag', 'getMainWindow fail: %{public}s', JSON.stringify(e));
+    });
+
+    // 始终先加载启动页，由启动页检查登录态后跳转
+    windowStage.loadContent('pages/Splash', (err: Error) => {
+      if (err && err.message) {
+        hilog.error(DOMAIN, 'testTag', 'Failed to load Splash. Cause: %{public}s', JSON.stringify(err));
+        return;
+      }
+      hilog.info(DOMAIN, 'testTag', 'Succeeded in loading Splash page.');
     });
   }
 

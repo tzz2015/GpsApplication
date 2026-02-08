@@ -2,14 +2,20 @@ import { router } from '@kit.ArkUI';
 import { MapComponent, mapCommon, map } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
+import { AuthStore } from '../common/AuthStore';
 import { NavBar } from '../common/NavBar';
+
+const LOG_DOMAIN = 0x0000;
+const LOG_TAG = 'TrackDetail';
 
 /** 路由参数接口 */
 interface TrackDetailParams {
   trackId: string;
   title: string;
+  isPublicView?: boolean;
 }
 
 /**
@@ -24,22 +30,35 @@ struct TrackDetail {
   @State tombSpots: TrackModel.TombSpot[] = [];
   @State isEditing: boolean = false;
   @State isPrivate: boolean = true;
+  @State isOwner: boolean = false;
+  @State isPublicView: boolean = false;
   @State mapCenterLat: number = 23.7275;
   @State mapCenterLng: number = 108.3426;
+  @State showEditTitleDialog: boolean = false;
+  @State showEditSpotNameDialog: boolean = false;
+  @State editInputText: string = '';
+  @State editingSpotId: string = '';
   private trackId: string = '';
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private mapController?: map.MapComponentController;
+  private mapReady: boolean = false;
+  private dataReady: boolean = false;
 
   aboutToAppear(): void {
     const params = router.getParams() as TrackDetailParams | undefined;
     if (params) {
       this.trackId = params.trackId || '';
+      this.isPublicView = params.isPublicView || false;
     }
     this.loadData();
     this.mapCallback = async (err: Error, controller: map.MapComponentController) => {
       if (!err) {
         this.mapController = controller;
-        this.drawTrackOnMap();
+        this.mapReady = true;
+        // 如果数据已加载完，立即绘制轨迹
+        if (this.dataReady) {
+          this.moveCameraAndDraw();
+        }
       }
     };
   }
@@ -48,6 +67,8 @@ struct TrackDetail {
     this.loadData();
     if (this.mapController) {
       this.mapController.show();
+      // 重新绘制轨迹和打卡点（从编辑/记录返回时可能有新数据）
+      this.moveCameraAndDraw();
     }
   }
 
@@ -68,32 +89,285 @@ struct TrackDetail {
         this.mapCenterLat = t.startLat;
         this.mapCenterLng = t.startLng;
       }
+      // 判断当前用户是否为轨迹创建者
+      const user = await AuthStore.getCurrentUser(context);
+      if (user && t.ownerUserId === user.userId) {
+        this.isOwner = true;
+      }
     }
     this.tombSpots = await TrackStore.getTombSpotsByTrackId(context, this.trackId);
+    this.dataReady = true;
+
+    // 如果地图已就绪，移动相机并绘制轨迹
+    if (this.mapReady) {
+      this.moveCameraAndDraw();
+    }
   }
 
+  /** WGS84 坐标转 GCJ02（华为地图使用 GCJ02） */
+  private async convertToGCJ02(lat: number, lng: number): Promise<mapCommon.LatLng> {
+    try {
+      const wgs84: mapCommon.LatLng = { latitude: lat, longitude: lng };
+      const gcj02: mapCommon.LatLng = await map.convertCoordinate(
+        mapCommon.CoordinateType.WGS84,
+        mapCommon.CoordinateType.GCJ02,
+        wgs84
+      );
+      return gcj02;
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'convertToGCJ02 error: %{public}s', JSON.stringify(e));
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  /** 绘制轨迹 + 打卡点，并自动适配相机让整条轨迹居中 */
+  private async moveCameraAndDraw(): Promise<void> {
+    if (!this.mapController) {
+      return;
+    }
+    await this.drawTrackOnMap();
+    await this.drawSpotMarkers();
+  }
+
+  /** 绘制轨迹折线 + 起终点标记，并自动将相机适配到轨迹范围 */
   private async drawTrackOnMap(): Promise<void> {
     if (!this.mapController) {
       return;
     }
     const context = this.getUIContext().getHostContext() as common.Context;
     const points = await TrackStore.getTrackPointsByTrackId(context, this.trackId);
-    if (points.length < 2) {
+
+    hilog.info(LOG_DOMAIN, LOG_TAG, 'drawTrackOnMap start: GPS pts=%{public}d, spots=%{public}d',
+      points.length, this.tombSpots.length);
+
+    // 收集所有需要显示在地图上的坐标，用于包围盒计算
+    const allLatLngs: mapCommon.LatLng[] = [];
+
+    // ===== 1. 绘制轨迹折线 =====
+    if (points.length >= 2) {
+      // 方案 A：GPS 轨迹点充足，画精确折线
+      const gcj02Points: mapCommon.LatLng[] = [];
+      for (let i = 0; i < points.length; i++) {
+        const converted = await this.convertToGCJ02(points[i].latitude, points[i].longitude);
+        gcj02Points.push(converted);
+        allLatLngs.push(converted);
+      }
+      try {
+        await this.mapController.addPolyline({
+          points: gcj02Points,
+          color: 0xFFFF6B35,
+          width: 12,
+          visible: true
+        });
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'addPolyline GPS: %{public}d points drawn', gcj02Points.length);
+      } catch (e) {
+        hilog.error(LOG_DOMAIN, LOG_TAG, 'addPolyline GPS error: %{public}s', JSON.stringify(e));
+      }
+    } else {
+      // 方案 B：GPS 轨迹点不足，用 起点→打卡点→终点 的坐标连线作为回退路线
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'GPS pts < 2, fallback to waypoints route');
+      const waypoints: mapCommon.LatLng[] = [];
+
+      // 起点坐标
+      if (this.track && this.track.startLat !== 0) {
+        const p = await this.convertToGCJ02(this.track.startLat, this.track.startLng);
+        waypoints.push(p);
+      }
+      // 打卡点坐标（按 orderIndex 排序）
+      const sortedSpots: TrackModel.TombSpot[] = [];
+      for (let i = 0; i < this.tombSpots.length; i++) {
+        sortedSpots.push(this.tombSpots[i]);
+      }
+      sortedSpots.sort((a: TrackModel.TombSpot, b: TrackModel.TombSpot): number => a.orderIndex - b.orderIndex);
+      for (let i = 0; i < sortedSpots.length; i++) {
+        if (sortedSpots[i].latitude !== 0) {
+          const p = await this.convertToGCJ02(sortedSpots[i].latitude, sortedSpots[i].longitude);
+          waypoints.push(p);
+        }
+      }
+      // 终点坐标
+      if (this.track && this.track.endLat !== 0 && this.track.endName.length > 0) {
+        const p = await this.convertToGCJ02(this.track.endLat, this.track.endLng);
+        waypoints.push(p);
+      }
+
+      // 有至少 2 个航点才能画线
+      if (waypoints.length >= 2) {
+        try {
+          await this.mapController.addPolyline({
+            points: waypoints,
+            color: 0xFFFF6B35,
+            width: 10,
+            visible: true
+          });
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'addPolyline waypoints: %{public}d waypoints drawn', waypoints.length);
+        } catch (e) {
+          hilog.error(LOG_DOMAIN, LOG_TAG, 'addPolyline waypoints error: %{public}s', JSON.stringify(e));
+        }
+      }
+      for (let i = 0; i < waypoints.length; i++) {
+        allLatLngs.push(waypoints[i]);
+      }
+    }
+
+    // ===== 2. 起点标记（始终绘制） =====
+    if (this.track && this.track.startLat !== 0) {
+      try {
+        const startP = await this.convertToGCJ02(this.track.startLat, this.track.startLng);
+        await this.mapController.addMarker({
+          position: startP,
+          title: this.track.startName || '起点',
+          visible: true
+        });
+        allLatLngs.push(startP);
+      } catch (e) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'addMarker start: %{public}s', JSON.stringify(e));
+      }
+    }
+
+    // ===== 3. 终点标记（轨迹已完成时绘制） =====
+    if (this.track && this.track.endLat !== 0 && this.track.endName.length > 0) {
+      try {
+        const endP = await this.convertToGCJ02(this.track.endLat, this.track.endLng);
+        await this.mapController.addMarker({
+          position: endP,
+          title: this.track.endName || '终点',
+          visible: true
+        });
+        allLatLngs.push(endP);
+      } catch (e) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'addMarker end: %{public}s', JSON.stringify(e));
+      }
+    }
+
+    // ===== 4. 打卡点坐标加入包围盒 =====
+    for (let i = 0; i < this.tombSpots.length; i++) {
+      if (this.tombSpots[i].latitude !== 0) {
+        const spotP = await this.convertToGCJ02(this.tombSpots[i].latitude, this.tombSpots[i].longitude);
+        allLatLngs.push(spotP);
+      }
+    }
+
+    // ===== 5. 计算包围盒并适配相机，让轨迹居中 =====
+    if (allLatLngs.length > 0) {
+      this.fitCameraToBounds(allLatLngs);
+    } else {
+      // 无任何坐标，回退到默认起点
+      try {
+        const gcj02 = await this.convertToGCJ02(this.mapCenterLat, this.mapCenterLng);
+        const cameraPosition: mapCommon.CameraPosition = {
+          target: gcj02,
+          zoom: 15,
+          tilt: 0,
+          bearing: 0
+        };
+        this.mapController.moveCamera(map.newCameraPosition(cameraPosition));
+      } catch (e) {
+        hilog.error(LOG_DOMAIN, LOG_TAG, 'moveCamera fallback: %{public}s', JSON.stringify(e));
+      }
+    }
+
+    hilog.info(LOG_DOMAIN, LOG_TAG, 'drawTrackOnMap done: GPS=%{public}d, spots=%{public}d, bounds=%{public}d',
+      points.length, this.tombSpots.length, allLatLngs.length);
+  }
+
+  /** 在地图上标记所有打卡点（优先用小圆圈，回退到半透明标记） */
+  private async drawSpotMarkers(): Promise<void> {
+    if (!this.mapController) {
+      return;
+    }
+    for (let i = 0; i < this.tombSpots.length; i++) {
+      const spot = this.tombSpots[i];
+      if (spot.latitude === 0 && spot.longitude === 0) {
+        continue;
+      }
+      const gcj02 = await this.convertToGCJ02(spot.latitude, spot.longitude);
+      let circleOk = false;
+      // 优先用小圆圈标记打卡点（比默认大图钉更精致）
+      try {
+        await this.mapController.addCircle({
+          center: gcj02,
+          radius: 6,
+          fillColor: 0xCC4A90D9,
+          strokeColor: 0xFFFFFFFF,
+          strokeWidth: 3,
+          visible: true
+        });
+        circleOk = true;
+      } catch (e) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'addCircle[%{public}d] fallback to marker: %{public}s', i, JSON.stringify(e));
+      }
+      // 添加标记：圆圈成功则几乎隐藏图钉（仅保留可点击标题），否则用半透明图钉
+      try {
+        await this.mapController.addMarker({
+          position: gcj02,
+          title: spot.name,
+          visible: true,
+          alpha: circleOk ? 0.01 : 0.7
+        });
+      } catch (e) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'addSpotMarker[%{public}d]: %{public}s', i, JSON.stringify(e));
+      }
+    }
+  }
+
+  /** 根据坐标集合计算包围盒，移动相机使所有点居中可见 */
+  private fitCameraToBounds(points: mapCommon.LatLng[]): void {
+    if (!this.mapController || points.length === 0) {
       return;
     }
     try {
-      const latLngs: mapCommon.LatLng[] = points.map((p: TrackModel.TrackPointItem): mapCommon.LatLng => ({
-        latitude: p.latitude,
-        longitude: p.longitude
-      }));
-      await this.mapController.addPolyline({
-        points: latLngs,
-        color: 0xFFFF6B35,
-        width: 12,
-        visible: true
-      });
+      let minLat = points[0].latitude;
+      let maxLat = points[0].latitude;
+      let minLng = points[0].longitude;
+      let maxLng = points[0].longitude;
+      for (let i = 1; i < points.length; i++) {
+        const p = points[i];
+        if (p.latitude < minLat) {
+          minLat = p.latitude;
+        }
+        if (p.latitude > maxLat) {
+          maxLat = p.latitude;
+        }
+        if (p.longitude < minLng) {
+          minLng = p.longitude;
+        }
+        if (p.longitude > maxLng) {
+          maxLng = p.longitude;
+        }
+      }
+      // 计算中心点
+      const centerLat = (minLat + maxLat) / 2;
+      const centerLng = (minLng + maxLng) / 2;
+      // 根据范围计算合适的缩放等级
+      const latDiff = maxLat - minLat;
+      const lngDiff = maxLng - minLng;
+      const maxDiff = Math.max(latDiff, lngDiff);
+      let zoom = 16;
+      if (maxDiff > 0.1) {
+        zoom = 10;
+      } else if (maxDiff > 0.05) {
+        zoom = 11;
+      } else if (maxDiff > 0.02) {
+        zoom = 12;
+      } else if (maxDiff > 0.01) {
+        zoom = 13;
+      } else if (maxDiff > 0.005) {
+        zoom = 14;
+      } else if (maxDiff > 0.002) {
+        zoom = 15;
+      } else {
+        zoom = 16;
+      }
+      const cameraPosition: mapCommon.CameraPosition = {
+        target: { latitude: centerLat, longitude: centerLng },
+        zoom: zoom,
+        tilt: 0,
+        bearing: 0
+      };
+      this.mapController.moveCamera(map.newCameraPosition(cameraPosition));
     } catch (e) {
-      console.error('drawTrackOnMap: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'fitCameraToBounds error: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -125,6 +399,7 @@ struct TrackDetail {
   }
 
   build() {
+    Stack() {
     Column() {
       NavBar({ title: this.track ? this.track.title : '轨迹详情', showBack: true });
 
@@ -160,6 +435,15 @@ struct TrackDetail {
                   .fontWeight(FontWeight.Bold)
                   .fontColor($r('app.color.label_primary'))
                   .layoutWeight(1);
+                // 编辑图标（仅创建者可见）
+                if (this.isOwner && !this.isPublicView) {
+                  Text('✏️')
+                    .fontSize(16)
+                    .onClick(() => {
+                      this.editInputText = this.track ? this.track.title : '';
+                      this.showEditTitleDialog = true;
+                    });
+                }
                 if (this.isEditing) {
                   Text('编辑中')
                     .fontSize(11)
@@ -302,16 +586,16 @@ struct TrackDetail {
               // 起点
               if (this.track && this.track.startName.length > 0) {
                 this.TimelineItem('🌱 ' + this.track.startName, '起点',
-                  TrackModel.formatDate(this.track.createdAt), true, false, '');
+                  TrackModel.formatDate(this.track.createdAt), true, false, '', false);
               }
 
               // 打卡点
               ForEach(this.tombSpots, (spot: TrackModel.TombSpot, index: number) => {
                 this.TimelineItem(
-                  '① '.slice(0, 0) + (index + 1).toString() + ' ' + spot.name,
+                  (index + 1).toString() + ' ' + spot.name,
                   '',
                   TrackModel.formatDate(spot.createdAt) + ' · 海拔 ' + spot.altitude.toString() + 'm',
-                  false, false, spot.tombId
+                  false, false, spot.tombId, this.isOwner && !this.isPublicView
                 );
               }, (spot: TrackModel.TombSpot) => spot.tombId);
 
@@ -332,7 +616,7 @@ struct TrackDetail {
                 .borderStyle(BorderStyle.Dashed);
               } else if (this.track && this.track.endName.length > 0) {
                 this.TimelineItem('🏁 ' + this.track.endName, '终点',
-                  '', false, true, '');
+                  '', false, true, '', false);
               }
             }
             .width('100%')
@@ -395,6 +679,126 @@ struct TrackDetail {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.app_background'));
+
+    // 编辑标题弹窗
+    if (this.showEditTitleDialog) {
+      Column() {
+        Column() {
+          Text('编辑轨迹名称')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.label_primary'))
+            .margin({ bottom: 16 });
+          TextInput({ placeholder: '轨迹名称', text: this.editInputText })
+            .onChange((value: string) => {
+              this.editInputText = value;
+            })
+            .width('100%')
+            .height(44)
+            .fontSize(15)
+            .backgroundColor($r('app.color.app_background'))
+            .borderRadius(10)
+            .padding({ left: 12, right: 12 })
+            .margin({ bottom: 16 });
+          Row({ space: 12 }) {
+            Button('取消')
+              .layoutWeight(1)
+              .height(44)
+              .fontSize(15)
+              .fontColor($r('app.color.primary'))
+              .backgroundColor($r('app.color.primary_light'))
+              .borderRadius(22)
+              .onClick(() => {
+                this.showEditTitleDialog = false;
+                this.editInputText = '';
+              });
+            Button('保存')
+              .layoutWeight(1)
+              .height(44)
+              .fontSize(15)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.primary'))
+              .borderRadius(22)
+              .onClick(() => {
+                this.saveEditedTitle();
+              });
+          }
+          .width('100%');
+        }
+        .width(300)
+        .padding(24)
+        .backgroundColor($r('app.color.card_background'))
+        .borderRadius(20)
+        .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor('#66000000')
+      .justifyContent(FlexAlign.Center)
+      .zIndex(100);
+    }
+
+    // 编辑打卡点名称弹窗
+    if (this.showEditSpotNameDialog) {
+      Column() {
+        Column() {
+          Text('编辑打卡点名称')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.label_primary'))
+            .margin({ bottom: 16 });
+          TextInput({ placeholder: '打卡点名称', text: this.editInputText })
+            .onChange((value: string) => {
+              this.editInputText = value;
+            })
+            .width('100%')
+            .height(44)
+            .fontSize(15)
+            .backgroundColor($r('app.color.app_background'))
+            .borderRadius(10)
+            .padding({ left: 12, right: 12 })
+            .margin({ bottom: 16 });
+          Row({ space: 12 }) {
+            Button('取消')
+              .layoutWeight(1)
+              .height(44)
+              .fontSize(15)
+              .fontColor($r('app.color.primary'))
+              .backgroundColor($r('app.color.primary_light'))
+              .borderRadius(22)
+              .onClick(() => {
+                this.showEditSpotNameDialog = false;
+                this.editInputText = '';
+                this.editingSpotId = '';
+              });
+            Button('保存')
+              .layoutWeight(1)
+              .height(44)
+              .fontSize(15)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.primary'))
+              .borderRadius(22)
+              .onClick(() => {
+                this.saveEditedSpotName();
+              });
+          }
+          .width('100%');
+        }
+        .width(300)
+        .padding(24)
+        .backgroundColor($r('app.color.card_background'))
+        .borderRadius(20)
+        .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor('#66000000')
+      .justifyContent(FlexAlign.Center)
+      .zIndex(100);
+    }
+    }
+    .width('100%')
+    .height('100%');
   }
 
   @Builder
@@ -413,7 +817,7 @@ struct TrackDetail {
   }
 
   @Builder
-  TimelineItem(name: string, tag: string, meta: string, isStart: boolean, isEnd: boolean, tombId: string) {
+  TimelineItem(name: string, tag: string, meta: string, isStart: boolean, isEnd: boolean, tombId: string, canEditName: boolean) {
     Row({ space: 12 }) {
       // 时间轴圆点
       Column() {
@@ -429,7 +833,8 @@ struct TrackDetail {
           Text(name)
             .fontSize(14)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.label_primary'));
+            .fontColor($r('app.color.label_primary'))
+            .layoutWeight(1);
           if (tag.length > 0) {
             Text(tag)
               .fontSize(10)
@@ -438,6 +843,22 @@ struct TrackDetail {
               .backgroundColor(isStart ? $r('app.color.success_light') : '#FFE8E6')
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .borderRadius(4);
+          }
+          // 编辑打卡点名称图标（仅创建者）
+          if (canEditName && tombId.length > 0) {
+            Text('✏️')
+              .fontSize(14)
+              .onClick(() => {
+                // 从打卡点列表中找到对应名称
+                for (let i = 0; i < this.tombSpots.length; i++) {
+                  if (this.tombSpots[i].tombId === tombId) {
+                    this.editInputText = this.tombSpots[i].name;
+                    break;
+                  }
+                }
+                this.editingSpotId = tombId;
+                this.showEditSpotNameDialog = true;
+              });
           }
         }
         if (meta.length > 0) {
@@ -468,5 +889,30 @@ struct TrackDetail {
     .width('100%')
     .alignItems(VerticalAlign.Top)
     .margin({ bottom: 8, left: 12 });
+  }
+
+  /** 保存编辑后的标题 */
+  private async saveEditedTitle(): Promise<void> {
+    const newTitle = this.editInputText.trim();
+    if (newTitle.length === 0 || !this.track) {
+      return;
+    }
+    this.showEditTitleDialog = false;
+    const context = this.getUIContext().getHostContext() as common.Context;
+    await TrackStore.updateTrack(context, this.trackId, { title: newTitle });
+    await this.loadData();
+  }
+
+  /** 保存编辑后的打卡点名称 */
+  private async saveEditedSpotName(): Promise<void> {
+    const newName = this.editInputText.trim();
+    if (newName.length === 0 || this.editingSpotId.length === 0) {
+      return;
+    }
+    this.showEditSpotNameDialog = false;
+    const context = this.getUIContext().getHostContext() as common.Context;
+    await TrackStore.updateTombSpot(context, this.editingSpotId, { name: newName });
+    this.editingSpotId = '';
+    await this.loadData();
   }
 }

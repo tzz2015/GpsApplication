@@ -90,6 +90,7 @@ export class TrackStore {
     list[idx] = {
       trackId: existing.trackId,
       ownerUserId: existing.ownerUserId,
+      ownerDisplayName: existing.ownerDisplayName || '',
       title: updates.title !== undefined ? updates.title : existing.title,
       description: updates.description !== undefined ? updates.description : existing.description,
       visibility: updates.visibility !== undefined ? updates.visibility : existing.visibility,
@@ -103,6 +104,7 @@ export class TrackStore {
       totalDistance: updates.totalDistance !== undefined ? updates.totalDistance : existing.totalDistance,
       totalDuration: updates.totalDuration !== undefined ? updates.totalDuration : existing.totalDuration,
       maxAltitude: updates.maxAltitude !== undefined ? updates.maxAltitude : existing.maxAltitude,
+      spotCount: existing.spotCount || 0,
       coverImageUrl: updates.coverImageUrl !== undefined ? updates.coverImageUrl : existing.coverImageUrl,
       createdAt: existing.createdAt,
       updatedAt: Date.now()

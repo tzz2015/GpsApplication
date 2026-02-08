@@ -16,6 +16,7 @@ const LOG_TAG = 'Login';
 @Entry
 @Component
 struct Login {
+  @StorageProp('bottomSafeHeight') bottomSafeHeight: number = 0;
   @State agreed: boolean = false;
   @State isLoggingIn: boolean = false;
   @State loginError: string = '';
@@ -149,107 +150,124 @@ struct Login {
   }
 
   build() {
-    Column() {
-      Blank().layoutWeight(1);
+    Stack() {
+      // 主内容区域
+      Column() {
+        Blank().layoutWeight(1);
 
-      // ---- Logo 和标语 ----
-      Column({ space: 16 }) {
-        Column() {
-          Text('🗺')
-            .fontSize(48);
+        // ---- Logo 和标语 ----
+        Column({ space: 16 }) {
+          Column() {
+            Text('🗺')
+              .fontSize(52);
+          }
+          .width(88)
+          .height(88)
+          .borderRadius(22)
+          .backgroundColor('#22FFFFFF')
+          .justifyContent(FlexAlign.Center)
+          .backdropBlur(20)
+          .shadow({ radius: 16, color: '#331A3DB8', offsetX: 0, offsetY: 6 });
+
+          Text('遨游轨迹')
+            .fontSize(28)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Color.White);
+          Text('记录扫墓轨迹，守护家族记忆')
+            .fontSize(15)
+            .fontColor('#BBFFFFFF');
         }
-        .width(80)
-        .height(80)
-        .borderRadius(20)
-        .backgroundColor($r('app.color.primary_light'))
-        .justifyContent(FlexAlign.Center)
-        .shadow({ radius: 12, color: '#1A3478F6', offsetX: 0, offsetY: 4 });
+        .alignItems(HorizontalAlign.Center);
 
-        Text('遨游轨迹')
-          .fontSize(28)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.label_primary'));
-        Text('记录扫墓轨迹，守护家族记忆')
-          .fontSize(15)
-          .fontColor($r('app.color.label_secondary'));
-      }
-      .alignItems(HorizontalAlign.Center);
+        Blank().layoutWeight(1);
 
-      Blank().layoutWeight(1);
+        // ---- 登录按钮区域 ----
+        Column({ space: 16 }) {
+          // 错误提示
+          if (this.loginError.length > 0) {
+            Text(this.loginError)
+              .fontSize(13)
+              .fontColor('#FF6B6B')
+              .width('100%')
+              .textAlign(TextAlign.Center);
+          }
 
-      // ---- 协议勾选 + 登录按钮 ----
-      Column({ space: 20 }) {
-        // 协议勾选
-        Row({ space: 6 }) {
-          Checkbox()
-            .select(this.agreed)
-            .onChange((value: boolean) => {
-              this.onAgreementChange(value);
-            });
-          Text('已阅读并同意')
-            .fontSize(13)
-            .fontColor($r('app.color.label_secondary'));
-          Text('《隐私政策》')
-            .fontSize(13)
-            .fontColor($r('app.color.link'))
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/PrivacyPolicy' });
-            });
-          Text('与')
-            .fontSize(13)
-            .fontColor($r('app.color.label_secondary'));
-          Text('《用户协议》')
-            .fontSize(13)
-            .fontColor($r('app.color.link'))
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/UserAgreement' });
-            });
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center);
-
-        // 错误提示
-        if (this.loginError.length > 0) {
-          Text(this.loginError)
-            .fontSize(13)
-            .fontColor($r('app.color.destructive'))
+          // ★ 官方华为账号登录按钮组件（个人开发者必须使用此组件）
+          LoginWithHuaweiIDButton({
+            params: {
+              style: loginComponentManager.Style.BUTTON_RED,
+              borderRadius: 24,
+              loginType: loginComponentManager.LoginType.ID,
+              supportDarkMode: true
+            },
+            controller: this.controller
+          })
             .width('100%')
-            .textAlign(TextAlign.Center);
-        }
+            .height(50);
 
-        // ★ 官方华为账号登录按钮组件（个人开发者必须使用此组件）
-        LoginWithHuaweiIDButton({
-          params: {
-            style: loginComponentManager.Style.BUTTON_RED,
-            borderRadius: 24,
-            loginType: loginComponentManager.LoginType.ID,
-            supportDarkMode: true
-          },
-          controller: this.controller
-        })
-          .width('100%')
-          .height(50);
+          // 首次登录提示
+          Text('首次登录将自动创建账户')
+            .fontSize(12)
+            .fontColor('#88FFFFFF')
+            .textAlign(TextAlign.Center)
+            .width('100%');
 
-        // 开发模式：模拟登录
-        if (Config.IS_DEVELOPMENT_MODE) {
-          Button('开发模式：模拟登录')
-            .width('100%')
-            .height(40)
-            .fontSize(14)
-            .fontColor($r('app.color.label_secondary'))
-            .backgroundColor(Color.Transparent)
-            .borderRadius(20)
-            .enabled(this.agreed && !this.isLoggingIn)
-            .onClick(() => {
-              this.onMockLogin();
-            });
+          // 开发模式：模拟登录
+          if (Config.IS_DEVELOPMENT_MODE) {
+            Button('开发模式：模拟登录')
+              .width('100%')
+              .height(40)
+              .fontSize(14)
+              .fontColor('#AAFFFFFF')
+              .backgroundColor(Color.Transparent)
+              .borderRadius(20)
+              .enabled(this.agreed && !this.isLoggingIn)
+              .onClick(() => {
+                this.onMockLogin();
+              });
+          }
         }
+        .width('85%')
+        .margin({ bottom: 100 });
       }
-      .width('85%')
-      .margin({ bottom: 48 });
+      .width('100%')
+      .height('100%');
+
+      // ---- 底部协议勾选（绝对定位在底部） ----
+      Row({ space: 6 }) {
+        Checkbox()
+          .select(this.agreed)
+          .onChange((value: boolean) => {
+            this.onAgreementChange(value);
+          });
+        Text('已阅读并同意')
+          .fontSize(12)
+          .fontColor('#99FFFFFF');
+        Text('《隐私政策》')
+          .fontSize(12)
+          .fontColor('#DDFFFFFF')
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/PrivacyPolicy' });
+          });
+        Text('与')
+          .fontSize(12)
+          .fontColor('#99FFFFFF');
+        Text('《用户协议》')
+          .fontSize(12)
+          .fontColor('#DDFFFFFF')
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/UserAgreement' });
+          });
+      }
+      .justifyContent(FlexAlign.Center)
+      .width('100%')
+      .position({ bottom: 20 + this.bottomSafeHeight });
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.login_background'));
+    .linearGradient({
+      angle: 160,
+      colors: [['#3478F6', 0], ['#1E56CC', 0.5], ['#0D3BA8', 1]]
+    });
   }
 }
