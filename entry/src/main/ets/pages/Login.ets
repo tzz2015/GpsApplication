@@ -6,6 +6,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { AuthStore } from '../common/AuthStore';
 import { HuaweiAuthHelper, UserInfo } from '../common/HuaweiAuthHelper';
 import { Config } from '../common/Config';
+import { SyncService } from '../common/SyncService';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'Login';
@@ -114,6 +115,10 @@ struct Login {
       AuthStore.setUser(context, authUser)
         .then(() => {
           hilog.info(LOG_DOMAIN, LOG_TAG, 'User saved, navigating to Main');
+          // 登录成功后立即同步用户信息到云端
+          SyncService.syncUser(context).catch((e: Error) => {
+            hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync user after login: %{public}s', JSON.stringify(e));
+          });
           router.replaceUrl({ url: 'pages/Main' });
         })
         .catch((error: Error) => {
@@ -192,10 +197,14 @@ struct Login {
               .textAlign(TextAlign.Center);
           }
 
-          // ★ 官方华为账号登录按钮组件（个人开发者必须使用此组件）
+          // ★ 官方华为账号登录按钮组件
           LoginWithHuaweiIDButton({
             params: {
               style: loginComponentManager.Style.BUTTON_RED,
+              extraStyle: {
+                buttonStyle: new loginComponentManager.ButtonStyle()
+                  .loadingStyle({ show: this.isLoggingIn })
+              },
               borderRadius: 24,
               loginType: loginComponentManager.LoginType.ID,
               supportDarkMode: true

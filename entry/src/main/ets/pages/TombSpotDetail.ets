@@ -356,30 +356,31 @@ struct TombSpotDetail {
           // 底部操作
           Column({ space: 8 }) {
             if (this.isEditing) {
-              Button('保存')
-                .width('100%')
-                .height(50)
-                .fontSize(17)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(Color.White)
-                .backgroundColor($r('app.color.primary'))
-                .borderRadius(25)
-                .onClick(() => {
-                  this.saveSpotData();
-                });
               if (this.fromRecording) {
                 Button('保存并返回继续记录')
                   .width('100%')
-                  .height(44)
-                  .fontSize(15)
-                  .fontColor($r('app.color.accent'))
-                  .backgroundColor($r('app.color.accent_light'))
-                  .borderRadius(22)
+                  .height(50)
+                  .fontSize(17)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(Color.White)
+                  .backgroundColor($r('app.color.primary'))
+                  .borderRadius(25)
                   .onClick(async () => {
                     await this.saveSpotData();
                     router.back();
                   });
               }
+              Button(this.fromRecording ? '仅保存' : '保存')
+                .width('100%')
+                .height(this.fromRecording ? 44 : 50)
+                .fontSize(this.fromRecording ? 15 : 17)
+                .fontWeight(this.fromRecording ? FontWeight.Normal : FontWeight.Medium)
+                .fontColor(this.fromRecording ? $r('app.color.label_secondary') : Color.White)
+                .backgroundColor(this.fromRecording ? $r('app.color.accent_light') : $r('app.color.primary'))
+                .borderRadius(this.fromRecording ? 22 : 25)
+                .onClick(() => {
+                  this.saveSpotData();
+                });
             } else {
               Row({ space: 12 }) {
                 Button('编辑图文')

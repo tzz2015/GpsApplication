@@ -4,6 +4,8 @@ import { AsyncCallback } from '@kit.BasicServicesKit';
 import { geoLocationManager } from '@kit.LocationKit';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { image } from '@kit.ImageKit';
+import { fileIo } from '@kit.CoreFileKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { SyncService } from '../common/SyncService';
@@ -61,7 +63,7 @@ struct TrackRecord {
   @State mapCenterLat: number = 23.7275;
   @State mapCenterLng: number = 108.3426;
   @State showLayerPanel: boolean = false;
-  @State currentMapType: number = 1; // 1=标准, 2=卫星, 3=地形
+  @State currentMapType: number = 3; // 1=标准, 2=卫星, 3=地形（默认地形）
   @State is3DMode: boolean = false;
   private mapOptions?: mapCommon.MapOptions;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
@@ -80,8 +82,26 @@ struct TrackRecord {
       this.trackId = params.trackId || '';
       this.trackTitle = params.title || '';
     }
+    // 先尝试获取最近已知位置，快速定位地图中心
+    this.getLastKnownLocation();
     this.loadExistingData();
     this.initMap();
+  }
+
+  /** 获取最近已知位置，用于快速初始化地图中心 */
+  private getLastKnownLocation(): void {
+    try {
+      const lastLocation = geoLocationManager.getLastLocation();
+      if (lastLocation && lastLocation.latitude !== 0) {
+        this.mapCenterLat = lastLocation.latitude;
+        this.mapCenterLng = lastLocation.longitude;
+        hilog.info(LOG_DOMAIN, LOG_TAG,
+          'Last known location: %{public}f, %{public}f',
+          lastLocation.latitude, lastLocation.longitude);
+      }
+    } catch (e) {
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'getLastLocation: %{public}s', JSON.stringify(e));
+    }
   }
 
   aboutToDisappear(): void {
@@ -138,6 +158,12 @@ struct TrackRecord {
           controller.setMyLocationEnabled(true);
         } catch (e) {
           hilog.info(LOG_DOMAIN, LOG_TAG, 'setMyLocationEnabled: %{public}s', JSON.stringify(e));
+        }
+        // 默认设置地形图层
+        try {
+          controller.setMapType(3);
+        } catch (e) {
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'setMapType terrain: %{public}s', JSON.stringify(e));
         }
         // 定位到当前位置
         this.moveToCurrentLocation();
@@ -215,6 +241,9 @@ struct TrackRecord {
     });
   }
 
+  // 上次有效定位的时间戳，用于速度过滤
+  private lastLocationTime: number = 0;
+
   /** 开始持续定位记录 */
   private startLocationTracking(): void {
     const request: geoLocationManager.ContinuousLocationRequest = {
@@ -228,18 +257,39 @@ struct TrackRecord {
       const lat = location.latitude;
       const lng = location.longitude;
       const alt = Math.round(location.altitude);
+      const accuracy = location.accuracy || 0;
+      const now = Date.now();
 
-      // 距离阈值过滤：至少移动2米才记录
+      // ① GPS 精度过滤：精度 > 30m 说明信号差，丢弃
+      if (accuracy > 30) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'Skip low accuracy point: %{public}f m', accuracy);
+        return;
+      }
+
       if (this.lastLat !== 0) {
         const dist = TrackModel.calculateDistance(this.lastLat, this.lastLng, lat, lng);
-        if (dist < 2) {
+
+        // ② 距离阈值过滤：至少移动 5 米才记录（避免 GPS 漂移累加）
+        if (dist < 5) {
           return;
         }
+
+        // ③ 速度过滤：两点间速度超过 150km/h 视为 GPS 跳点，丢弃
+        const timeDiffSec = (now - this.lastLocationTime) / 1000;
+        if (timeDiffSec > 0) {
+          const speedKmh = (dist / timeDiffSec) * 3.6;
+          if (speedKmh > 150) {
+            hilog.info(LOG_DOMAIN, LOG_TAG, 'Skip GPS jump: dist=%{public}f speed=%{public}f km/h', dist, speedKmh);
+            return;
+          }
+        }
+
         this.totalDistance += dist;
       }
 
       this.lastLat = lat;
       this.lastLng = lng;
+      this.lastLocationTime = now;
       this.currentAltitude = alt;
       if (alt > this.maxAltitude) {
         this.maxAltitude = alt;
@@ -248,12 +298,12 @@ struct TrackRecord {
       // 记录轨迹点
       this.recordPoints.push({ latitude: lat, longitude: lng });
       const point: TrackModel.TrackPointItem = {
-        pointId: this.trackId + '_pt_' + Date.now(),
+        pointId: this.trackId + '_pt_' + now.toString(),
         latitude: lat,
         longitude: lng,
         altitude: alt,
-        accuracy: location.accuracy || 0,
-        timestamp: Date.now(),
+        accuracy: accuracy,
+        timestamp: now,
         syncStatus: 'pending'
       };
       this.allTrackPoints.push(point);
@@ -268,6 +318,33 @@ struct TrackRecord {
       geoLocationManager.off('locationChange');
     } catch (e) {
       hilog.info(LOG_DOMAIN, LOG_TAG, 'off locationChange: %{public}s', JSON.stringify(e));
+    }
+  }
+
+  /** 截取地图当前视图作为轨迹封面图 */
+  private async captureMapCover(context: common.Context): Promise<string> {
+    if (!this.mapController) {
+      return '';
+    }
+    try {
+      const pixelMap: image.PixelMap = await this.mapController.snapshot();
+      // 保存为本地文件
+      const dir = context.filesDir;
+      const fileName = 'cover_' + this.trackId + '.jpg';
+      const filePath = dir + '/' + fileName;
+      const packer = image.createImagePacker();
+      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 80 };
+      const data: ArrayBuffer = await packer.packing(pixelMap, packOpts);
+      const file = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
+      fileIo.writeSync(file.fd, data);
+      fileIo.closeSync(file.fd);
+      packer.release();
+      pixelMap.release();
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Map cover saved: %{public}s', filePath);
+      return filePath;
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'captureMapCover: %{public}s', JSON.stringify(e));
+      return '';
     }
   }
 
@@ -424,6 +501,9 @@ struct TrackRecord {
       this.allTrackPoints = [];
     }
 
+    // 先尝试截取地图作为封面图
+    const coverPath = await this.captureMapCover(context);
+
     // 更新轨迹为已完成
     await TrackStore.updateTrack(context, this.trackId, {
       status: TrackModel.TRACK_STATUS_DONE,
@@ -432,7 +512,8 @@ struct TrackRecord {
       endLng: this.lastLng,
       totalDistance: this.totalDistance,
       totalDuration: this.elapsedTime,
-      maxAltitude: this.maxAltitude
+      maxAltitude: this.maxAltitude,
+      coverImageUrl: coverPath
     });
 
     // 结束轨迹后，后台同步到云端

@@ -211,14 +211,27 @@ struct TrackDetail {
       }
     }
 
-    // ===== 2. 起点标记（始终绘制） =====
+    // ===== 2. 起点标记（小绿色圆点 + 标题，点击显示名称） =====
     if (this.track && this.track.startLat !== 0) {
       try {
         const startP = await this.convertToGCJ02(this.track.startLat, this.track.startLng);
+        // 绘制小圆点作为视觉标记
+        await this.mapController.addCircle({
+          center: startP,
+          radius: 8,
+          fillColor: 0xFF34C759,
+          strokeColor: 0xFFFFFFFF,
+          strokeWidth: 3,
+          visible: true
+        });
+        // 添加可点击标记（用于显示名称）
         await this.mapController.addMarker({
           position: startP,
           title: this.track.startName || '起点',
-          visible: true
+          snippet: '起点',
+          visible: true,
+          clickable: true,
+          alpha: 0.01
         });
         allLatLngs.push(startP);
       } catch (e) {
@@ -226,14 +239,25 @@ struct TrackDetail {
       }
     }
 
-    // ===== 3. 终点标记（轨迹已完成时绘制） =====
+    // ===== 3. 终点标记（小红色圆点 + 标题） =====
     if (this.track && this.track.endLat !== 0 && this.track.endName.length > 0) {
       try {
         const endP = await this.convertToGCJ02(this.track.endLat, this.track.endLng);
+        await this.mapController.addCircle({
+          center: endP,
+          radius: 8,
+          fillColor: 0xFFFF3B30,
+          strokeColor: 0xFFFFFFFF,
+          strokeWidth: 3,
+          visible: true
+        });
         await this.mapController.addMarker({
           position: endP,
           title: this.track.endName || '终点',
-          visible: true
+          snippet: '终点',
+          visible: true,
+          clickable: true,
+          alpha: 0.01
         });
         allLatLngs.push(endP);
       } catch (e) {
@@ -272,7 +296,7 @@ struct TrackDetail {
       points.length, this.tombSpots.length, allLatLngs.length);
   }
 
-  /** 在地图上标记所有打卡点（优先用小圆圈，回退到半透明标记） */
+  /** 在地图上标记所有打卡点（蓝色圆点 + 可点击标记显示名称） */
   private async drawSpotMarkers(): Promise<void> {
     if (!this.mapController) {
       return;
@@ -283,31 +307,44 @@ struct TrackDetail {
         continue;
       }
       const gcj02 = await this.convertToGCJ02(spot.latitude, spot.longitude);
-      let circleOk = false;
-      // 优先用小圆圈标记打卡点（比默认大图钉更精致）
+      // 蓝色圆点作为视觉标记
       try {
         await this.mapController.addCircle({
           center: gcj02,
           radius: 6,
-          fillColor: 0xCC4A90D9,
+          fillColor: 0xFF3478F6,
           strokeColor: 0xFFFFFFFF,
           strokeWidth: 3,
           visible: true
         });
-        circleOk = true;
       } catch (e) {
-        hilog.info(LOG_DOMAIN, LOG_TAG, 'addCircle[%{public}d] fallback to marker: %{public}s', i, JSON.stringify(e));
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'addCircle[%{public}d]: %{public}s', i, JSON.stringify(e));
       }
-      // 添加标记：圆圈成功则几乎隐藏图钉（仅保留可点击标题），否则用半透明图钉
+      // 可点击标记（点击显示名称信息窗口）
       try {
+        const spotLabel = (i + 1).toString() + '. ' + spot.name;
         await this.mapController.addMarker({
           position: gcj02,
-          title: spot.name,
+          title: spotLabel,
+          snippet: '海拔 ' + spot.altitude.toString() + 'm',
           visible: true,
-          alpha: circleOk ? 0.01 : 0.7
+          clickable: true,
+          alpha: 0.01
         });
       } catch (e) {
         hilog.info(LOG_DOMAIN, LOG_TAG, 'addSpotMarker[%{public}d]: %{public}s', i, JSON.stringify(e));
+      }
+    }
+
+    // 注册标记点击事件，点击时显示信息窗口
+    if (this.mapController) {
+      try {
+        this.mapController.on('markerClick', (marker: map.Marker) => {
+          marker.setInfoWindowVisible(true);
+          return true;
+        });
+      } catch (e) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'on markerClick: %{public}s', JSON.stringify(e));
       }
     }
   }

@@ -20,18 +20,18 @@ export struct NavBar {
       // 导航栏主体
       Row() {
         if (this.showBack) {
-          Row({ space: 2 }) {
-            Text('‹')
-              .fontSize(22)
+          Row({ space: 6 }) {
+            Text('<')
+              .fontSize(18)
               .fontColor($r('app.color.primary'))
-              .fontWeight(FontWeight.Medium);
+              .fontWeight(FontWeight.Bold);
             Text($r('app.string.nav_back'))
               .fontSize(16)
               .fontColor($r('app.color.primary'));
           }
           .alignItems(VerticalAlign.Center)
           .height(44)
-          .padding({ left: 8, right: 12 })
+          .padding({ left: 12, right: 12 })
           .onClick(() => {
             router.back();
           });

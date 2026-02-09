@@ -155,14 +155,14 @@ struct Main {
         .fontSize(15)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.currentTopIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
-      if (this.currentTopIndex === index) {
-        Column()
-          .width(24)
-          .height(3)
-          .backgroundColor($r('app.color.primary'))
-          .borderRadius(1.5)
-          .margin({ top: 6 });
-      }
+      // 始终渲染指示线，未选中时透明，避免布局抖动
+      Column()
+        .width(24)
+        .height(3)
+        .backgroundColor($r('app.color.primary'))
+        .borderRadius(1.5)
+        .margin({ top: 6 })
+        .opacity(this.currentTopIndex === index ? 1 : 0);
     }
     .padding({ top: 8, bottom: 4 });
   }
@@ -225,11 +225,11 @@ struct Main {
             .borderWidth(2)
             .borderColor($r('app.color.primary'))
             .borderStyle(BorderStyle.Dashed)
-            .margin({ left: 16, right: 16 })
             .onClick(() => {
               router.pushUrl({ url: 'pages/CreateOrEditTrack' });
             });
           }
+          .margin({ left: 16, right: 16 });
 
           // 轨迹卡片列表
           ForEach(this.myTracks, (item: TrackModel.Track) => {
@@ -297,71 +297,86 @@ struct Main {
   @Builder
   TrackCard(item: TrackModel.Track) {
     Column() {
-      Row({ space: 8 }) {
-        Text(item.title)
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.label_primary'))
-          .layoutWeight(1)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-        if (item.status === TrackModel.TRACK_STATUS_DONE) {
-          Text('已完成')
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.success'))
-            .backgroundColor($r('app.color.success_light'))
-            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .borderRadius(10);
-        } else {
-          Text('编辑中')
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.warning'))
-            .backgroundColor($r('app.color.warning_light'))
-            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .borderRadius(10);
+      // 封面图（如有）
+      if (item.coverImageUrl.length > 0) {
+        Image(item.coverImageUrl)
+          .width('100%')
+          .height(140)
+          .objectFit(ImageFit.Cover)
+          .borderRadius({ topLeft: 12, topRight: 12 })
+          .alt($r('app.color.separator'));
+      }
+
+      Column() {
+        Row({ space: 8 }) {
+          Text(item.title)
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.label_primary'))
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+          if (item.status === TrackModel.TRACK_STATUS_DONE) {
+            Text('已完成')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.success'))
+              .backgroundColor($r('app.color.success_light'))
+              .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+              .borderRadius(10);
+          } else {
+            Text('编辑中')
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.warning'))
+              .backgroundColor($r('app.color.warning_light'))
+              .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+              .borderRadius(10);
+          }
         }
-      }
-      .width('100%');
+        .width('100%');
 
-      Text(TrackModel.formatDate(item.createdAt))
-        .fontSize(12)
-        .fontColor($r('app.color.label_tertiary'))
-        .margin({ top: 4 });
-
-      if (item.description.length > 0) {
-        Text(item.description)
-          .fontSize(13)
-          .fontColor($r('app.color.label_secondary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 4 });
-      }
-
-      Row({ space: 16 }) {
-        Text('📍 ' + TrackModel.formatDistance(item.totalDistance))
+        Text(TrackModel.formatDate(item.createdAt))
           .fontSize(12)
-          .fontColor($r('app.color.label_secondary'));
-        if (item.maxAltitude > 0) {
-          Text('⛰ ' + item.maxAltitude.toString() + 'm')
+          .fontColor($r('app.color.label_tertiary'))
+          .margin({ top: 4 });
+
+        if (item.description.length > 0) {
+          Text(item.description)
+            .fontSize(13)
+            .fontColor($r('app.color.label_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 4 });
+        }
+
+        Row({ space: 16 }) {
+          Text('📍 ' + TrackModel.formatDistance(item.totalDistance))
             .fontSize(12)
             .fontColor($r('app.color.label_secondary'));
+          if (item.maxAltitude > 0) {
+            Text('⛰ ' + item.maxAltitude.toString() + 'm')
+              .fontSize(12)
+              .fontColor($r('app.color.label_secondary'));
+          }
+          if (item.totalDuration > 0) {
+            Text('⏱ ' + TrackModel.formatDuration(item.totalDuration))
+              .fontSize(12)
+              .fontColor($r('app.color.label_secondary'));
+          }
         }
-        if (item.totalDuration > 0) {
-          Text('⏱ ' + TrackModel.formatDuration(item.totalDuration))
-            .fontSize(12)
-            .fontColor($r('app.color.label_secondary'));
-        }
+        .width('100%')
+        .margin({ top: 8 });
       }
       .width('100%')
-      .margin({ top: 8 });
+      .padding(item.coverImageUrl.length > 0 ? { left: 16, right: 16, top: 12, bottom: 16 } :
+        { left: 16, right: 16, top: 16, bottom: 16 });
     }
     .width('100%')
-    .padding(16)
     .backgroundColor($r('app.color.card_background'))
     .borderRadius(12)
     .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
+    .clip(true)
     .onClick(() => {
       router.pushUrl({
         url: 'pages/TrackDetail',
@@ -573,7 +588,7 @@ struct Main {
       .padding({ top: 32 + this.statusBarHeight, bottom: 24, left: 20, right: 20 })
       .linearGradient({
         angle: 160,
-        colors: [['#263238', 0], ['#37474f', 0.5], ['#455a64', 1]]
+        colors: [['#3478F6', 0], ['#1E56CC', 0.5], ['#0D3BA8', 1]]
       })
       .alignItems(HorizontalAlign.Center);
 
