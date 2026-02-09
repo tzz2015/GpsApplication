@@ -47,13 +47,6 @@ export class SyncService {
       return;
     }
 
-    // ★ 确保 AGC Auth 已就绪
-    const authOk = await CloudDBService.ensureAuth();
-    if (!authOk) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncUser: AGC Auth 未就绪，跳过');
-      return;
-    }
-
     try {
       const authUser = await AuthStore.getCurrentUser(context);
       if (!authUser) {
@@ -129,13 +122,6 @@ export class SyncService {
       return;
     }
     if (!SyncService.isNetworkAvailable()) {
-      return;
-    }
-
-    // ★ 确保 AGC Auth 已就绪
-    const authOk = await CloudDBService.ensureAuth();
-    if (!authOk) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncAll: AGC Auth 未就绪，跳过');
       return;
     }
 
@@ -223,9 +209,10 @@ export class SyncService {
   private static localSpotToEntity(spot: TrackModel.TombSpot): TombSpotEntity {
     const entity = new TombSpotEntity();
     entity.tombId = spot.tombId;
+    entity.segmentId = ''; // 云 schema 中为 notNull，当前不使用分段
     entity.trackId = spot.trackId;
     entity.orderIndex = spot.orderIndex;
-    entity.name = spot.name;
+    entity.name = spot.name || '';
     entity.personInfo = spot.personInfo;
     entity.remark = spot.remark;
     entity.lat = spot.latitude;

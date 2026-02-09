@@ -41,31 +41,40 @@ export class CloudDBService {
 
   /**
    * 确保 AGC Auth 已登录并注册 AuthProvider
-   * 在执行 Cloud DB 写操作前调用
+   * 即使 Auth 登录失败，仍然注册 AuthProvider 并返回 true（依赖 World 权限）
    */
   static async ensureAuth(): Promise<boolean> {
     try {
       const user: AuthUser | null = await auth.getCurrentUser();
       if (user === null) {
-        hilog.info(LOG_DOMAIN, LOG_TAG, 'No AGC Auth user, signing in with HWID...');
-        await auth.signIn({
-          autoCreateUser: true,
-          credentialInfo: { 'kind': 'hwid' }
-        });
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ AGC Auth signIn success');
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'No AGC Auth user, trying HWID signIn...');
+        try {
+          await auth.signIn({
+            autoCreateUser: true,
+            credentialInfo: { 'kind': 'hwid' }
+          });
+          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ AGC Auth signIn success');
+        } catch (signErr) {
+          const se = signErr as BusinessError;
+          hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ AGC Auth signIn failed (will use World role): code=%{public}d',
+            se.code || 0);
+        }
       } else {
         hilog.info(LOG_DOMAIN, LOG_TAG, '✅ AGC Auth user exists, uid=%{public}s', user.getUid());
       }
-      // 注册 AuthProvider 到 CloudFoundationKit
-      cloudCommon.init({ authProvider: auth.getAuthProvider() });
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ CloudCommon AuthProvider registered');
-      return true;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ ensureAuth failed: code=%{public}d, msg=%{public}s',
-        err.code || 0, err.message || JSON.stringify(e));
-      return false;
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ getCurrentUser failed: code=%{public}d', err.code || 0);
     }
+
+    // ★ 无论 Auth 是否成功，都注册 AuthProvider 并返回 true
+    try {
+      cloudCommon.init({ authProvider: auth.getAuthProvider() });
+      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ CloudCommon AuthProvider registered');
+    } catch (e) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ cloudCommon.init skipped');
+    }
+    return true;
   }
 
   /**

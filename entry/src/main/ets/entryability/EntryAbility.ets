@@ -90,16 +90,12 @@ export default class EntryAbility extends UIAbility {
 
   onForeground(): void {
     hilog.info(DOMAIN, TAG, 'Ability onForeground');
-    // ★ 等待 Auth 就绪后再触发同步，避免竞态条件
+    // ★ 等待 ensureAuth 完成后再触发同步（ensureAuth 现在始终返回 true）
     if (this.authReadyPromise) {
-      this.authReadyPromise.then((authOk: boolean) => {
-        if (authOk) {
-          SyncService.syncAll(this.context).catch((e: Error) => {
-            hilog.warn(DOMAIN, TAG, 'Background sync failed: %{public}s', JSON.stringify(e));
-          });
-        } else {
-          hilog.warn(DOMAIN, TAG, 'Skip sync: auth not ready');
-        }
+      this.authReadyPromise.then(() => {
+        SyncService.syncAll(this.context).catch((e: Error) => {
+          hilog.warn(DOMAIN, TAG, 'Background sync failed: %{public}s', JSON.stringify(e));
+        });
       });
     }
   }
