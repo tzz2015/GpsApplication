@@ -5,6 +5,7 @@ import { TrackModel } from './TrackModel';
 import { TrackStore } from './TrackStore';
 import { AuthStore } from './AuthStore';
 import { CloudDBService } from './CloudDBService';
+import { CloudStorageService } from './CloudStorageService';
 import { UserEntity } from '../model/UserEntity';
 import { TrackEntity } from '../model/TrackEntity';
 import { TrackPointEntity } from '../model/TrackPointEntity';
@@ -73,6 +74,7 @@ export class SyncService {
 
   /**
    * 同步单条轨迹到云端（包含打卡点和轨迹点）
+   * 流程：上传图片 → 同步轨迹 → 同步打卡点 → 同步轨迹点
    */
   static async syncTrack(context: common.Context, trackId: string): Promise<void> {
     if (!SyncService.isNetworkAvailable()) {
@@ -81,23 +83,51 @@ export class SyncService {
     }
 
     try {
-      // 1. 同步轨迹主体
+      // 1. 读取轨迹主体
       const track = await TrackStore.getTrackById(context, trackId);
       if (!track) {
         return;
       }
 
+      // 2. ★ 上传轨迹封面图到云存储（本地路径 → 云端 URL）
+      if (track.coverImageUrl.length > 0 && CloudStorageService.isLocalPath(track.coverImageUrl)) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'Uploading track cover for %{public}s...', trackId);
+        const cloudCoverUrl = await CloudStorageService.uploadTrackCover(context, trackId, track.coverImageUrl);
+        if (cloudCoverUrl !== track.coverImageUrl) {
+          // 上传成功，更新本地存储的封面 URL
+          track.coverImageUrl = cloudCoverUrl;
+          await TrackStore.updateTrack(context, trackId, { coverImageUrl: cloudCoverUrl });
+          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Track cover uploaded & local updated');
+        }
+      }
+
+      // 3. 同步轨迹主体到 Cloud DB
       const trackEntity = SyncService.localTrackToEntity(track);
       await CloudDBService.upsertTrack(trackEntity);
 
-      // 2. 同步打卡点
+      // 4. 同步打卡点（含图片上传）
       const spots = await TrackStore.getTombSpotsByTrackId(context, trackId);
       for (let i = 0; i < spots.length; i++) {
-        const spotEntity = SyncService.localSpotToEntity(spots[i]);
+        const spot = spots[i];
+
+        // ★ 上传打卡点图片到云存储
+        if (spot.imageUris.length > 0 && spot.imageUris !== '[]') {
+          const updatedUrisJson = await CloudStorageService.uploadSpotImages(
+            context, trackId, spot.tombId, spot.imageUris
+          );
+          if (updatedUrisJson !== spot.imageUris) {
+            // 有图片上传成功，更新本地
+            spot.imageUris = updatedUrisJson;
+            await TrackStore.updateTombSpot(context, spot.tombId, { imageUris: updatedUrisJson });
+            hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Spot images uploaded: %{public}s', spot.tombId);
+          }
+        }
+
+        const spotEntity = SyncService.localSpotToEntity(spot);
         await CloudDBService.upsertTombSpot(spotEntity);
       }
 
-      // 3. 同步轨迹点（本地 syncStatus=pending 的）
+      // 5. 同步轨迹点（本地 syncStatus=pending 的）
       const points = await TrackStore.getTrackPointsByTrackId(context, trackId);
       const pendingPoints = points.filter((p: TrackModel.TrackPointItem) => p.syncStatus === 'pending');
       if (pendingPoints.length > 0) {
@@ -163,7 +193,7 @@ export class SyncService {
   }
 
   /**
-   * 删除云端轨迹（及关联数据）
+   * 删除云端轨迹（及关联数据 + 云存储文件）
    */
   static async deleteCloudTrack(trackId: string): Promise<void> {
     if (!SyncService.isNetworkAvailable()) {
@@ -171,6 +201,7 @@ export class SyncService {
     }
 
     try {
+      // 1. 删除 Cloud DB 数据
       await CloudDBService.deleteTrackPoints(trackId);
 
       const spots = await CloudDBService.queryTombSpots(trackId);
@@ -182,7 +213,17 @@ export class SyncService {
       }
 
       await CloudDBService.deleteTrack(trackId);
-      hilog.info(LOG_DOMAIN, LOG_TAG, 'Cloud track deleted: %{public}s', trackId);
+
+      // 2. ★ 清理云存储中该轨迹的所有文件（封面 + 打卡点图片）
+      const tombIds: string[] = [];
+      for (let i = 0; i < spots.length; i++) {
+        if (spots[i].tombId) {
+          tombIds.push(spots[i].tombId as string);
+        }
+      }
+      await CloudStorageService.deleteTrackFiles(trackId, tombIds);
+
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Cloud track deleted (DB + Storage): %{public}s', trackId);
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'Delete cloud track failed: %{public}s', JSON.stringify(e));
     }

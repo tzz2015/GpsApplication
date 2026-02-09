@@ -26,10 +26,18 @@ alwaysApply: true
 - 页面文件使用 `page.ets` 后缀（或与路由一致的命名）。
 - 资源文件使用 `resources` 目录统一管理。
 
-## 四、代码风格与类型安全
+## 四、代码风格与类型安全（arkts-no-any-unknown 零容忍）
 
 - 使用 ArkTS/TypeScript 进行类型标注。
-- **ArkTS 不支持 `any` 与 `unknown` 类型**：禁止使用 `any`、`unknown`，一律使用明确的类型定义（如 `interface`、具体类型或泛型约束）。
+- **⚠️ ArkTS 绝对禁止 `any` 与 `unknown`（编译器规则 arkts-no-any-unknown，违反即编译失败）**：
+  所有变量、参数、返回值、泛型都必须使用明确的具体类型，包括隐式产生 `any` 的场景：
+  1. `JSON.parse()` 返回值 → 必须 `as SomeType` 断言：`JSON.parse(str) as string[]`
+  2. `catch (e)` 异常 → 必须 `const err = e as BusinessError;`
+  3. Promise/回调参数 → 必须标注：`.then((ok: boolean) => { ... })`
+  4. SDK 返回值 → 必须标注：`const user: AuthUser | null = await auth.getCurrentUser();`
+  5. 函数参数和返回值 → 必须显式声明类型
+  6. 空数组 → 必须泛型：`const arr: string[] = [];`
+  7. 对象字面量传给 SDK 方法 → 确保匹配接口类型或用断言
 - 使用 `interface` 定义对象类型。
 - 启用严格模式检查。
 - 使用明确的类型注解和泛型提高代码复用性。
