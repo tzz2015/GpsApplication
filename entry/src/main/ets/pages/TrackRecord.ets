@@ -6,6 +6,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
+import { SyncService } from '../common/SyncService';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'TrackRecord';
@@ -432,6 +433,11 @@ struct TrackRecord {
       totalDistance: this.totalDistance,
       totalDuration: this.elapsedTime,
       maxAltitude: this.maxAltitude
+    });
+
+    // 结束轨迹后，后台同步到云端
+    SyncService.syncTrack(context, this.trackId).catch((e: Error) => {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync track after end: %{public}s', JSON.stringify(e));
     });
 
     // 跳转到轨迹详情页

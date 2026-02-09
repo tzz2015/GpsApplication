@@ -302,4 +302,27 @@ export class TrackStore {
       .filter((p: TrackModel.TrackPointItem) => p.pointId.startsWith(trackId))
       .sort((a: TrackModel.TrackPointItem, b: TrackModel.TrackPointItem) => a.timestamp - b.timestamp);
   }
+
+  /**
+   * 标记轨迹点为已同步
+   */
+  static async markPointsSynced(context: common.Context, trackId: string, syncedPoints: TrackModel.TrackPointItem[]): Promise<void> {
+    try {
+      const all = await TrackStore.getAllTrackPoints(context);
+      const syncedIds: string[] = [];
+      for (let i = 0; i < syncedPoints.length; i++) {
+        syncedIds.push(syncedPoints[i].pointId);
+      }
+      for (let i = 0; i < all.length; i++) {
+        if (syncedIds.indexOf(all[i].pointId) >= 0) {
+          all[i].syncStatus = 'synced';
+        }
+      }
+      const prefs = await preferences.getPreferences(context, PREF_NAME);
+      await prefs.put(KEY_TRACKPOINTS, JSON.stringify(all));
+      await prefs.flush();
+    } catch (e) {
+      console.error('TrackStore markPointsSynced: ' + JSON.stringify(e));
+    }
+  }
 }

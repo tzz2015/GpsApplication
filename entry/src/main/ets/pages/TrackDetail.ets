@@ -7,6 +7,7 @@ import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { AuthStore } from '../common/AuthStore';
 import { NavBar } from '../common/NavBar';
+import { SyncService } from '../common/SyncService';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'TrackDetail';
@@ -378,6 +379,10 @@ struct TrackDetail {
     await TrackStore.updateTrack(context, this.trackId, {
       visibility: this.isPrivate ? TrackModel.VISIBILITY_PRIVATE : TrackModel.VISIBILITY_PUBLIC
     });
+    // 同步可见性变更到云端
+    SyncService.syncTrack(context, this.trackId).catch((e: Error) => {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync visibility change: %{public}s', JSON.stringify(e));
+    });
   }
 
   /** 删除轨迹 */
@@ -392,6 +397,10 @@ struct TrackDetail {
         action: async () => {
           const context = this.getUIContext().getHostContext() as common.Context;
           await TrackStore.deleteTrack(context, this.trackId);
+          // 同时删除云端数据
+          SyncService.deleteCloudTrack(this.trackId).catch((e: Error) => {
+            hilog.warn(0x0000, 'TrackDetail', 'Delete cloud track: %{public}s', JSON.stringify(e));
+          });
           router.back();
         }
       }

@@ -2,6 +2,7 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window, display } from '@kit.ArkUI';
 import { AuthStore } from '../common/AuthStore';
+import { SyncService } from '../common/SyncService';
 
 const DOMAIN = 0x0000;
 
@@ -13,13 +14,7 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     
-    // AGC初始化暂时注释，因为AGC SDK不可用
-    // try {
-    //   agconnect.instance().init(this.context);
-    //   hilog.info(DOMAIN, 'testTag', 'AGC initialized successfully');
-    // } catch (e) {
-    //   hilog.warn(DOMAIN, 'testTag', 'AGC init failed: %{public}s', JSON.stringify(e));
-    // }
+    // Cloud Foundation Kit 无需手动初始化 AGC，系统 Kit 自动处理
 
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
@@ -79,6 +74,11 @@ export default class EntryAbility extends UIAbility {
   onForeground(): void {
     // Ability has brought to foreground
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
+
+    // 回到前台时，触发后台同步（有网时将本地数据同步到云端）
+    SyncService.syncAll(this.context).catch((e: Error) => {
+      hilog.warn(DOMAIN, 'testTag', 'Background sync failed: %{public}s', JSON.stringify(e));
+    });
   }
 
   onBackground(): void {

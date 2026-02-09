@@ -4,6 +4,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { AuthStore, AuthUser } from '../common/AuthStore';
+import { SyncService } from '../common/SyncService';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'Main';
@@ -49,6 +50,11 @@ struct Main {
         t.visibility === TrackModel.VISIBILITY_PUBLIC && t.status === TrackModel.TRACK_STATUS_DONE
       );
       this.isLoading = false;
+
+      // 进入首页时，后台同步本地数据到云端
+      SyncService.syncAll(context).catch((e: Error) => {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'Background sync: %{public}s', JSON.stringify(e));
+      });
     }).catch(() => {
       this.isLoading = false;
     });
