@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/lyf/.ohos/config/default_GpsApplication__UTIqBClQyDl0PsdQmctN24epMMpmsbdUdGh8F48joc=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001B4FC39C81D5D3893401003B3AEEBAB8AD7ECA8E3061F9A61D56A6B83F33221A8DE68C6D6B45587C",
-          "profile": "/Users/lyf/.ohos/config/default_GpsApplication__UTIqBClQyDl0PsdQmctN24epMMpmsbdUdGh8F48joc=.p7b",
+          "storeFile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.p12",
+          "storePassword": "0000001A92180A35278B5AF486B9DDFB4AF5F764E2A5ABD736432974ADBC85555051FF4429389DE714BE",
+          "keyAlias": "lyy",
+          "keyPassword": "0000001A720C7B5F31DB69C5A1F0C44806D9E8758A4FE48A9C6718DB3E2B559F72427D69BEDF29503E8D",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/lyf/.ohos/config/default_GpsApplication__UTIqBClQyDl0PsdQmctN24epMMpmsbdUdGh8F48joc=.p12",
-          "storePassword": "0000001B1E42D62B78A908DF76EAA1CB55202723D0B63CFB687D07B950CC46EA4197D0A14E66966C655A75"
+          "profile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debugDebug.p7b",
+          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.cer"
         }
       }
     ],
