@@ -6,6 +6,6 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "@hw.hms.agconnect": "^1.9.0.300"
+    "@hw-agconnect/auth": "^1.0.4"
   }
 }

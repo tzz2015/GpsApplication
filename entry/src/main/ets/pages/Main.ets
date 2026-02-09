@@ -5,6 +5,7 @@ import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { AuthStore, AuthUser } from '../common/AuthStore';
 import { SyncService } from '../common/SyncService';
+import { CloudDBService } from '../common/CloudDBService';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'Main';
@@ -23,6 +24,8 @@ struct Main {
   @State publicTracks: TrackModel.Track[] = [];
   @State isLoading: boolean = false;
   @State currentUser: AuthUser | null = null;
+  @State diagResult: string = '';
+  @State isDiagnosing: boolean = false;
 
   aboutToAppear(): void {
     this.loadAllData();
@@ -619,6 +622,39 @@ struct Main {
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)
         .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 });
+
+        // 开发调试：Cloud DB 诊断
+        Column({ space: 8 }) {
+          Button(this.isDiagnosing ? '诊断中...' : '🔧 诊断 Cloud DB 连通性')
+            .width('100%')
+            .height(48)
+            .fontSize(14)
+            .fontColor('#3478F6')
+            .backgroundColor($r('app.color.card_background'))
+            .borderRadius(12)
+            .enabled(!this.isDiagnosing)
+            .onClick(() => {
+              this.isDiagnosing = true;
+              this.diagResult = '';
+              CloudDBService.diagnose().then((result: string) => {
+                this.diagResult = result;
+                this.isDiagnosing = false;
+              }).catch((e: Error) => {
+                this.diagResult = '❌ 诊断异常: ' + JSON.stringify(e);
+                this.isDiagnosing = false;
+              });
+            });
+
+          if (this.diagResult.length > 0) {
+            Text(this.diagResult)
+              .fontSize(12)
+              .fontColor($r('app.color.label_secondary'))
+              .width('100%')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8);
+          }
+        }
 
         Button('退出登录')
           .width('100%')
