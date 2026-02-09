@@ -1,6 +1,7 @@
 import { cloudDatabase, cloudCommon } from '@kit.CloudFoundationKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { http } from '@kit.NetworkKit';
 import auth from '@hw-agconnect/auth';
 import { AuthUser } from '@hw-agconnect/auth';
 import { UserEntity } from '../model/UserEntity';
@@ -86,40 +87,79 @@ export class CloudDBService {
 
     hilog.info(LOG_DOMAIN, LOG_TAG, '====== Cloud DB 诊断开始 ======');
 
-    // ★ 第 0 步：检查 AGC Auth 状态
+    // ★ 第 0a 步：HTTP 连通性测试（直接测 AGC 网关 DNS）
+    const testUrls: string[] = [
+      'https://connect-drcn.dbankcloud.cn',
+      'https://connect-drcn.hispace.hicloud.com',
+      'https://www.baidu.com'
+    ];
+    for (let i = 0; i < testUrls.length; i++) {
+      const testUrl = testUrls[i];
+      try {
+        const httpRequest = http.createHttp();
+        const resp = await httpRequest.request(testUrl, {
+          method: http.RequestMethod.GET,
+          connectTimeout: 5000,
+          readTimeout: 5000
+        });
+        const code = resp.responseCode;
+        results.push('✅ HTTP ' + testUrl + ' → ' + code.toString());
+        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0a] HTTP %{public}s → %{public}d', testUrl, code);
+        httpRequest.destroy();
+      } catch (httpErr) {
+        const he = httpErr as BusinessError;
+        results.push('❌ HTTP ' + testUrl + ' → code=' + (he.code || 0).toString());
+        hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0a] HTTP %{public}s → code=%{public}d, msg=%{public}s',
+          testUrl, he.code || 0, he.message || '');
+      }
+    }
+
+    // ★ 第 0b 步：检查 AGC Auth 状态
     try {
       const user: AuthUser | null = await auth.getCurrentUser();
       if (user !== null) {
         const uid: string = user.getUid();
         const displayName: string = user.getDisplayName();
         results.push('✅ AGC Auth 已登录: uid=' + uid + ', name=' + displayName);
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0/5] AGC Auth 已登录: uid=%{public}s, name=%{public}s',
+        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0b] AGC Auth 已登录: uid=%{public}s, name=%{public}s',
           uid, displayName);
       } else {
-        results.push('⚠️ AGC Auth 未登录，尝试自动登录...');
-        hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ [0/5] AGC Auth 未登录，尝试自动登录');
-        // 尝试自动登录
+        results.push('⚠️ AGC Auth 未登录');
+        hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ [0b] AGC Auth 未登录');
+
+        // 尝试 HWID 登录
         try {
           const signInResult = await auth.signIn({
             autoCreateUser: true,
             credentialInfo: { 'kind': 'hwid' }
           });
           const signedUser: AuthUser = signInResult.getUser();
-          results.push('✅ AGC Auth 自动登录成功: uid=' + signedUser.getUid());
-          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0/5] AGC Auth 自动登录成功: uid=%{public}s',
-            signedUser.getUid());
+          results.push('✅ HWID 登录成功: uid=' + signedUser.getUid());
+          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0b] HWID 登录成功: uid=%{public}s', signedUser.getUid());
         } catch (signErr) {
           const se = signErr as BusinessError;
-          results.push('❌ AGC Auth 自动登录失败: code=' + (se.code || 0).toString() + ', ' + (se.message || ''));
-          hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0/5] AGC Auth 自动登录失败: code=%{public}d, msg=%{public}s',
+          results.push('❌ HWID 登录失败: code=' + (se.code || 0).toString());
+          hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0b] HWID 登录失败: code=%{public}d, msg=%{public}s',
             se.code || 0, se.message || '');
+
+          // ★ 再尝试匿名登录
+          try {
+            const anonResult = await auth.signInAnonymously();
+            const anonUser: AuthUser = anonResult.getUser();
+            results.push('✅ 匿名登录成功: uid=' + anonUser.getUid());
+            hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0b] 匿名登录成功: uid=%{public}s', anonUser.getUid());
+          } catch (anonErr) {
+            const ae = anonErr as BusinessError;
+            results.push('❌ 匿名登录也失败: code=' + (ae.code || 0).toString());
+            hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0b] 匿名登录失败: code=%{public}d, msg=%{public}s',
+              ae.code || 0, ae.message || '');
+          }
         }
       }
     } catch (e) {
       const err = e as BusinessError;
-      results.push('❌ AGC Auth getCurrentUser 失败: code=' + (err.code || 0).toString() + ', ' + (err.message || ''));
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0/5] getCurrentUser 失败: code=%{public}d, msg=%{public}s',
-        err.code || 0, err.message || '');
+      results.push('❌ getCurrentUser 失败: code=' + (err.code || 0).toString());
+      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0b] getCurrentUser 失败: code=%{public}d', err.code || 0);
     }
 
     // ★ 第 1 步：注册 AuthProvider
