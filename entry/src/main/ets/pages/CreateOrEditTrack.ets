@@ -1,4 +1,3 @@
-import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { NavBar } from '../common/NavBar';
 import { TrackStore } from '../common/TrackStore';
@@ -55,7 +54,7 @@ struct CreateOrEditTrack {
     await TrackStore.saveTrack(context, track);
 
     try {
-      router.replace({
+      this.getUIContext().getRouter().replaceUrl({
         url: 'pages/TrackRecord',
         params: { trackId: trackId, title: this.title.trim() }
       });

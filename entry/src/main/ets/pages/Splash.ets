@@ -1,4 +1,3 @@
-import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { AuthStore } from '../common/AuthStore';
 
@@ -30,11 +29,12 @@ struct Splash {
 
   private navigateNext(): void {
     const context = this.getUIContext().getHostContext() as common.Context;
+    const uiContext = this.getUIContext();
     AuthStore.isLoggedIn(context).then((loggedIn: boolean) => {
       const target = loggedIn ? 'pages/Main' : 'pages/Login';
-      router.replace({ url: target });
+      uiContext.getRouter().replaceUrl({ url: target });
     }).catch(() => {
-      router.replace({ url: 'pages/Login' });
+      uiContext.getRouter().replaceUrl({ url: 'pages/Login' });
     });
   }
 

@@ -5,7 +5,6 @@ import { cloudDatabase } from '@kit.CloudFoundationKit';
  */
 export class TombSpotEntity extends cloudDatabase.DatabaseObject {
   public tombId: string | undefined;
-  public segmentId: string | undefined; // 云 schema 中有此字段
   public trackId: string | undefined;
   public orderIndex: number | undefined;
   public name: string | undefined;

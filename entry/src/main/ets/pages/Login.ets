@@ -1,4 +1,3 @@
-import { router } from '@kit.ArkUI';
 import { LoginWithHuaweiIDButton, loginComponentManager } from '@kit.AccountKit';
 import { abilityAccessCtrl, common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -120,7 +119,7 @@ struct Login {
           await SyncService.syncUser(context).catch((e: Error) => {
             hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync user after login: %{public}s', JSON.stringify(e));
           });
-          router.replace({ url: 'pages/Main' });
+          this.getUIContext().getRouter().replaceUrl({ url: 'pages/Main' });
         })
         .catch((error: Error) => {
           hilog.error(LOG_DOMAIN, LOG_TAG, 'User save failed: %{public}s', JSON.stringify(error));
@@ -147,7 +146,7 @@ struct Login {
 
     AuthStore.setUser(context, mockUser)
       .then(() => {
-        router.replace({ url: 'pages/Main' });
+        this.getUIContext().getRouter().replaceUrl({ url: 'pages/Main' });
       })
       .catch(() => {
         this.loginError = '登录失败，请重试';
@@ -257,7 +256,7 @@ struct Login {
           .fontSize(12)
           .fontColor('#DDFFFFFF')
           .onClick(() => {
-            router.push({ url: 'pages/PrivacyPolicy' });
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
           });
         Text('与')
           .fontSize(12)
@@ -266,7 +265,7 @@ struct Login {
           .fontSize(12)
           .fontColor('#DDFFFFFF')
           .onClick(() => {
-            router.push({ url: 'pages/UserAgreement' });
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
           });
       }
       .justifyContent(FlexAlign.Center)

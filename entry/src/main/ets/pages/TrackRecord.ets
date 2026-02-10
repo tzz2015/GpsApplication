@@ -1,4 +1,3 @@
-import { router } from '@kit.ArkUI';
 import { MapComponent, mapCommon, map } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { geoLocationManager } from '@kit.LocationKit';
@@ -77,7 +76,7 @@ struct TrackRecord {
   private lastLng: number = 0;
 
   aboutToAppear(): void {
-    const params = router.getParams() as TrackRecordParams | undefined;
+    const params = this.getUIContext().getRouter().getParams() as TrackRecordParams | undefined;
     if (params) {
       this.trackId = params.trackId || '';
       this.trackTitle = params.title || '';
@@ -488,7 +487,7 @@ struct TrackRecord {
 
     // 跳到打卡点详情页填写图文
     try {
-      router.push({
+      this.getUIContext().getRouter().pushUrl({
         url: 'pages/TombSpotDetail',
         params: {
           tombId: spot.tombId,
@@ -541,7 +540,7 @@ struct TrackRecord {
 
     // 跳转到轨迹详情页
     try {
-      router.replace({
+      this.getUIContext().getRouter().replaceUrl({
         url: 'pages/TrackDetail',
         params: { trackId: this.trackId, title: this.trackTitle }
       });
@@ -567,7 +566,7 @@ struct TrackRecord {
       maxAltitude: this.maxAltitude
     });
 
-    router.back();
+    this.getUIContext().getRouter().back();
   }
 
   onPageShow(): void {
@@ -620,7 +619,7 @@ struct TrackRecord {
             if (this.isRecording) {
               this.showInterruptDialog = true;
             } else {
-              router.back();
+              this.getUIContext().getRouter().back();
             }
           });
         }

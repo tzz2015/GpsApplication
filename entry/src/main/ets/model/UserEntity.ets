@@ -11,7 +11,7 @@ export class UserEntity extends cloudDatabase.DatabaseObject {
   public avatarUrl: string | undefined;
   public familyName: string | undefined;
   public createdAt: Date | undefined;
-  public updatedAt: string | undefined; // 云 schema 定义为 String 类型
+  public updatedAt: Date | undefined;
 
   public naturalbase_ClassName(): string {
     return 'User';

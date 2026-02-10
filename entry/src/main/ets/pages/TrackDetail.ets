@@ -1,4 +1,4 @@
-import { router } from '@kit.ArkUI';
+import { promptAction } from '@kit.ArkUI';
 import { MapComponent, mapCommon, map } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
@@ -46,7 +46,7 @@ struct TrackDetail {
   private dataReady: boolean = false;
 
   aboutToAppear(): void {
-    const params = router.getParams() as TrackDetailParams | undefined;
+    const params = this.getUIContext().getRouter().getParams() as TrackDetailParams | undefined;
     if (params) {
       this.trackId = params.trackId || '';
       this.isPublicView = params.isPublicView || false;
@@ -424,24 +424,23 @@ struct TrackDetail {
 
   /** 删除轨迹 */
   private showDeleteConfirm(): void {
-    AlertDialog.show({
-      title: '删除轨迹',
+    this.getUIContext().getPromptAction().showDialog({
       message: '确定删除这条轨迹？删除后无法恢复。',
-      primaryButton: { value: '取消', action: () => {} },
-      secondaryButton: {
-        value: '确定删除',
-        fontColor: $r('app.color.destructive'),
-        action: async () => {
-          const context = this.getUIContext().getHostContext() as common.Context;
-          await TrackStore.deleteTrack(context, this.trackId);
-          // 同时删除云端数据
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '确定删除', color: '#FF3B30' }
+      ]
+    }).then((result: promptAction.ShowDialogSuccessResponse) => {
+      if (result.index === 1) {
+        const context = this.getUIContext().getHostContext() as common.Context;
+        TrackStore.deleteTrack(context, this.trackId).then(async () => {
           SyncService.deleteCloudTrack(this.trackId).catch((e: Error) => {
             hilog.warn(0x0000, 'TrackDetail', 'Delete cloud track: %{public}s', JSON.stringify(e));
           });
-          router.back();
-        }
+          this.getUIContext().getRouter().back();
+        });
       }
-    });
+    }).catch(() => {});
   }
 
   build() {
@@ -681,7 +680,7 @@ struct TrackDetail {
                   .backgroundColor($r('app.color.accent'))
                   .borderRadius(25)
                   .onClick(() => {
-                    router.push({
+                    this.getUIContext().getRouter().pushUrl({
                       url: 'pages/TrackRecord',
                       params: { trackId: this.trackId, title: this.track ? this.track.title : '' }
                     });
@@ -920,7 +919,7 @@ struct TrackDetail {
       .shadow({ radius: 2, color: '#0A000000', offsetX: 0, offsetY: 1 })
       .onClick(() => {
         if (tombId.length > 0) {
-          router.push({
+          this.getUIContext().getRouter().pushUrl({
             url: 'pages/TombSpotDetail',
             params: {
               tombId: tombId,

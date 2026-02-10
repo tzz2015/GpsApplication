@@ -15,6 +15,8 @@ const IMAGE_MAX_SIDE = 1920;
 const IMAGE_JPEG_QUALITY = 75;
 /** 头像裁剪输出边长（像素），中心正方形裁剪后缩放到此尺寸 */
 const AVATAR_SIZE = 512;
+/** 单文件上传任务等待超时（毫秒），弱网或大图可适当调大 */
+const UPLOAD_TASK_TIMEOUT_MS: number = 180000;
 
 /**
  * Cloud Storage 服务
@@ -267,10 +269,14 @@ export class CloudStorageService {
 
       // 用 Promise 封装 Task 的 completed / failed 事件，等待上传真正完成
       let resolved: boolean = false;
+      let timeoutId: number = 0;
       const uploadOk: boolean = await new Promise<boolean>((resolve: (value: boolean) => void) => {
         const finish = (success: boolean): void => {
           if (!resolved) {
             resolved = true;
+            if (timeoutId !== 0) {
+              clearTimeout(timeoutId);
+            }
             resolve(success);
           }
         };
@@ -284,11 +290,12 @@ export class CloudStorageService {
           finish(false);
         });
 
-        // 超时保护（90 秒）
-        setTimeout((): void => {
-          hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ Upload task timeout (90s): %{public}s', cloudPath);
+        // 超时保护（默认 3 分钟，弱网/大图可避免误判）
+        timeoutId = setTimeout((): void => {
+          hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ Upload task timeout (%{public}ds): %{public}s',
+            UPLOAD_TASK_TIMEOUT_MS / 1000, cloudPath);
           finish(false);
-        }, 90000);
+        }, UPLOAD_TASK_TIMEOUT_MS);
 
         // 启动上传任务
         uploadTask.start((err: BusinessError): void => {
@@ -568,6 +575,38 @@ export class CloudStorageService {
       hilog.error(LOG_DOMAIN, LOG_TAG, '❌ getDownloadURL failed [%{public}s]: code=%{public}d, msg=%{public}s',
         cloudPath, err.code || 0, err.message || '');
       return '';
+    }
+  }
+
+  /**
+   * 从 AGC 下载 URL 中解析出云存储路径（约定为 .../tracks/... 形式）
+   * 若解析不到则返回空字符串，不删文件
+   */
+  private static cloudPathFromDownloadUrl(url: string): string {
+    const prefix = 'tracks/';
+    const idx = url.indexOf(prefix);
+    if (idx < 0) {
+      return '';
+    }
+    const after = url.substring(idx);
+    const q = after.indexOf('?');
+    if (q >= 0) {
+      return after.substring(0, q);
+    }
+    return after;
+  }
+
+  /**
+   * 删除打卡点的一张图片（通过其云端下载 URL 解析出路径后删除）
+   * 调用场景：用户在打卡点详情页删除某张图片时，同步删除云存储对应文件
+   */
+  static async deleteSpotImageByUrl(url: string): Promise<void> {
+    if (url.length === 0 || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+      return;
+    }
+    const cloudPath = CloudStorageService.cloudPathFromDownloadUrl(url);
+    if (cloudPath.length > 0) {
+      await CloudStorageService.deleteFile(cloudPath);
     }
   }
 

@@ -1,5 +1,3 @@
-import { router } from '@kit.ArkUI';
-
 /**
  * iOS 风格导航栏：左侧返回、居中标题、可选右侧操作。
  * 自动适配沉浸式状态栏（顶部安全区）。
@@ -33,7 +31,7 @@ export struct NavBar {
           .height(44)
           .padding({ left: 12, right: 12 })
           .onClick(() => {
-            router.back();
+            this.getUIContext().getRouter().back();
           });
         }
 

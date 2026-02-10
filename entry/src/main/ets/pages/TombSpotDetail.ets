@@ -1,13 +1,14 @@
-import { router } from '@kit.ArkUI';
+import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { picker } from '@kit.CoreFileKit';
 import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { promptAction } from '@kit.ArkUI';
 import { NavBar } from '../common/NavBar';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
+import { CloudStorageService } from '../common/CloudStorageService';
+import { SyncService } from '../common/SyncService';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'TombSpotDetail';
@@ -18,6 +19,17 @@ interface TombSpotDetailParams {
   trackId: string;
   trackTitle: string;
   fromRecording: boolean;
+}
+
+/** 捏合手势回调中事件对象带有的 scale 字段（ArkTS 禁止对象字面量作类型） */
+interface PinchEventLike {
+  scale?: number;
+}
+
+/** 拖拽手势回调中事件对象带有的 offset 字段（ArkTS 禁止对象字面量作类型） */
+interface PanEventLike {
+  offsetX?: number;
+  offsetY?: number;
 }
 
 /**
@@ -50,7 +62,7 @@ struct TombSpotDetail {
   private fromRecording: boolean = false;
 
   aboutToAppear(): void {
-    const params = router.getParams() as TombSpotDetailParams | undefined;
+    const params = this.getUIContext().getRouter().getParams() as TombSpotDetailParams | undefined;
     if (params) {
       this.tombId = params.tombId || '';
       this.trackId = params.trackId || '';
@@ -80,7 +92,7 @@ struct TombSpotDetail {
     }
   }
 
-  /** 保存打卡点信息 */
+  /** 保存打卡点信息（含同步到 Cloud DB，重装后可恢复） */
   private async saveSpotData(): Promise<void> {
     const context = this.getUIContext().getHostContext() as common.Context;
     await TrackStore.updateTombSpot(context, this.tombId, {
@@ -92,11 +104,18 @@ struct TombSpotDetail {
     });
     this.isEditing = false;
 
+    // 同步到云端（等待完成，确保 contentText/imageUris 写入 Cloud DB）
+    try {
+      await SyncService.syncTrack(context, this.trackId);
+    } catch (e) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync after save: %{public}s', JSON.stringify(e));
+    }
+
     // 重新加载数据
     await this.loadData();
   }
 
-  /** 选择图片 */
+  /** 选择图片：先展示缩略图（本地 URI），再在后台上传并替换为云端 URL */
   private async pickImages(): Promise<void> {
     try {
       const photoPicker = new picker.PhotoViewPicker();
@@ -105,7 +124,25 @@ struct TombSpotDetail {
         maxSelectNumber: 9
       });
       if (result && result.photoUris && result.photoUris.length > 0) {
-        this.imageUris = this.imageUris.concat(result.photoUris);
+        const context = this.getUIContext().getHostContext() as common.Context;
+        const newUris: string[] = this.imageUris.concat(result.photoUris);
+        this.imageUris = newUris;
+        const urisJson: string = JSON.stringify(newUris);
+        CloudStorageService.uploadSpotImages(context, this.trackId, this.tombId, urisJson)
+          .then((updatedJson: string) => {
+            const updated: string[] = JSON.parse(updatedJson) as string[];
+            this.imageUris = updated;
+            TrackStore.updateTombSpot(context, this.tombId, { imageUris: updatedJson });
+            hilog.info(LOG_DOMAIN, LOG_TAG, 'Upload done, spot images: %{public}d', updated.length);
+            SyncService.syncTrack(context, this.trackId).then(() => {
+              hilog.info(LOG_DOMAIN, LOG_TAG, 'Spot synced to Cloud DB after image upload');
+            }).catch((e: Error) => {
+              hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync after image upload: %{public}s', JSON.stringify(e));
+            });
+          })
+          .catch((e: Error) => {
+            hilog.error(LOG_DOMAIN, LOG_TAG, 'uploadSpotImages error: %{public}s', JSON.stringify(e));
+          });
       }
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'pickImages error: %{public}s', JSON.stringify(e));
@@ -200,20 +237,100 @@ struct TombSpotDetail {
 
   /** 删除打卡点 */
   private showDeleteConfirm(): void {
-    AlertDialog.show({
-      title: '删除打卡点',
+    this.getUIContext().getPromptAction().showDialog({
       message: '确定删除该打卡点及其图文内容？',
-      primaryButton: { value: '取消', action: () => {} },
-      secondaryButton: {
-        value: '确定删除',
-        fontColor: $r('app.color.destructive'),
-        action: async () => {
-          const context = this.getUIContext().getHostContext() as common.Context;
-          await TrackStore.deleteTombSpot(context, this.tombId);
-          router.back();
-        }
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '确定删除', color: '#FF3B30' }
+      ]
+    }).then((result: promptAction.ShowDialogSuccessResponse) => {
+      if (result.index === 1) {
+        const context = this.getUIContext().getHostContext() as common.Context;
+        TrackStore.deleteTombSpot(context, this.tombId).then(() => {
+          this.getUIContext().getRouter().back();
+        });
       }
-    });
+    }).catch(() => {});
+  }
+
+  /** 全屏图片预览：Swiper 左右滑动多图，底部关闭/下载便于点击 */
+  @Builder
+  imageViewerCover(): void {
+    Column() {
+      Swiper() {
+        ForEach(this.imageUris, (uri: string, index: number) => {
+          Stack() {
+            Image(uri)
+              .width('100%')
+              .height('100%')
+              .objectFit(ImageFit.Contain)
+              .scale({ x: this.viewerScale, y: this.viewerScale })
+              .translate({ x: this.viewerOffsetX, y: this.viewerOffsetY })
+              .gesture(
+                PinchGesture({ fingers: 2, distance: 0.1 })
+                  .onActionStart(() => {
+                    this.pinchStartScale = this.viewerScale;
+                  })
+                  .onActionUpdate((event: GestureEvent) => {
+                    const pinchEvent = event as PinchEventLike;
+                    const scaleVal = pinchEvent.scale !== undefined ? pinchEvent.scale : 1;
+                    const s = this.pinchStartScale * scaleVal;
+                    this.viewerScale = Math.min(4, Math.max(0.5, s));
+                  })
+                  .onActionEnd(() => {
+                    this.pinchStartScale = this.viewerScale;
+                  })
+              );
+          }
+          .width('100%')
+          .height('100%');
+        }, (uri: string, index: number) => uri + index.toString());
+      }
+      .index(this.selectedImageIndex)
+      .indicator(false)
+      .loop(false)
+      .curve(Curve.EaseOut)
+      .onChange((index: number) => {
+        this.selectedImageIndex = index;
+        this.resetViewerTransform();
+      })
+      .layoutWeight(1)
+      .width('100%');
+
+      Column() {
+        Text((this.selectedImageIndex + 1).toString() + ' / ' + this.imageUris.length.toString())
+          .fontSize(13)
+          .fontColor('rgba(255,255,255,0.8)');
+        Row() {
+          Button('关闭')
+            .fontSize(16)
+            .fontColor(Color.White)
+            .backgroundColor('#66000000')
+            .layoutWeight(1)
+            .height(48)
+            .onClick(() => {
+              this.closeImageViewer();
+            });
+          Button(this.isDownloading ? '保存中…' : '下载')
+            .fontSize(16)
+            .fontColor(Color.White)
+            .backgroundColor('#66000000')
+            .layoutWeight(1)
+            .height(48)
+            .enabled(!this.isDownloading)
+            .onClick(() => {
+              this.downloadCurrentImage();
+            });
+        }
+        .width('100%');
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, bottom: 16, top: 12 })
+      .backgroundColor('#CC000000');
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#EE000000');
   }
 
   build() {
@@ -354,7 +471,15 @@ struct TombSpotDetail {
                       .backgroundColor($r('app.color.destructive'))
                       .borderRadius(10)
                       .position({ x: 76, y: 2 })
-                      .onClick(() => {
+                      .onClick(async () => {
+                        const uri = this.imageUris[index];
+                        if (uri && (uri.startsWith('http://') || uri.startsWith('https://'))) {
+                          try {
+                            await CloudStorageService.deleteSpotImageByUrl(uri);
+                          } catch (e) {
+                            hilog.warn(LOG_DOMAIN, LOG_TAG, 'Delete cloud image: %{public}s', JSON.stringify(e));
+                          }
+                        }
                         this.imageUris.splice(index, 1);
                         this.imageUris = this.imageUris.slice(0);
                       });
@@ -470,7 +595,7 @@ struct TombSpotDetail {
                   .borderRadius(25)
                   .onClick(async () => {
                     await this.saveSpotData();
-                    router.back();
+                    this.getUIContext().getRouter().back();
                   });
               }
               Button(this.fromRecording ? '仅保存' : '保存')
@@ -522,108 +647,10 @@ struct TombSpotDetail {
       .scrollBar(BarState.Off)
       .backgroundColor($r('app.color.app_background'));
       }
-
-      // 全屏图片查看器：滑动切换、双指缩放/拖动、下载
-      if (this.showImageViewer && this.imageUris.length > 0 && this.selectedImageIndex >= 0 &&
-        this.selectedImageIndex < this.imageUris.length) {
-        Column() {
-          // 顶部：关闭
-          Row() {
-            Blank();
-            Button() {
-              Text('✕')
-                .fontSize(22)
-                .fontColor(Color.White);
-            }
-            .width(44)
-            .height(44)
-            .backgroundColor('#66000000')
-            .borderRadius(22)
-            .onClick(() => {
-              this.closeImageViewer();
-            });
-          }
-          .width('100%')
-          .padding({ top: 12, right: 12 });
-
-          // 中间：Swiper 滑动切换，每页内双指缩放+拖动
-          Swiper() {
-            ForEach(this.imageUris, (uri: string, index: number) => {
-              Stack() {
-                Image(uri)
-                  .width('100%')
-                  .height('100%')
-                  .objectFit(ImageFit.Contain)
-                  .scale({ x: this.viewerScale, y: this.viewerScale })
-                  .translate({ x: this.viewerOffsetX, y: this.viewerOffsetY })
-                  .gesture(
-                    GestureGroup(GestureMode.Parallel,
-                      PinchGesture({ fingers: 2, distance: 0.1 })
-                        .onActionStart(() => {
-                          this.pinchStartScale = this.viewerScale;
-                        })
-                        .onActionUpdate((event: GestureEvent) => {
-                          const pinchEvent = event as { scale?: number };
-                          const scaleVal = pinchEvent.scale !== undefined ? pinchEvent.scale : 1;
-                          const s = this.pinchStartScale * scaleVal;
-                          this.viewerScale = Math.min(4, Math.max(0.5, s));
-                        })
-                        .onActionEnd(() => {
-                          this.pinchStartScale = this.viewerScale;
-                        }),
-                      PanGesture({ fingers: 1 })
-                        .onActionStart(() => {
-                          this.panStartX = this.viewerOffsetX;
-                          this.panStartY = this.viewerOffsetY;
-                        })
-                        .onActionUpdate((event: GestureEvent) => {
-                          const panEvent = event as { offsetX?: number; offsetY?: number };
-                          const dx = panEvent.offsetX !== undefined ? panEvent.offsetX : 0;
-                          const dy = panEvent.offsetY !== undefined ? panEvent.offsetY : 0;
-                          this.viewerOffsetX = this.panStartX + dx;
-                          this.viewerOffsetY = this.panStartY + dy;
-                        })
-                    )
-                  );
-              }
-              .width('100%')
-              .height('100%');
-            }, (uri: string, index: number) => uri + index.toString());
-          }
-          .index(this.selectedImageIndex)
-          .indicator(false)
-          .loop(false)
-          .onChange((index: number) => {
-            this.selectedImageIndex = index;
-            this.resetViewerTransform();
-          })
-          .layoutWeight(1)
-          .width('100%');
-
-          // 底部：仅下载
-          Row() {
-            Blank();
-            Button(this.isDownloading ? '保存中…' : '下载')
-              .fontSize(14)
-              .fontColor(Color.White)
-              .backgroundColor('#66000000')
-              .enabled(!this.isDownloading)
-              .onClick(() => {
-                this.downloadCurrentImage();
-              });
-            Blank();
-          }
-          .width('100%')
-          .padding(16)
-          .backgroundColor('#CC000000');
-        }
-        .width('100%')
-        .height('100%')
-        .backgroundColor('#EE000000');
-      }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.app_background'));
+    .backgroundColor($r('app.color.app_background'))
+    .bindContentCover(this.showImageViewer, this.imageViewerCover());
   }
 }

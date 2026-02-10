@@ -1,4 +1,4 @@
-import { router } from '@kit.ArkUI';
+import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
@@ -232,7 +232,7 @@ struct Main {
             .borderColor($r('app.color.primary'))
             .borderStyle(BorderStyle.Dashed)
             .onClick(() => {
-              router.push({ url: 'pages/CreateOrEditTrack' });
+              this.getUIContext().getRouter().pushUrl({ url: 'pages/CreateOrEditTrack' });
             });
           }
           .margin({ left: 16, right: 16 });
@@ -273,7 +273,7 @@ struct Main {
             .borderRadius(24)
             .margin({ top: 8 })
             .onClick(() => {
-              router.push({ url: 'pages/CreateOrEditTrack' });
+              this.getUIContext().getRouter().pushUrl({ url: 'pages/CreateOrEditTrack' });
             });
         }
         .layoutWeight(1)
@@ -384,7 +384,7 @@ struct Main {
     .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
     .clip(true)
     .onClick(() => {
-      router.push({
+      this.getUIContext().getRouter().pushUrl({
         url: 'pages/TrackDetail',
         params: { trackId: item.trackId, title: item.title }
       });
@@ -501,7 +501,7 @@ struct Main {
     .borderRadius(12)
     .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
     .onClick(() => {
-      router.push({
+      this.getUIContext().getRouter().pushUrl({
         url: 'pages/TrackDetail',
         params: { trackId: item.trackId, title: item.title, isPublicView: true }
       });
@@ -602,7 +602,7 @@ struct Main {
       Column({ space: 12 }) {
         Column() {
           this.MenuItem('👤', '编辑个人信息', '', '#3478F6', () => {
-            router.push({ url: 'pages/ProfileEdit' });
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/ProfileEdit' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
           this.MenuItem('🔒', '隐私设置', '', '#FF9500', () => {});
@@ -613,11 +613,11 @@ struct Main {
 
         Column() {
           this.MenuItem('📄', '隐私政策与用户协议', '', '#34C759', () => {
-            router.push({ url: 'pages/PrivacyPolicy' });
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
           this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', '#5856D6', () => {
-            router.push({ url: 'pages/About' });
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/About' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
           this.MenuItem('💬', '意见反馈', '', '#FF3B30', () => {});
@@ -668,21 +668,20 @@ struct Main {
           .borderRadius(12)
           .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
           .onClick(() => {
-            AlertDialog.show({
-              title: '退出帐号',
+            this.getUIContext().getPromptAction().showDialog({
               message: '确定退出当前帐号？',
-              primaryButton: { value: '取消', action: () => {} },
-              secondaryButton: {
-                value: '确定',
-                fontColor: $r('app.color.destructive'),
-                action: () => {
-                  const ctx = this.getUIContext().getHostContext() as common.Context;
-                  AuthStore.clearUser(ctx).then(() => {
-                    router.replace({ url: 'pages/Login' });
-                  });
-                }
+              buttons: [
+                { text: '取消', color: '#666666' },
+                { text: '确定', color: '#FF3B30' }
+              ]
+            }).then((result: promptAction.ShowDialogSuccessResponse) => {
+              if (result.index === 1) {
+                const ctx = this.getUIContext().getHostContext() as common.Context;
+                AuthStore.clearUser(ctx).then(() => {
+                  this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
+                });
               }
-            });
+            }).catch(() => {});
           });
       }
       .width('100%')

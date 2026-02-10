@@ -63,7 +63,7 @@ export class SyncService {
       userEntity.avatarUrl = authUser.avatarUrl;
       userEntity.familyName = authUser.familyName;
       userEntity.createdAt = new Date(authUser.createdAt);
-      userEntity.updatedAt = new Date(authUser.updatedAt).toISOString();
+      userEntity.updatedAt = new Date(authUser.updatedAt);
 
       await CloudDBService.upsertUser(userEntity);
       hilog.info(LOG_DOMAIN, LOG_TAG, '✅ syncUser 完成');
@@ -108,7 +108,7 @@ export class SyncService {
       // 4. 同步打卡点（含图片上传）
       const spots = await TrackStore.getTombSpotsByTrackId(context, trackId);
       for (let i = 0; i < spots.length; i++) {
-        const spot = spots[i];
+        let spot = spots[i];
 
         // ★ 上传打卡点图片到云存储
         if (spot.imageUris.length > 0 && spot.imageUris !== '[]') {
@@ -116,13 +116,17 @@ export class SyncService {
             context, trackId, spot.tombId, spot.imageUris
           );
           if (updatedUrisJson !== spot.imageUris) {
-            // 有图片上传成功，更新本地
             spot.imageUris = updatedUrisJson;
             await TrackStore.updateTombSpot(context, spot.tombId, { imageUris: updatedUrisJson });
             hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Spot images uploaded: %{public}s', spot.tombId);
           }
         }
 
+        // 同步前再读一次本地，确保 contentText/imageUris 为最新（避免与保存竞态）
+        const latest = await TrackStore.getTombSpotById(context, spot.tombId);
+        if (latest) {
+          spot = latest;
+        }
         const spotEntity = SyncService.localSpotToEntity(spot);
         await CloudDBService.upsertTombSpot(spotEntity);
       }
@@ -348,17 +352,16 @@ export class SyncService {
   private static localSpotToEntity(spot: TrackModel.TombSpot): TombSpotEntity {
     const entity = new TombSpotEntity();
     entity.tombId = spot.tombId;
-    entity.segmentId = ''; // 云 schema 中为 notNull，当前不使用分段
     entity.trackId = spot.trackId;
     entity.orderIndex = spot.orderIndex;
     entity.name = spot.name || '';
-    entity.personInfo = spot.personInfo;
-    entity.remark = spot.remark;
+    entity.personInfo = spot.personInfo ?? '';
+    entity.remark = spot.remark ?? '';
     entity.lat = spot.latitude;
     entity.lng = spot.longitude;
     entity.altitude = spot.altitude;
-    entity.contentText = spot.contentText || '';
-    entity.imageUris = spot.imageUris || '[]';
+    entity.contentText = spot.contentText ?? '';
+    entity.imageUris = spot.imageUris ?? '[]';
     entity.createdAt = new Date(spot.createdAt);
     entity.updatedAt = new Date(spot.updatedAt);
     return entity;

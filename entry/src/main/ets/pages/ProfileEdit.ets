@@ -1,4 +1,3 @@
-import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { picker } from '@kit.CoreFileKit';
 import { NavBar } from '../common/NavBar';
@@ -46,7 +45,7 @@ struct ProfileEdit {
     // 同步到 Cloud DB，重装后登录可恢复昵称
     SyncService.syncUser(context).catch(() => {});
     this.isSaving = false;
-    router.back();
+    this.getUIContext().getRouter().back();
   }
 
   /** 选择照片并上传为头像 */

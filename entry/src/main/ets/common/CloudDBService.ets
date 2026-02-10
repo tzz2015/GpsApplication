@@ -195,7 +195,7 @@ export class CloudDBService {
       testUser.userId = '__diag_test__';
       testUser.nickname = 'DiagTest';
       testUser.createdAt = new Date();
-      testUser.updatedAt = new Date().toISOString();
+      testUser.updatedAt = new Date();
 
       const count = await CloudDBService.getZone().upsert(testUser);
       results.push('✅ 写入测试成功, count=' + count.toString());
@@ -424,11 +424,19 @@ export class CloudDBService {
 
   /**
    * 上传/更新打卡点
+   * 确保 contentText/imageUris 必为字符串，避免 Cloud DB 未持久化空/undefined
    */
   static async upsertTombSpot(spot: TombSpotEntity): Promise<number> {
     try {
+      if (spot.contentText === undefined || spot.contentText === null) {
+        spot.contentText = '';
+      }
+      if (spot.imageUris === undefined || spot.imageUris === null) {
+        spot.imageUris = '[]';
+      }
       const count = await CloudDBService.getZone().upsert(spot);
-      hilog.info(LOG_DOMAIN, LOG_TAG, 'Upsert tomb spot success, count: %{public}d', count);
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Upsert tomb spot success, count: %{public}d, contentLen: %{public}d, imageLen: %{public}d',
+        count, (spot.contentText || '').length, (spot.imageUris || '').length);
       return count;
     } catch (e) {
       const err = e as BusinessError;
