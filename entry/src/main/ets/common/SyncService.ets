@@ -39,12 +39,17 @@ export class SyncService {
 
   /**
    * 同步用户信息到云端
+   * 关闭 Cloud DB World 写入权限时，须先 AGC Auth 登录，否则跳过
    */
   static async syncUser(context: common.Context): Promise<void> {
     hilog.info(LOG_DOMAIN, LOG_TAG, '--- syncUser start ---');
 
     if (!SyncService.isNetworkAvailable()) {
       hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncUser: 无网络，跳过');
+      return;
+    }
+    if (!(await CloudDBService.hasAgcAuthUser())) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncUser: AGC Auth 未登录，无写入权限，跳过');
       return;
     }
 
@@ -75,10 +80,15 @@ export class SyncService {
   /**
    * 同步单条轨迹到云端（包含打卡点和轨迹点）
    * 流程：上传图片 → 同步轨迹 → 同步打卡点 → 同步轨迹点
+   * 关闭 Cloud DB World 写入权限时，须先 AGC Auth 登录，否则跳过
    */
   static async syncTrack(context: common.Context, trackId: string): Promise<void> {
     if (!SyncService.isNetworkAvailable()) {
       hilog.info(LOG_DOMAIN, LOG_TAG, 'No network, skip track sync');
+      return;
+    }
+    if (!(await CloudDBService.hasAgcAuthUser())) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncTrack: AGC Auth 未登录，无写入权限，跳过');
       return;
     }
 

@@ -3,6 +3,7 @@ import { abilityAccessCtrl, common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { AuthStore } from '../common/AuthStore';
+import { CloudDBService } from '../common/CloudDBService';
 import { HuaweiAuthHelper, UserInfo } from '../common/HuaweiAuthHelper';
 import { Config } from '../common/Config';
 import { SyncService } from '../common/SyncService';
@@ -114,6 +115,8 @@ struct Login {
       AuthStore.setUser(context, authUser)
         .then(async () => {
           hilog.info(LOG_DOMAIN, LOG_TAG, 'User saved');
+          // 建立 AGC Auth 会话（Cloud DB 写入需 Authenticated；刚用华为账号登录，静默可能成功）
+          await CloudDBService.ensureAuth();
           // 重装后：先从云端恢复用户信息（昵称等），再同步本地到云端，再进首页
           await SyncService.restoreUserFromCloud(context);
           await SyncService.syncUser(context).catch((e: Error) => {
