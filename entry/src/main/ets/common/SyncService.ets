@@ -178,6 +178,85 @@ export class SyncService {
   }
 
   /**
+   * 从云端恢复当前用户信息到本地（重装后登录用）
+   * 若 Cloud DB 中已有该用户的 nickname/avatarUrl/familyName，则覆盖本地
+   */
+  static async restoreUserFromCloud(context: common.Context): Promise<void> {
+    if (!SyncService.isNetworkAvailable()) {
+      return;
+    }
+    try {
+      const authUser = await AuthStore.getCurrentUser(context);
+      if (!authUser) {
+        return;
+      }
+      const cloudUser = await CloudDBService.queryUser(authUser.userId);
+      if (!cloudUser || !cloudUser.nickname || cloudUser.nickname.length === 0) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'No cloud user or nickname, keep local');
+        return;
+      }
+      await AuthStore.updateUser(context, {
+        displayName: cloudUser.nickname,
+        avatarUrl: cloudUser.avatarUrl || '',
+        familyName: cloudUser.familyName || ''
+      });
+      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ restoreUserFromCloud: nickname=%{public}s', cloudUser.nickname);
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'restoreUserFromCloud failed: %{public}s', JSON.stringify(e));
+    }
+  }
+
+  /**
+   * 从云端恢复「我的轨迹」到本地（重装后或本地为空时用）
+   * 仅当本地当前用户轨迹数为 0 时才拉取，避免覆盖本地新数据
+   */
+  static async restoreMyTracksFromCloud(context: common.Context): Promise<void> {
+    if (!SyncService.isNetworkAvailable()) {
+      return;
+    }
+    try {
+      const authUser = await AuthStore.getCurrentUser(context);
+      if (!authUser) {
+        return;
+      }
+      const localTracks = await TrackStore.getTracksByUser(context, authUser.userId);
+      if (localTracks.length > 0) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'Local tracks exist (%{public}d), skip restore', localTracks.length);
+        return;
+      }
+
+      const cloudTracks = await CloudDBService.queryTracksByUser(authUser.userId);
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Restore my tracks from cloud: %{public}d', cloudTracks.length);
+
+      for (let i = 0; i < cloudTracks.length; i++) {
+        const entity = cloudTracks[i];
+        const track = SyncService.cloudTrackToLocal(entity);
+        track.ownerDisplayName = authUser.displayName;
+        await TrackStore.saveTrack(context, track);
+
+        const trackId = track.trackId;
+        const spots = await CloudDBService.queryTombSpots(trackId);
+        for (let s = 0; s < spots.length; s++) {
+          const spot = SyncService.cloudSpotToLocal(spots[s]);
+          await TrackStore.saveTombSpot(context, spot);
+        }
+
+        const points = await CloudDBService.queryTrackPoints(trackId);
+        const localPoints = SyncService.cloudPointsToLocal(points, trackId);
+        if (localPoints.length > 0) {
+          await TrackStore.saveTrackPoints(context, trackId, localPoints);
+        }
+      }
+
+      if (cloudTracks.length > 0) {
+        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ restoreMyTracksFromCloud done: %{public}d tracks', cloudTracks.length);
+      }
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'restoreMyTracksFromCloud failed: %{public}s', JSON.stringify(e));
+    }
+  }
+
+  /**
    * 从云端拉取公开轨迹
    */
   static async fetchPublicTracks(): Promise<TrackEntity[]> {
@@ -307,5 +386,42 @@ export class SyncService {
       updatedAt: entity.updatedAt ? entity.updatedAt.getTime() : Date.now()
     };
     return track;
+  }
+
+  private static cloudSpotToLocal(entity: TombSpotEntity): TrackModel.TombSpot {
+    const spot: TrackModel.TombSpot = {
+      tombId: entity.tombId || '',
+      trackId: entity.trackId || '',
+      orderIndex: entity.orderIndex ?? 0,
+      name: entity.name || '',
+      personInfo: entity.personInfo || '',
+      remark: entity.remark || '',
+      latitude: entity.lat ?? 0,
+      longitude: entity.lng ?? 0,
+      altitude: entity.altitude ?? 0,
+      contentText: '',
+      imageUris: '[]',
+      createdAt: entity.createdAt ? entity.createdAt.getTime() : Date.now(),
+      updatedAt: entity.updatedAt ? entity.updatedAt.getTime() : Date.now()
+    };
+    return spot;
+  }
+
+  private static cloudPointsToLocal(entities: TrackPointEntity[], trackId: string): TrackModel.TrackPointItem[] {
+    const items: TrackModel.TrackPointItem[] = [];
+    for (let i = 0; i < entities.length; i++) {
+      const e = entities[i];
+      const item: TrackModel.TrackPointItem = {
+        pointId: e.pointId || (trackId + '_pt_' + (e.timestamp ?? Date.now()) + '_' + i),
+        latitude: e.lat ?? 0,
+        longitude: e.lng ?? 0,
+        altitude: e.altitude ?? 0,
+        accuracy: e.accuracy ?? 0,
+        timestamp: e.timestamp ?? Date.now(),
+        syncStatus: 'synced'
+      };
+      items.push(item);
+    }
+    return items;
   }
 }

@@ -113,10 +113,11 @@ struct Login {
       const authUser = AuthStore.createNewUser(user.userId, user.displayName, user.avatarUrl);
 
       AuthStore.setUser(context, authUser)
-        .then(() => {
-          hilog.info(LOG_DOMAIN, LOG_TAG, 'User saved, navigating to Main');
-          // 登录成功后立即同步用户信息到云端
-          SyncService.syncUser(context).catch((e: Error) => {
+        .then(async () => {
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'User saved');
+          // 重装后：先从云端恢复用户信息（昵称等），再同步本地到云端，再进首页
+          await SyncService.restoreUserFromCloud(context);
+          await SyncService.syncUser(context).catch((e: Error) => {
             hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync user after login: %{public}s', JSON.stringify(e));
           });
           router.replaceUrl({ url: 'pages/Main' });

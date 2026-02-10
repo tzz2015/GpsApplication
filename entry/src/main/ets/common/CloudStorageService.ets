@@ -2,7 +2,7 @@ import { cloudStorage } from '@kit.CloudFoundationKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { BusinessError, request } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
 
 const LOG_DOMAIN = 0x0000;
@@ -145,8 +145,14 @@ export class CloudStorageService {
 
   /**
    * 上传本地文件到云存储，返回下载 URL
+   *
+   * ★ 关键说明（对齐华为官方示例 StoragePage.ets）：
+   *   1. localPath 必须是 **相对于 cacheDir 的文件名**，而非绝对路径
+   *   2. uploadFile 返回 request.agent.Task，需调用 task.start() 才真正开始上传
+   *   3. 必须监听 completed / failed 事件等待上传实际完成
+   *
    * @param context 应用上下文
-   * @param localPath 本地文件的绝对路径（不是 URI，需先 copyUriToCache）
+   * @param localPath 本地文件的绝对路径（需在 cacheDir 下，方法内部自动转相对路径）
    * @param cloudPath 云存储目标路径（如 'tracks/xxx/cover.jpg'）
    * @returns 云存储下载 URL；失败返回空字符串
    */
@@ -163,13 +169,70 @@ export class CloudStorageService {
       return '';
     }
 
-    // 第二步：上传文件
+    // 第二步：将绝对路径转换为相对于 cacheDir 的文件名（SDK 要求）
+    const cachePrefix: string = context.cacheDir + '/';
+    let relativeLocalPath: string = localPath;
+    if (localPath.startsWith(cachePrefix)) {
+      relativeLocalPath = localPath.substring(cachePrefix.length);
+    }
+    hilog.info(LOG_DOMAIN, LOG_TAG, 'SDK localPath (relative): %{public}s', relativeLocalPath);
+
+    // 第三步：通过 Task-based API 上传文件（与官方示例一致）
     try {
-      await bucket.uploadFile(context, {
-        localPath: localPath,
-        cloudPath: cloudPath
+      const uploadTask: request.agent.Task = await bucket.uploadFile(context, {
+        localPath: relativeLocalPath,
+        cloudPath: cloudPath,
+        mode: request.agent.Mode.BACKGROUND
       });
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ uploadFile completed: %{public}s', cloudPath);
+
+      // 用 Promise 封装 Task 的 completed / failed 事件，等待上传真正完成
+      let resolved: boolean = false;
+      const uploadOk: boolean = await new Promise<boolean>((resolve: (value: boolean) => void) => {
+        const finish = (success: boolean): void => {
+          if (!resolved) {
+            resolved = true;
+            resolve(success);
+          }
+        };
+
+        uploadTask.on('completed', (): void => {
+          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Upload task completed: %{public}s', cloudPath);
+          finish(true);
+        });
+        uploadTask.on('failed', (): void => {
+          hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Upload task failed: %{public}s', cloudPath);
+          finish(false);
+        });
+
+        // 超时保护（90 秒）
+        setTimeout((): void => {
+          hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ Upload task timeout (90s): %{public}s', cloudPath);
+          finish(false);
+        }, 90000);
+
+        // 启动上传任务
+        uploadTask.start((err: BusinessError): void => {
+          if (err) {
+            hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Task start error: code=%{public}d, msg=%{public}s',
+              err.code, err.message);
+            finish(false);
+          } else {
+            hilog.info(LOG_DOMAIN, LOG_TAG, 'Upload task started: %{public}s', cloudPath);
+          }
+        });
+      });
+
+      if (!uploadOk) {
+        return '';
+      }
+
+      // 上传完成后清理缓存文件
+      try {
+        fileIo.unlinkSync(localPath);
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'Cache file cleaned: %{public}s', relativeLocalPath);
+      } catch (cleanErr) {
+        // 清理失败不影响主流程
+      }
     } catch (uploadErr) {
       const ue = uploadErr as BusinessError;
       hilog.error(LOG_DOMAIN, LOG_TAG, '❌ uploadFile failed [%{public}s]: code=%{public}d, msg=%{public}s',
@@ -177,18 +240,28 @@ export class CloudStorageService {
       return '';
     }
 
-    // 第三步：获取下载 URL
-    try {
-      const downloadUrl: string = await bucket.getDownloadURL(cloudPath);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ getDownloadURL: %{public}s', downloadUrl);
-      return downloadUrl;
-    } catch (urlErr) {
-      const uerr = urlErr as BusinessError;
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ getDownloadURL failed [%{public}s]: code=%{public}d, msg=%{public}s',
-        cloudPath, uerr.code || 0, uerr.message || '');
-      // 获取 URL 失败，返回空字符串（不保存无效路径，下次同步会重试）
-      return '';
+    // 第四步：获取下载 URL（含重试，文件刚上传可能需要短暂等待）
+    for (let retry = 0; retry < 3; retry++) {
+      try {
+        if (retry > 0) {
+          const delayMs: number = 2000 * retry;
+          await new Promise<void>((resolve: (value: void) => void) => {
+            setTimeout((): void => { resolve(undefined); }, delayMs);
+          });
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'Retry getDownloadURL (%{public}d/3): %{public}s', retry + 1, cloudPath);
+        }
+        const downloadUrl: string = await bucket.getDownloadURL(cloudPath);
+        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ getDownloadURL: %{public}s', downloadUrl);
+        return downloadUrl;
+      } catch (urlErr) {
+        const uerr = urlErr as BusinessError;
+        hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ getDownloadURL attempt %{public}d failed [%{public}s]: code=%{public}d, msg=%{public}s',
+          retry + 1, cloudPath, uerr.code || 0, uerr.message || '');
+      }
     }
+    // 3 次都失败，文件已上传但拿不到 URL
+    hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ getDownloadURL all retries failed, file uploaded but URL unavailable');
+    return '';
   }
 
   // ==================== 业务级上传 ====================

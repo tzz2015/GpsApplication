@@ -39,16 +39,19 @@ struct Main {
     this.isLoading = true;
     const context = this.getUIContext().getHostContext() as common.Context;
 
-    AuthStore.getCurrentUser(context).then((user: AuthUser | null) => {
+    AuthStore.getCurrentUser(context).then(async (user: AuthUser | null) => {
       this.currentUser = user;
-    });
-
-    TrackStore.getTracks(context).then((tracks: TrackModel.Track[]) => {
-      if (this.currentUser) {
-        this.myTracks = tracks.filter((t: TrackModel.Track) => t.ownerUserId === this.currentUser!.userId);
-      } else {
-        this.myTracks = tracks;
+      let tracks: TrackModel.Track[] = await TrackStore.getTracks(context);
+      let myTracks: TrackModel.Track[] = user
+        ? tracks.filter((t: TrackModel.Track) => t.ownerUserId === user.userId)
+        : tracks;
+      // 重装后本地为空时，从云端恢复「我的轨迹」
+      if (user && myTracks.length === 0) {
+        await SyncService.restoreMyTracksFromCloud(context);
+        tracks = await TrackStore.getTracks(context);
+        myTracks = tracks.filter((t: TrackModel.Track) => t.ownerUserId === user.userId);
       }
+      this.myTracks = myTracks;
       this.publicTracks = tracks.filter((t: TrackModel.Track) =>
         t.visibility === TrackModel.VISIBILITY_PUBLIC && t.status === TrackModel.TRACK_STATUS_DONE
       );

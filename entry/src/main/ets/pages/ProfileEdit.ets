@@ -2,6 +2,7 @@ import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { NavBar } from '../common/NavBar';
 import { AuthStore } from '../common/AuthStore';
+import { SyncService } from '../common/SyncService';
 
 /**
  * P3-2 个人信息编辑页：头像、昵称、家族、签名
@@ -39,6 +40,8 @@ struct ProfileEdit {
       signature: this.signature,
       avatarUrl: this.avatarUrl
     });
+    // 同步到 Cloud DB，重装后登录可恢复昵称
+    SyncService.syncUser(context).catch(() => {});
     this.isSaving = false;
     router.back();
   }
