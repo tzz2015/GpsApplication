@@ -104,7 +104,7 @@ export class TrackStore {
       totalDistance: updates.totalDistance !== undefined ? updates.totalDistance : existing.totalDistance,
       totalDuration: updates.totalDuration !== undefined ? updates.totalDuration : existing.totalDuration,
       maxAltitude: updates.maxAltitude !== undefined ? updates.maxAltitude : existing.maxAltitude,
-      spotCount: existing.spotCount || 0,
+      spotCount: updates.spotCount !== undefined ? updates.spotCount : (existing.spotCount || 0),
       coverImageUrl: updates.coverImageUrl !== undefined ? updates.coverImageUrl : existing.coverImageUrl,
       createdAt: existing.createdAt,
       updatedAt: Date.now()

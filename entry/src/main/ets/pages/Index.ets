@@ -57,7 +57,7 @@ struct Index {
 
       this.isTracking = true;
       this.locationStatus = '定位状态：持续定位中...';
-      promptAction.showToast({
+      promptAction.openToast({
         message: '开始持续定位',
         duration: 2000
       });
@@ -126,10 +126,14 @@ struct Index {
   // 清空位置历史
   clearLocationHistory(): void {
     this.locationHistory = [];
-    promptAction.showToast({
-      message: '位置历史已清空',
-      duration: 1500
-    });
+    try {
+      promptAction.openToast({
+        message: '位置历史已清空',
+        duration: 1500
+      });
+    } catch (_e) {
+      // 忽略 Toast 调用异常
+    }
   }
 
   build() {

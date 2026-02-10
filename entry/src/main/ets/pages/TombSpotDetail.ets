@@ -1,7 +1,10 @@
 import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { fileIo } from '@kit.CoreFileKit';
 import { picker } from '@kit.CoreFileKit';
+import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { promptAction } from '@kit.ArkUI';
 import { NavBar } from '../common/NavBar';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
@@ -31,7 +34,17 @@ struct TombSpotDetail {
   @State personInfo: string = '';
   @State remark: string = '';
   @State imageUris: string[] = [];
+  /** 图片查看器：打开大图、缩放、下载 */
+  @State showImageViewer: boolean = false;
+  @State selectedImageIndex: number = 0;
+  @State viewerScale: number = 1;
+  @State viewerOffsetX: number = 0;
+  @State viewerOffsetY: number = 0;
+  @State isDownloading: boolean = false;
   private tombId: string = '';
+  private pinchStartScale: number = 1;
+  private panStartX: number = 0;
+  private panStartY: number = 0;
   private trackId: string = '';
   private trackTitle: string = '';
   private fromRecording: boolean = false;
@@ -99,6 +112,92 @@ struct TombSpotDetail {
     }
   }
 
+  /** 打开图片查看器（大图、双指缩放/拖动、滑动切换、下载） */
+  private openImageViewer(index: number): void {
+    this.selectedImageIndex = index;
+    this.viewerScale = 1;
+    this.viewerOffsetX = 0;
+    this.viewerOffsetY = 0;
+    this.showImageViewer = true;
+  }
+
+  /** 重置当前页缩放与偏移（切换图片时调用） */
+  private resetViewerTransform(): void {
+    this.viewerScale = 1;
+    this.viewerOffsetX = 0;
+    this.viewerOffsetY = 0;
+  }
+
+  /** 关闭图片查看器 */
+  private closeImageViewer(): void {
+    this.showImageViewer = false;
+  }
+
+  /** 下载当前查看的图片到应用目录 */
+  private async downloadCurrentImage(): Promise<void> {
+    if (this.imageUris.length === 0 || this.selectedImageIndex < 0 || this.selectedImageIndex >= this.imageUris.length) {
+      return;
+    }
+    const uri: string = this.imageUris[this.selectedImageIndex];
+    this.isDownloading = true;
+    const context = this.getUIContext().getHostContext() as common.Context;
+    try {
+      let savedPath: string = '';
+      if (uri.startsWith('http://') || uri.startsWith('https://')) {
+        const httpReq = http.createHttp();
+        const resp = await httpReq.request(uri, { method: http.RequestMethod.GET, expectDataType: http.HttpDataType.ARRAY_BUFFER });
+        const data = resp.result as ArrayBuffer;
+        httpReq.destroy();
+        const dir = context.filesDir + '/Download';
+        try {
+          fileIo.mkdirSync(dir, false);
+        } catch (e) {
+          // 已存在则忽略
+        }
+        const name = 'img_' + Date.now() + '.jpg';
+        savedPath = dir + '/' + name;
+        const f = fileIo.openSync(savedPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+        fileIo.writeSync(f.fd, data);
+        fileIo.closeSync(f);
+      } else if (uri.startsWith('file://') || (uri.length > 0 && !uri.startsWith('http'))) {
+        const dir = context.filesDir + '/Download';
+        try {
+          fileIo.mkdirSync(dir, false);
+        } catch (e) {
+          // ignore
+        }
+        const name = 'img_' + Date.now() + '.jpg';
+        savedPath = dir + '/' + name;
+        try {
+          fileIo.copyFileSync(uri, savedPath);
+        } catch (copyErr) {
+          const srcFile = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY);
+          const dstFile = fileIo.openSync(savedPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+          const bufSize = 8192;
+          const buf = new ArrayBuffer(bufSize);
+          let readLen = fileIo.readSync(srcFile.fd, buf);
+          while (readLen > 0) {
+            fileIo.writeSync(dstFile.fd, buf.slice(0, readLen));
+            readLen = fileIo.readSync(srcFile.fd, buf);
+          }
+          fileIo.closeSync(srcFile);
+          fileIo.closeSync(dstFile);
+        }
+      }
+      if (savedPath.length > 0) {
+        promptAction.openToast({ message: '已保存至：' + savedPath });
+      }
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'Download image failed: %{public}s', JSON.stringify(e));
+      try {
+        promptAction.openToast({ message: '保存失败' });
+      } catch (_t) {
+        // 忽略 Toast 异常
+      }
+    }
+    this.isDownloading = false;
+  }
+
   /** 删除打卡点 */
   private showDeleteConfirm(): void {
     AlertDialog.show({
@@ -118,10 +217,11 @@ struct TombSpotDetail {
   }
 
   build() {
-    Column() {
-      NavBar({ title: this.spotName || '打卡点详情', showBack: true });
+    Stack() {
+      Column() {
+        NavBar({ title: this.spotName || '打卡点详情', showBack: true });
 
-      Scroll() {
+        Scroll() {
         Column() {
           // 打卡点头部
           Column({ space: 8 }) {
@@ -239,7 +339,10 @@ struct TombSpotDetail {
                       .width(100)
                       .height(100)
                       .objectFit(ImageFit.Cover)
-                      .borderRadius(8);
+                      .borderRadius(8)
+                      .onClick(() => {
+                        this.openImageViewer(index);
+                      });
                     if (this.isEditing) {
                       Button() {
                         Text('✕')
@@ -374,9 +477,9 @@ struct TombSpotDetail {
                 .width('100%')
                 .height(this.fromRecording ? 44 : 50)
                 .fontSize(this.fromRecording ? 15 : 17)
-                .fontWeight(this.fromRecording ? FontWeight.Normal : FontWeight.Medium)
-                .fontColor(this.fromRecording ? $r('app.color.label_secondary') : Color.White)
-                .backgroundColor(this.fromRecording ? $r('app.color.accent_light') : $r('app.color.primary'))
+                .fontWeight(FontWeight.Medium)
+                .fontColor(Color.White)
+                .backgroundColor(this.fromRecording ? '#3478F6' : $r('app.color.primary'))
                 .borderRadius(this.fromRecording ? 22 : 25)
                 .onClick(() => {
                   this.saveSpotData();
@@ -418,6 +521,106 @@ struct TombSpotDetail {
       .layoutWeight(1)
       .scrollBar(BarState.Off)
       .backgroundColor($r('app.color.app_background'));
+      }
+
+      // 全屏图片查看器：滑动切换、双指缩放/拖动、下载
+      if (this.showImageViewer && this.imageUris.length > 0 && this.selectedImageIndex >= 0 &&
+        this.selectedImageIndex < this.imageUris.length) {
+        Column() {
+          // 顶部：关闭
+          Row() {
+            Blank();
+            Button() {
+              Text('✕')
+                .fontSize(22)
+                .fontColor(Color.White);
+            }
+            .width(44)
+            .height(44)
+            .backgroundColor('#66000000')
+            .borderRadius(22)
+            .onClick(() => {
+              this.closeImageViewer();
+            });
+          }
+          .width('100%')
+          .padding({ top: 12, right: 12 });
+
+          // 中间：Swiper 滑动切换，每页内双指缩放+拖动
+          Swiper() {
+            ForEach(this.imageUris, (uri: string, index: number) => {
+              Stack() {
+                Image(uri)
+                  .width('100%')
+                  .height('100%')
+                  .objectFit(ImageFit.Contain)
+                  .scale({ x: this.viewerScale, y: this.viewerScale })
+                  .translate({ x: this.viewerOffsetX, y: this.viewerOffsetY })
+                  .gesture(
+                    GestureGroup(GestureMode.Parallel,
+                      PinchGesture({ fingers: 2, distance: 0.1 })
+                        .onActionStart(() => {
+                          this.pinchStartScale = this.viewerScale;
+                        })
+                        .onActionUpdate((event: GestureEvent) => {
+                          const pinchEvent = event as { scale?: number };
+                          const scaleVal = pinchEvent.scale !== undefined ? pinchEvent.scale : 1;
+                          const s = this.pinchStartScale * scaleVal;
+                          this.viewerScale = Math.min(4, Math.max(0.5, s));
+                        })
+                        .onActionEnd(() => {
+                          this.pinchStartScale = this.viewerScale;
+                        }),
+                      PanGesture({ fingers: 1 })
+                        .onActionStart(() => {
+                          this.panStartX = this.viewerOffsetX;
+                          this.panStartY = this.viewerOffsetY;
+                        })
+                        .onActionUpdate((event: GestureEvent) => {
+                          const panEvent = event as { offsetX?: number; offsetY?: number };
+                          const dx = panEvent.offsetX !== undefined ? panEvent.offsetX : 0;
+                          const dy = panEvent.offsetY !== undefined ? panEvent.offsetY : 0;
+                          this.viewerOffsetX = this.panStartX + dx;
+                          this.viewerOffsetY = this.panStartY + dy;
+                        })
+                    )
+                  );
+              }
+              .width('100%')
+              .height('100%');
+            }, (uri: string, index: number) => uri + index.toString());
+          }
+          .index(this.selectedImageIndex)
+          .indicator(false)
+          .loop(false)
+          .onChange((index: number) => {
+            this.selectedImageIndex = index;
+            this.resetViewerTransform();
+          })
+          .layoutWeight(1)
+          .width('100%');
+
+          // 底部：仅下载
+          Row() {
+            Blank();
+            Button(this.isDownloading ? '保存中…' : '下载')
+              .fontSize(14)
+              .fontColor(Color.White)
+              .backgroundColor('#66000000')
+              .enabled(!this.isDownloading)
+              .onClick(() => {
+                this.downloadCurrentImage();
+              });
+            Blank();
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor('#CC000000');
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#EE000000');
+      }
     }
     .width('100%')
     .height('100%')

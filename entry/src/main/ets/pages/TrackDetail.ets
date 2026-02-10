@@ -681,7 +681,7 @@ struct TrackDetail {
                   .backgroundColor($r('app.color.accent'))
                   .borderRadius(25)
                   .onClick(() => {
-                    router.pushUrl({
+                    router.push({
                       url: 'pages/TrackRecord',
                       params: { trackId: this.trackId, title: this.track ? this.track.title : '' }
                     });
@@ -920,7 +920,7 @@ struct TrackDetail {
       .shadow({ radius: 2, color: '#0A000000', offsetX: 0, offsetY: 1 })
       .onClick(() => {
         if (tombId.length > 0) {
-          router.pushUrl({
+          router.push({
             url: 'pages/TombSpotDetail',
             params: {
               tombId: tombId,

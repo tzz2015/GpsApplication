@@ -54,10 +54,14 @@ struct CreateOrEditTrack {
 
     await TrackStore.saveTrack(context, track);
 
-    router.replaceUrl({
-      url: 'pages/TrackRecord',
-      params: { trackId: trackId, title: this.title.trim() }
-    });
+    try {
+      router.replace({
+        url: 'pages/TrackRecord',
+        params: { trackId: trackId, title: this.title.trim() }
+      });
+    } catch (_e) {
+      console.error('CreateOrEditTrack router.replace failed: ' + JSON.stringify(_e));
+    }
   }
 
   build() {
@@ -65,24 +69,24 @@ struct CreateOrEditTrack {
       NavBar({ title: '新建轨迹', showBack: true });
 
       Scroll() {
-        Column({ space: 20 }) {
+        Column({ space: 14 }) {
           // 提示
           Row({ space: 8 }) {
             Text('💡')
-              .fontSize(16);
+              .fontSize(14);
             Text('建议填写本次扫墓的地区、主要祖先姓氏、日期等信息，方便日后查找。')
-              .fontSize(13)
+              .fontSize(12)
               .fontColor($r('app.color.primary'))
-              .lineHeight(20)
+              .lineHeight(18)
               .layoutWeight(1);
           }
           .width('100%')
-          .padding(14)
+          .padding(10)
           .backgroundColor($r('app.color.primary_light'))
-          .borderRadius(12);
+          .borderRadius(10);
 
           // 轨迹名称
-          Column({ space: 6 }) {
+          Column({ space: 4 }) {
             Row() {
               Text('轨迹名称')
                 .fontSize(13)
@@ -97,11 +101,11 @@ struct CreateOrEditTrack {
                 this.title = value;
               })
               .width('100%')
-              .height(48)
+              .height(44)
               .fontSize(16)
               .backgroundColor($r('app.color.card_background'))
               .borderRadius(10)
-              .padding({ left: 14, right: 14 })
+              .padding({ left: 12, right: 12 })
               .borderWidth(1.5)
               .borderColor($r('app.color.separator'));
           }
@@ -109,7 +113,7 @@ struct CreateOrEditTrack {
           .alignItems(HorizontalAlign.Start);
 
           // 轨迹简介
-          Column({ space: 6 }) {
+          Column({ space: 4 }) {
             Text('轨迹简介')
               .fontSize(13)
               .fontWeight(FontWeight.Medium)
@@ -119,22 +123,22 @@ struct CreateOrEditTrack {
                 this.description = value;
               })
               .width('100%')
-              .height(100)
+              .height(72)
               .fontSize(16)
               .backgroundColor($r('app.color.card_background'))
               .borderRadius(10)
-              .padding(14)
+              .padding(12)
               .borderWidth(1.5)
               .borderColor($r('app.color.separator'));
             Text('建议说明本次扫墓的地区、主要祖先、日期等')
-              .fontSize(12)
+              .fontSize(11)
               .fontColor($r('app.color.label_tertiary'));
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start);
         }
         .width('100%')
-        .padding(20);
+        .padding(16);
       }
       .layoutWeight(1)
       .width('100%')
@@ -145,12 +149,12 @@ struct CreateOrEditTrack {
       Column() {
         Button(this.isSaving ? '保存中…' : '保存并开始记录')
           .width('100%')
-          .height(50)
-          .fontSize(17)
+          .height(46)
+          .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor(Color.White)
           .backgroundColor($r('app.color.primary'))
-          .borderRadius(25)
+          .borderRadius(23)
           .enabled(this.title.trim().length > 0 && !this.isSaving)
           .opacity(this.title.trim().length > 0 && !this.isSaving ? 1 : 0.5)
           .onClick(() => {
@@ -158,9 +162,9 @@ struct CreateOrEditTrack {
           });
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 12, bottom: 32 })
+      .padding({ left: 20, right: 20, top: 8, bottom: 20 })
       .backgroundColor($r('app.color.card_background'))
-      .shadow({ radius: 8, color: '#0D000000', offsetX: 0, offsetY: -2 });
+      .shadow({ radius: 6, color: '#0D000000', offsetX: 0, offsetY: -2 });
     }
     .width('100%')
     .height('100%')

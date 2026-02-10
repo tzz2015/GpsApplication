@@ -232,7 +232,7 @@ struct Main {
             .borderColor($r('app.color.primary'))
             .borderStyle(BorderStyle.Dashed)
             .onClick(() => {
-              router.pushUrl({ url: 'pages/CreateOrEditTrack' });
+              router.push({ url: 'pages/CreateOrEditTrack' });
             });
           }
           .margin({ left: 16, right: 16 });
@@ -273,7 +273,7 @@ struct Main {
             .borderRadius(24)
             .margin({ top: 8 })
             .onClick(() => {
-              router.pushUrl({ url: 'pages/CreateOrEditTrack' });
+              router.push({ url: 'pages/CreateOrEditTrack' });
             });
         }
         .layoutWeight(1)
@@ -384,7 +384,7 @@ struct Main {
     .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
     .clip(true)
     .onClick(() => {
-      router.pushUrl({
+      router.push({
         url: 'pages/TrackDetail',
         params: { trackId: item.trackId, title: item.title }
       });
@@ -501,7 +501,7 @@ struct Main {
     .borderRadius(12)
     .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
     .onClick(() => {
-      router.pushUrl({
+      router.push({
         url: 'pages/TrackDetail',
         params: { trackId: item.trackId, title: item.title, isPublicView: true }
       });
@@ -602,7 +602,7 @@ struct Main {
       Column({ space: 12 }) {
         Column() {
           this.MenuItem('👤', '编辑个人信息', '', '#3478F6', () => {
-            router.pushUrl({ url: 'pages/ProfileEdit' });
+            router.push({ url: 'pages/ProfileEdit' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
           this.MenuItem('🔒', '隐私设置', '', '#FF9500', () => {});
@@ -613,11 +613,11 @@ struct Main {
 
         Column() {
           this.MenuItem('📄', '隐私政策与用户协议', '', '#34C759', () => {
-            router.pushUrl({ url: 'pages/PrivacyPolicy' });
+            router.push({ url: 'pages/PrivacyPolicy' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
           this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', '#5856D6', () => {
-            router.pushUrl({ url: 'pages/About' });
+            router.push({ url: 'pages/About' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
           this.MenuItem('💬', '意见反馈', '', '#FF3B30', () => {});
@@ -678,7 +678,7 @@ struct Main {
                 action: () => {
                   const ctx = this.getUIContext().getHostContext() as common.Context;
                   AuthStore.clearUser(ctx).then(() => {
-                    router.replaceUrl({ url: 'pages/Login' });
+                    router.replace({ url: 'pages/Login' });
                   });
                 }
               }

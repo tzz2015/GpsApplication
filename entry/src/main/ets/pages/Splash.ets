@@ -29,12 +29,12 @@ struct Splash {
   }
 
   private navigateNext(): void {
-    const context = getContext(this) as common.UIAbilityContext;
+    const context = this.getUIContext().getHostContext() as common.Context;
     AuthStore.isLoggedIn(context).then((loggedIn: boolean) => {
       const target = loggedIn ? 'pages/Main' : 'pages/Login';
-      router.replaceUrl({ url: target });
+      router.replace({ url: target });
     }).catch(() => {
-      router.replaceUrl({ url: 'pages/Login' });
+      router.replace({ url: 'pages/Login' });
     });
   }
 

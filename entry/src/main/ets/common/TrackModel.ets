@@ -87,6 +87,7 @@ export namespace TrackModel {
     totalDistance?: number;
     totalDuration?: number;
     maxAltitude?: number;
+    spotCount?: number;
     coverImageUrl?: string;
   }
 

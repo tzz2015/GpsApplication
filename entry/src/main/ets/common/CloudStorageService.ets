@@ -1,6 +1,7 @@
 import { cloudStorage } from '@kit.CloudFoundationKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
+import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError, request } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
@@ -12,6 +13,8 @@ const LOG_TAG = 'CloudStorageService';
 const IMAGE_MAX_SIDE = 1920;
 /** 图片压缩 JPEG 质量（1-100） */
 const IMAGE_JPEG_QUALITY = 75;
+/** 头像裁剪输出边长（像素），中心正方形裁剪后缩放到此尺寸 */
+const AVATAR_SIZE = 512;
 
 /**
  * Cloud Storage 服务
@@ -116,7 +119,7 @@ export class CloudStorageService {
         format: 'image/jpeg',
         quality: IMAGE_JPEG_QUALITY
       };
-      const compressedData: ArrayBuffer = await packer.packing(pixelMap, packOpts);
+      const compressedData: ArrayBuffer = await packer.packToData(pixelMap, packOpts);
 
       // 6. 写入缓存文件
       const dstFile: fileIo.File = fileIo.openSync(destPath,
@@ -136,6 +139,83 @@ export class CloudStorageService {
     } catch (e) {
       const err = e as BusinessError;
       hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Compress image failed [%{public}s]: code=%{public}d, msg=%{public}s',
+        srcPath, err.code || 0, err.message || '');
+      return '';
+    }
+  }
+
+  /**
+   * 头像专用：中心正方形裁剪 + 缩放到 AVATAR_SIZE，再压缩为 JPEG 写入缓存
+   * - 先解码（最长边不超过 1024 以省内存），再裁成中心正方形，再缩放到 512x512，最后打包
+   * @returns 缓存文件路径；失败返回空字符串
+   */
+  static async compressAndCropAvatarToCache(context: common.Context, srcPath: string, fileName: string): Promise<string> {
+    try {
+      const cacheDir: string = context.cacheDir;
+      const destPath: string = cacheDir + '/' + fileName;
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Avatar crop: %{public}s', srcPath);
+
+      const srcFile: fileIo.File = fileIo.openSync(srcPath, fileIo.OpenMode.READ_ONLY);
+      const imgSource: image.ImageSource = image.createImageSource(srcFile.fd);
+      const imgInfo: image.ImageInfo = await imgSource.getImageInfo();
+      const origWidth: number = imgInfo.size.width;
+      const origHeight: number = imgInfo.size.height;
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Avatar original: %{public}dx%{public}d', origWidth, origHeight);
+
+      // 解码时限制最长边 1024，减少大图内存
+      let decodeW: number = origWidth;
+      let decodeH: number = origHeight;
+      const maxDecode: number = 1024;
+      if (Math.max(origWidth, origHeight) > maxDecode) {
+        const scale: number = maxDecode / Math.max(origWidth, origHeight);
+        decodeW = Math.round(origWidth * scale);
+        decodeH = Math.round(origHeight * scale);
+      }
+      const decodingOpts: image.DecodingOptions = {
+        desiredSize: { width: decodeW, height: decodeH }
+      };
+      const pixelMap: image.PixelMap = await imgSource.createPixelMap(decodingOpts);
+      imgSource.release();
+      fileIo.closeSync(srcFile);
+
+      // 中心正方形裁剪（在解码后的尺寸上）
+      const w: number = decodeW;
+      const h: number = decodeH;
+      const side: number = Math.min(w, h);
+      const x: number = Math.floor((w - side) / 2);
+      const y: number = Math.floor((h - side) / 2);
+      const region: image.Region = {
+        x: x,
+        y: y,
+        size: { width: side, height: side }
+      };
+      await pixelMap.crop(region);
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Avatar cropped to square: %{public}d', side);
+
+      // 若大于目标边长则缩放
+      if (side > AVATAR_SIZE) {
+        const scaleFactor: number = AVATAR_SIZE / side;
+        await pixelMap.scale(scaleFactor, scaleFactor);
+        hilog.info(LOG_DOMAIN, LOG_TAG, 'Avatar scaled to: %{public}d', AVATAR_SIZE);
+      }
+
+      const packer: image.ImagePacker = image.createImagePacker();
+      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: IMAGE_JPEG_QUALITY };
+      const compressedData: ArrayBuffer = await packer.packToData(pixelMap, packOpts);
+      packer.release();
+      pixelMap.release();
+
+      const dstFile: fileIo.File = fileIo.openSync(destPath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      fileIo.writeSync(dstFile.fd, compressedData);
+      fileIo.closeSync(dstFile);
+
+      const sizeKB: number = Math.round(compressedData.byteLength / 1024);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Avatar cropped & saved: %{public}s (%{public}dKB)', destPath, sizeKB);
+      return destPath;
+    } catch (e) {
+      const err = e as BusinessError;
+      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Avatar crop failed [%{public}s]: code=%{public}d, msg=%{public}s',
         srcPath, err.code || 0, err.message || '');
       return '';
     }
@@ -267,6 +347,25 @@ export class CloudStorageService {
   // ==================== 业务级上传 ====================
 
   /**
+   * 上传用户头像（自动压缩）
+   * - 上传到 users/{userId}/avatar.jpg
+   * @returns 云存储下载 URL；失败返回空字符串
+   */
+  static async uploadUserAvatar(context: common.Context, userId: string, localPath: string): Promise<string> {
+    if (userId.length === 0) {
+      return '';
+    }
+    const cacheName = 'avatar_upload_' + userId + '.jpg';
+    const compressedPath: string = await CloudStorageService.compressAndCropAvatarToCache(context, localPath, cacheName);
+    if (compressedPath.length === 0) {
+      return '';
+    }
+    const cloudPath = 'users/' + userId + '/avatar.jpg';
+    const url: string = await CloudStorageService.uploadFile(context, compressedPath, cloudPath);
+    return url;
+  }
+
+  /**
    * 上传轨迹封面图（自动压缩）
    * - 如果已经是云端 URL，直接返回
    * - 压缩图片到缓存后上传
@@ -354,6 +453,87 @@ export class CloudStorageService {
       return JSON.stringify(updatedUris);
     }
     return imageUrisJson;
+  }
+
+  /**
+   * 从网络 URL 下载图片到应用缓存目录（用于重装后恢复打卡点图片）
+   * @param context 上下文（用于 cacheDir）
+   * @param imageUrl 图片 URL（http/https）
+   * @param fileName 缓存文件名，如 restore_spot_xxx_0.jpg
+   * @returns 本地路径，失败返回空字符串
+   */
+  static async downloadImageUrlToCache(
+    context: common.Context,
+    imageUrl: string,
+    fileName: string
+  ): Promise<string> {
+    if (imageUrl.length === 0 || !imageUrl.startsWith('http')) {
+      return '';
+    }
+    try {
+      const httpReq = http.createHttp();
+      const resp = await httpReq.request(imageUrl, {
+        method: http.RequestMethod.GET,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
+      });
+      const data = resp.result as ArrayBuffer;
+      httpReq.destroy();
+      if (!data || data.byteLength === 0) {
+        return '';
+      }
+      const cacheDir: string = context.cacheDir;
+      const destPath: string = cacheDir + '/' + fileName;
+      const f: fileIo.File = fileIo.openSync(destPath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      fileIo.writeSync(f.fd, data);
+      fileIo.closeSync(f);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ downloadImageUrlToCache: %{public}s', fileName);
+      return destPath;
+    } catch (e) {
+      const err = e as BusinessError;
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ downloadImageUrlToCache failed [%{public}s]: %{public}s',
+        fileName, err.message || '');
+      return '';
+    }
+  }
+
+  /**
+   * 将打卡点 imageUris 中的云端 URL 下载到本地缓存，返回新的 JSON 字符串（用于重装恢复）
+   * 已是本地路径的项保持不变；云端 URL 下载后替换为本地路径
+   */
+  static async restoreSpotImagesToLocal(
+    context: common.Context,
+    tombId: string,
+    imageUrisJson: string
+  ): Promise<string> {
+    if (imageUrisJson.length === 0 || imageUrisJson === '[]') {
+      return imageUrisJson;
+    }
+    let uris: string[];
+    try {
+      uris = JSON.parse(imageUrisJson) as string[];
+    } catch (e) {
+      return imageUrisJson;
+    }
+    if (uris.length === 0) {
+      return imageUrisJson;
+    }
+    const result: string[] = [];
+    for (let i = 0; i < uris.length; i++) {
+      const uri = uris[i];
+      if (CloudStorageService.isLocalPath(uri)) {
+        result.push(uri);
+        continue;
+      }
+      const fileName = 'restore_spot_' + tombId + '_' + i.toString() + '.jpg';
+      const localPath: string = await CloudStorageService.downloadImageUrlToCache(context, uri, fileName);
+      if (localPath.length > 0) {
+        result.push(localPath);
+      } else {
+        result.push(uri);
+      }
+    }
+    return JSON.stringify(result);
   }
 
   // ==================== 删除 / 查询 ====================

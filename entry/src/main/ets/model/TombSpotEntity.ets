@@ -14,6 +14,9 @@ export class TombSpotEntity extends cloudDatabase.DatabaseObject {
   public lat: number | undefined;
   public lng: number | undefined;
   public altitude: number | undefined;
+  /** 打卡点图文与图片 URL 列表（JSON 字符串），同步与恢复用 */
+  public contentText: string | undefined;
+  public imageUris: string | undefined;
   public createdAt: Date | undefined;
   public updatedAt: Date | undefined;
 

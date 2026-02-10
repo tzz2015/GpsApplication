@@ -118,10 +118,15 @@ struct TrackRecord {
       this.startPointName = track.startName;
       this.totalDistance = track.totalDistance;
       this.maxAltitude = track.maxAltitude;
+      this.elapsedTime = track.totalDuration || 0;
+      this.isRecording = true;
       if (track.startLat !== 0) {
         this.mapCenterLat = track.startLat;
         this.mapCenterLng = track.startLng;
       }
+      // 继续记录：恢复计时并重新开启定位
+      this.startTimer(this.elapsedTime);
+      this.startLocationTracking();
     }
     this.tombSpots = await TrackStore.getTombSpotsByTrackId(context, this.trackId);
 
@@ -246,6 +251,7 @@ struct TrackRecord {
 
   /** 开始持续定位记录 */
   private startLocationTracking(): void {
+    try {
     const request: geoLocationManager.ContinuousLocationRequest = {
       interval: 3,
       locationScenario: geoLocationManager.UserActivityScenario.NAVIGATION
@@ -311,6 +317,9 @@ struct TrackRecord {
       // 更新地图折线
       this.updatePolyline();
     });
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'startLocationTracking: %{public}s', JSON.stringify(e));
+    }
   }
 
   private stopLocationTracking(): void {
@@ -334,7 +343,7 @@ struct TrackRecord {
       const filePath = dir + '/' + fileName;
       const packer = image.createImagePacker();
       const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 80 };
-      const data: ArrayBuffer = await packer.packing(pixelMap, packOpts);
+      const data: ArrayBuffer = await packer.packToData(pixelMap, packOpts);
       const file = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
       fileIo.writeSync(file.fd, data);
       fileIo.closeSync(file.fd);
@@ -379,8 +388,13 @@ struct TrackRecord {
   }
 
   /** 计时器 */
-  private startTimer(): void {
-    this.recordStartTime = Date.now();
+  /** @param baseElapsedMs 已有时长（毫秒），继续记录时传入，计时从该值累加 */
+  private startTimer(baseElapsedMs?: number): void {
+    if (baseElapsedMs !== undefined && baseElapsedMs > 0) {
+      this.recordStartTime = Date.now() - baseElapsedMs;
+    } else {
+      this.recordStartTime = Date.now();
+    }
     this.timerInterval = setInterval(() => {
       if (!this.isPaused) {
         this.elapsedTime = Date.now() - this.recordStartTime - this.totalPausedTime;
@@ -473,15 +487,19 @@ struct TrackRecord {
     });
 
     // 跳到打卡点详情页填写图文
-    router.pushUrl({
-      url: 'pages/TombSpotDetail',
-      params: {
-        tombId: spot.tombId,
-        trackId: this.trackId,
-        trackTitle: this.trackTitle,
-        fromRecording: true
-      }
-    });
+    try {
+      router.push({
+        url: 'pages/TombSpotDetail',
+        params: {
+          tombId: spot.tombId,
+          trackId: this.trackId,
+          trackTitle: this.trackTitle,
+          fromRecording: true
+        }
+      });
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'router.push TombSpotDetail: %{public}s', JSON.stringify(e));
+    }
   }
 
   /** 设置终点并结束轨迹 */
@@ -522,10 +540,14 @@ struct TrackRecord {
     });
 
     // 跳转到轨迹详情页
-    router.replaceUrl({
-      url: 'pages/TrackDetail',
-      params: { trackId: this.trackId, title: this.trackTitle }
-    });
+    try {
+      router.replace({
+        url: 'pages/TrackDetail',
+        params: { trackId: this.trackId, title: this.trackTitle }
+      });
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'router.replace TrackDetail: %{public}s', JSON.stringify(e));
+    }
   }
 
   /** 中断记录 */
@@ -605,14 +627,20 @@ struct TrackRecord {
         .position({ x: 12, y: 12 + this.statusBarHeight })
         .zIndex(10);
 
-        // 地图控制按钮（右上角）
+        // 地图控制按钮（右上角，仅保留图层切换与 2D/3D；定位使用地图右下角系统按钮）
         Column({ space: 10 }) {
-          // 图层切换
+          // 图层切换（图标+文字，便于识别）
           Button() {
-            Text('🗺')
-              .fontSize(18);
+            Row({ space: 4 }) {
+              Text('☰')
+                .fontSize(16)
+                .fontColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
+              Text('图层')
+                .fontSize(12)
+                .fontColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
+            }
           }
-          .width(40)
+          .width(56)
           .height(40)
           .backgroundColor(this.showLayerPanel ? '#3478F6' : $r('app.color.card_background'))
           .borderRadius(12)
@@ -654,23 +682,9 @@ struct TrackRecord {
               }
             }
           });
-
-          // 定位按钮
-          Button() {
-            Text('📍')
-              .fontSize(18);
-          }
-          .width(40)
-          .height(40)
-          .backgroundColor($r('app.color.card_background'))
-          .borderRadius(12)
-          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
-          .onClick(() => {
-            this.moveToCurrentLocation();
-          });
         }
         .position({ x: '100%', y: 12 + this.statusBarHeight })
-        .translate({ x: -52 })
+        .translate({ x: -60 })
         .zIndex(10);
 
         // 图层选择面板

@@ -238,7 +238,19 @@ export class SyncService {
         const spots = await CloudDBService.queryTombSpots(trackId);
         for (let s = 0; s < spots.length; s++) {
           const spot = SyncService.cloudSpotToLocal(spots[s]);
+          // 重装恢复：将打卡点图片的云端 URL 下载到本地，保证图文记录可正常显示
+          if (spot.imageUris.length > 0 && spot.imageUris !== '[]') {
+            const localUrisJson: string = await CloudStorageService.restoreSpotImagesToLocal(
+              context, spot.tombId, spot.imageUris
+            );
+            if (localUrisJson !== spot.imageUris) {
+              spot.imageUris = localUrisJson;
+            }
+          }
           await TrackStore.saveTombSpot(context, spot);
+        }
+        if (spots.length > 0) {
+          await TrackStore.updateTrack(context, trackId, { spotCount: spots.length });
         }
 
         const points = await CloudDBService.queryTrackPoints(trackId);
@@ -323,6 +335,13 @@ export class SyncService {
     entity.coverImageUrl = track.coverImageUrl;
     entity.createdAt = new Date(track.createdAt);
     entity.updatedAt = new Date(track.updatedAt);
+    entity.totalDistance = track.totalDistance;
+    entity.totalDuration = track.totalDuration;
+    entity.maxAltitude = track.maxAltitude;
+    entity.startLat = track.startLat;
+    entity.startLng = track.startLng;
+    entity.endLat = track.endLat;
+    entity.endLng = track.endLng;
     return entity;
   }
 
@@ -338,6 +357,8 @@ export class SyncService {
     entity.lat = spot.latitude;
     entity.lng = spot.longitude;
     entity.altitude = spot.altitude;
+    entity.contentText = spot.contentText || '';
+    entity.imageUris = spot.imageUris || '[]';
     entity.createdAt = new Date(spot.createdAt);
     entity.updatedAt = new Date(spot.updatedAt);
     return entity;
@@ -373,13 +394,13 @@ export class SyncService {
       status: entity.status || 'editing',
       startName: entity.startName || '',
       endName: entity.endName || '',
-      startLat: 0,
-      startLng: 0,
-      endLat: 0,
-      endLng: 0,
-      totalDistance: 0,
-      totalDuration: 0,
-      maxAltitude: 0,
+      startLat: entity.startLat ?? 0,
+      startLng: entity.startLng ?? 0,
+      endLat: entity.endLat ?? 0,
+      endLng: entity.endLng ?? 0,
+      totalDistance: entity.totalDistance ?? 0,
+      totalDuration: entity.totalDuration ?? 0,
+      maxAltitude: entity.maxAltitude ?? 0,
       spotCount: 0,
       coverImageUrl: entity.coverImageUrl || '',
       createdAt: entity.createdAt ? entity.createdAt.getTime() : Date.now(),
@@ -399,8 +420,8 @@ export class SyncService {
       latitude: entity.lat ?? 0,
       longitude: entity.lng ?? 0,
       altitude: entity.altitude ?? 0,
-      contentText: '',
-      imageUris: '[]',
+      contentText: entity.contentText || '',
+      imageUris: entity.imageUris || '[]',
       createdAt: entity.createdAt ? entity.createdAt.getTime() : Date.now(),
       updatedAt: entity.updatedAt ? entity.updatedAt.getTime() : Date.now()
     };

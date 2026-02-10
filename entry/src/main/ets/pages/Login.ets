@@ -49,7 +49,7 @@ struct Login {
   requestPermissions(): void {
     try {
       const atManager = abilityAccessCtrl.createAtManager();
-      const context = getContext(this) as common.UIAbilityContext;
+      const context = this.getUIContext().getHostContext() as common.Context;
       atManager.requestPermissionsFromUser(context, [
         'ohos.permission.INTERNET',
         'ohos.permission.LOCATION',
@@ -109,7 +109,7 @@ struct Login {
   /** 处理登录成功 */
   private handleLoginSuccess(user: UserInfo): void {
     try {
-      const context = getContext(this) as common.UIAbilityContext;
+      const context = this.getUIContext().getHostContext() as common.Context;
       const authUser = AuthStore.createNewUser(user.userId, user.displayName, user.avatarUrl);
 
       AuthStore.setUser(context, authUser)
@@ -120,7 +120,7 @@ struct Login {
           await SyncService.syncUser(context).catch((e: Error) => {
             hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync user after login: %{public}s', JSON.stringify(e));
           });
-          router.replaceUrl({ url: 'pages/Main' });
+          router.replace({ url: 'pages/Main' });
         })
         .catch((error: Error) => {
           hilog.error(LOG_DOMAIN, LOG_TAG, 'User save failed: %{public}s', JSON.stringify(error));
@@ -142,12 +142,12 @@ struct Login {
     this.isLoggingIn = true;
     this.loginError = '';
 
-    const context = getContext(this) as common.UIAbilityContext;
+    const context = this.getUIContext().getHostContext() as common.Context;
     const mockUser = AuthStore.createNewUser('mock_user_001', '轨迹用户', '');
 
     AuthStore.setUser(context, mockUser)
       .then(() => {
-        router.replaceUrl({ url: 'pages/Main' });
+        router.replace({ url: 'pages/Main' });
       })
       .catch(() => {
         this.loginError = '登录失败，请重试';
@@ -257,7 +257,7 @@ struct Login {
           .fontSize(12)
           .fontColor('#DDFFFFFF')
           .onClick(() => {
-            router.pushUrl({ url: 'pages/PrivacyPolicy' });
+            router.push({ url: 'pages/PrivacyPolicy' });
           });
         Text('与')
           .fontSize(12)
@@ -266,7 +266,7 @@ struct Login {
           .fontSize(12)
           .fontColor('#DDFFFFFF')
           .onClick(() => {
-            router.pushUrl({ url: 'pages/UserAgreement' });
+            router.push({ url: 'pages/UserAgreement' });
           });
       }
       .justifyContent(FlexAlign.Center)

@@ -8,6 +8,9 @@ alwaysApply: true
 - **鸿蒙应用开发指南（必读）**：https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/application-dev-guide  
   编写或修改鸿蒙相关代码时，应优先查阅该文档，按官方指南与 API 规范实现，避免使用已废弃或非推荐写法。
 
+- **编译与构建 FAQ（必遵）**：https://developer.huawei.com/consumer/cn/doc/harmonyos-faqs/faqs-compiling-and-building-30  
+  后续开发与修复编译/构建告警时，须按该规范执行：包括但不限于弃用 API 的替代方式、编译选项、构建配置、Code Linter 与修复建议等。出现 ArkTS 弃用告警（如 getContext、pushUrl/replaceUrl、packing、showToast 等）时，应查阅官方文档采用推荐 API 或迁移方案，并确保构建通过、告警消除或收敛。
+
 ## 二、轨迹 App 项目与技术栈
 
 - **项目**：遨游轨迹 HarmonyOS App（AiApplication），见 `doc/需求文档v1.0.md`、`doc/页面流程与原型说明v1.0.md`、`doc/技术架构文档v1.0.md`。轨迹为单条路径（起点、打卡点、终点），支持暂停/继续；不拆分多段。
@@ -137,6 +140,7 @@ alwaysApply: true
 
 ## 十八、构建与部署
 
+- **遵循华为编译与构建 FAQ**：https://developer.huawei.com/consumer/cn/doc/harmonyos-faqs/faqs-compiling-and-building-30 （与第一节「编译与构建 FAQ（必遵）」一致）。
 - 正确配置 `build-profile.json5` 和 `hvigorfile.ts`。
 - 正确配置应用签名信息。
 - 在 `module.json5` 中正确声明权限（定位、网络、存储等）。

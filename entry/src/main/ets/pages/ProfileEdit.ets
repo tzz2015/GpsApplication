@@ -1,8 +1,10 @@
 import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { picker } from '@kit.CoreFileKit';
 import { NavBar } from '../common/NavBar';
 import { AuthStore } from '../common/AuthStore';
 import { SyncService } from '../common/SyncService';
+import { CloudStorageService } from '../common/CloudStorageService';
 
 /**
  * P3-2 个人信息编辑页：头像、昵称、家族、签名
@@ -15,6 +17,7 @@ struct ProfileEdit {
   @State signature: string = '';
   @State avatarUrl: string = '';
   @State isSaving: boolean = false;
+  @State isUploadingAvatar: boolean = false;
 
   aboutToAppear(): void {
     this.loadUserInfo();
@@ -46,13 +49,45 @@ struct ProfileEdit {
     router.back();
   }
 
+  /** 选择照片并上传为头像 */
+  private async pickAndUploadAvatar(): Promise<void> {
+    if (this.isUploadingAvatar) {
+      return;
+    }
+    const context = this.getUIContext().getHostContext() as common.Context;
+    const user = await AuthStore.getCurrentUser(context);
+    if (!user) {
+      return;
+    }
+    try {
+      const photoPicker = new picker.PhotoViewPicker();
+      const result = await photoPicker.select({
+        MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: 1
+      });
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        const uri: string = result.photoUris[0];
+        this.isUploadingAvatar = true;
+        const cloudUrl: string = await CloudStorageService.uploadUserAvatar(context, user.userId, uri);
+        this.isUploadingAvatar = false;
+        if (cloudUrl.length > 0) {
+          this.avatarUrl = cloudUrl;
+          await AuthStore.updateUser(context, { avatarUrl: cloudUrl });
+          SyncService.syncUser(context).catch(() => {});
+        }
+      }
+    } catch (e) {
+      this.isUploadingAvatar = false;
+    }
+  }
+
   build() {
     Column() {
       NavBar({ title: '编辑个人信息', showBack: true });
 
       Scroll() {
         Column() {
-          // 头像区域
+          // 头像区域（可点击更换）
           Column({ space: 12 }) {
             Stack() {
               if (this.avatarUrl.length > 0) {
@@ -74,7 +109,7 @@ struct ProfileEdit {
               }
               // 相机角标
               Column() {
-                Text('📷')
+                Text(this.isUploadingAvatar ? '…' : '📷')
                   .fontSize(14);
               }
               .width(28)
@@ -87,8 +122,11 @@ struct ProfileEdit {
               .position({ x: 56, y: 56 });
             }
             .width(80)
-            .height(80);
-            Text('点击更换头像')
+            .height(80)
+            .onClick(() => {
+              this.pickAndUploadAvatar();
+            });
+            Text(this.isUploadingAvatar ? '上传中…' : '点击更换头像')
               .fontSize(13)
               .fontColor($r('app.color.label_tertiary'));
           }
