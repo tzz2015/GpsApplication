@@ -29,7 +29,8 @@ export struct NavBar {
           }
           .alignItems(VerticalAlign.Center)
           .height(44)
-          .padding({ left: 12, right: 12 })
+          .width(88)
+          .padding({ left: 16, right: 16 })
           .onClick(() => {
             this.getUIContext().getRouter().back();
           });

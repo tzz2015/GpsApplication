@@ -9,6 +9,8 @@ import { CloudDBService } from '../common/CloudDBService';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'Main';
+/** 我的轨迹列表每页条数，支持分页加载更多 */
+const MY_TRACKS_PAGE_SIZE = 20;
 
 /**
  * P1-0 首页（顶部 Tab：我的轨迹 | 公开轨迹）+ P3-1 个人中心
@@ -21,7 +23,9 @@ struct Main {
   @State currentBottomIndex: number = 0;
   @State currentTopIndex: number = 0;
   @State myTracks: TrackModel.Track[] = [];
+  @State myTracksDisplayCount: number = MY_TRACKS_PAGE_SIZE;
   @State publicTracks: TrackModel.Track[] = [];
+  @State publicTracksDisplayCount: number = MY_TRACKS_PAGE_SIZE;
   @State isLoading: boolean = false;
   @State currentUser: AuthUser | null = null;
   @State diagResult: string = '';
@@ -52,9 +56,11 @@ struct Main {
         myTracks = tracks.filter((t: TrackModel.Track) => t.ownerUserId === user.userId);
       }
       this.myTracks = myTracks;
+      this.myTracksDisplayCount = Math.min(MY_TRACKS_PAGE_SIZE, myTracks.length);
       this.publicTracks = tracks.filter((t: TrackModel.Track) =>
         t.visibility === TrackModel.VISIBILITY_PUBLIC && t.status === TrackModel.TRACK_STATUS_DONE
       );
+      this.publicTracksDisplayCount = Math.min(MY_TRACKS_PAGE_SIZE, this.publicTracks.length);
       this.isLoading = false;
 
       // 进入首页时，后台同步本地数据到云端
@@ -193,25 +199,6 @@ struct Main {
     Column() {
       if (this.myTracks.length > 0) {
         List({ space: 12 }) {
-          // 统计卡片
-          ListItem() {
-            Row() {
-              this.StatsItem(this.getTrackCount().toString(), '轨迹总数');
-              Column().width(1).height(30).backgroundColor('#33FFFFFF');
-              this.StatsItem(this.getSpotCount().toString(), '打卡点数');
-              Column().width(1).height(30).backgroundColor('#33FFFFFF');
-              this.StatsItem(this.getTotalDistance(), '总里程');
-            }
-            .width('100%')
-            .padding(16)
-            .linearGradient({
-              angle: 135,
-              colors: [['#3478F6', 0], ['#5B8FF9', 1]]
-            })
-            .borderRadius(12)
-            .margin({ left: 16, right: 16 });
-          }
-
           // 新建按钮
           ListItem() {
             Row({ space: 6 }) {
@@ -237,13 +224,34 @@ struct Main {
           }
           .margin({ left: 16, right: 16 });
 
-          // 轨迹卡片列表
-          ForEach(this.myTracks, (item: TrackModel.Track) => {
+          // 轨迹卡片列表（分页展示，避免一次渲染过多）
+          ForEach(this.myTracks.slice(0, this.myTracksDisplayCount), (item: TrackModel.Track) => {
             ListItem() {
               this.TrackCard(item);
             }
             .margin({ left: 16, right: 16 });
           }, (item: TrackModel.Track) => item.trackId);
+
+          // 加载更多
+          if (this.myTracksDisplayCount < this.myTracks.length) {
+            ListItem() {
+              Row() {
+                Text('加载更多（' + (this.myTracks.length - this.myTracksDisplayCount).toString() + ' 条）')
+                  .fontSize(14)
+                  .fontColor($r('app.color.primary'));
+              }
+              .width('100%')
+              .height(48)
+              .justifyContent(FlexAlign.Center)
+              .onClick(() => {
+                this.myTracksDisplayCount = Math.min(
+                  this.myTracksDisplayCount + MY_TRACKS_PAGE_SIZE,
+                  this.myTracks.length
+                );
+              });
+            }
+            .margin({ left: 16, right: 16 });
+          }
         }
         .layoutWeight(1)
         .width('100%')
@@ -397,12 +405,31 @@ struct Main {
     Column() {
       if (this.publicTracks.length > 0) {
         List({ space: 12 }) {
-          ForEach(this.publicTracks, (item: TrackModel.Track) => {
+          ForEach(this.publicTracks.slice(0, this.publicTracksDisplayCount), (item: TrackModel.Track) => {
             ListItem() {
               this.PublicTrackCard(item);
             }
             .margin({ left: 16, right: 16 });
           }, (item: TrackModel.Track) => item.trackId);
+          if (this.publicTracksDisplayCount < this.publicTracks.length) {
+            ListItem() {
+              Row() {
+                Text('加载更多（' + (this.publicTracks.length - this.publicTracksDisplayCount).toString() + ' 条）')
+                  .fontSize(14)
+                  .fontColor($r('app.color.primary'));
+              }
+              .width('100%')
+              .height(48)
+              .justifyContent(FlexAlign.Center)
+              .onClick(() => {
+                this.publicTracksDisplayCount = Math.min(
+                  this.publicTracksDisplayCount + MY_TRACKS_PAGE_SIZE,
+                  this.publicTracks.length
+                );
+              });
+            }
+            .margin({ left: 16, right: 16 });
+          }
         }
         .layoutWeight(1)
         .width('100%')
@@ -604,23 +631,27 @@ struct Main {
           this.MenuItem('👤', '编辑个人信息', '', '#3478F6', () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/ProfileEdit' });
           });
-          Divider().color($r('app.color.separator')).margin({ left: 56 });
-          this.MenuItem('🔒', '隐私设置', '', '#FF9500', () => {});
         }
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)
         .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 });
 
         Column() {
-          this.MenuItem('📄', '隐私政策与用户协议', '', '#34C759', () => {
+          this.MenuItem('📄', '隐私政策', '', '#34C759', () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
+          });
+          Divider().color($r('app.color.separator')).margin({ left: 56 });
+          this.MenuItem('📋', '用户协议', '', '#34C759', () => {
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
           this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', '#5856D6', () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/About' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56 });
-          this.MenuItem('💬', '意见反馈', '', '#FF3B30', () => {});
+          this.MenuItem('💬', '意见反馈', '', '#FF3B30', () => {
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/Feedback' });
+          });
         }
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)

@@ -14,16 +14,12 @@ struct About {
       Column({ space: 16 }) {
         Blank().height(32);
 
-        // App 图标
-        Column() {
-          Text('🗺')
-            .fontSize(48);
-        }
-        .width(80)
-        .height(80)
-        .borderRadius(20)
-        .backgroundColor($r('app.color.primary_light'))
-        .justifyContent(FlexAlign.Center);
+        // App 图标（与桌面/启动页一致）
+        Image($r('app.media.startIcon'))
+          .width(80)
+          .height(80)
+          .borderRadius(20)
+          .objectFit(ImageFit.Contain);
 
         Text('遨游轨迹')
           .fontSize(22)

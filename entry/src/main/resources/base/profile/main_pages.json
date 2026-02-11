@@ -12,6 +12,7 @@
     "pages/ProfileEdit",
     "pages/PrivacyPolicy",
     "pages/UserAgreement",
-    "pages/About"
+    "pages/About",
+    "pages/Feedback"
   ]
 }

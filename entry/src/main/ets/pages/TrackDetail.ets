@@ -3,6 +3,8 @@ import { MapComponent, mapCommon, map } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { image } from '@kit.ImageKit';
+import { fileIo } from '@kit.CoreFileKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { AuthStore } from '../common/AuthStore';
@@ -422,6 +424,77 @@ struct TrackDetail {
     });
   }
 
+  /** 分享轨迹：生成地图截图，可选保存到本地或删除 */
+  private async shareTrackAsImage(): Promise<void> {
+    if (!this.mapController) {
+      try {
+        promptAction.showToast({ message: '请稍候，地图加载完成后重试' });
+      } catch (_t) {
+      }
+      return;
+    }
+    const context = this.getUIContext().getHostContext() as common.Context;
+    const tempDir = context.cacheDir;
+    const tempPath = tempDir + '/share_' + this.trackId + '_' + Date.now().toString() + '.jpg';
+    try {
+      const pixelMap: image.PixelMap = await this.mapController.snapshot();
+      const packer = image.createImagePacker();
+      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 85 };
+      const data: ArrayBuffer = await packer.packToData(pixelMap, packOpts);
+      const f = fileIo.openSync(tempPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      fileIo.writeSync(f.fd, data);
+      fileIo.closeSync(f);
+      packer.release();
+      pixelMap.release();
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'share snapshot: %{public}s', JSON.stringify(e));
+      try {
+        promptAction.showToast({ message: '生成分享图失败' });
+      } catch (_t) {
+      }
+      return;
+    }
+    this.getUIContext().getPromptAction().showDialog({
+      title: '分享图已生成',
+      message: '是否保存到本地？不保存将删除该图片。',
+      buttons: [
+        { text: '不保存', color: '#666666' },
+        { text: '保存', color: '#3478F6' }
+      ]
+    }).then((result: promptAction.ShowDialogSuccessResponse) => {
+      if (result.index === 1) {
+        const saveDir = context.filesDir + '/Download';
+        try {
+          fileIo.mkdirSync(saveDir, false);
+        } catch (_e) {
+        }
+        const name = '轨迹_' + (this.track && this.track.title ? this.track.title : this.trackId) + '_' + Date.now().toString() + '.jpg';
+        const savePath = saveDir + '/' + name;
+        try {
+          fileIo.copyFileSync(tempPath, savePath);
+          try {
+            promptAction.showToast({ message: '已保存至 应用文件/Download' });
+          } catch (_t) {
+          }
+        } catch (copyErr) {
+          try {
+            promptAction.showToast({ message: '保存失败' });
+          } catch (_t) {
+          }
+        }
+      }
+      try {
+        fileIo.unlinkSync(tempPath);
+      } catch (_e) {
+      }
+    }).catch(() => {
+      try {
+        fileIo.unlinkSync(tempPath);
+      } catch (_e) {
+      }
+    });
+  }
+
   /** 删除轨迹 */
   private showDeleteConfirm(): void {
     this.getUIContext().getPromptAction().showDialog({
@@ -466,7 +539,7 @@ struct TrackDetail {
               .height('100%');
           }
           .width('100%')
-          .height(200)
+          .height(300)
           .margin({ left: 16, right: 16, top: 8 })
           .borderRadius(12)
           .clip(true);
@@ -695,7 +768,7 @@ struct TrackDetail {
                   .backgroundColor($r('app.color.primary'))
                   .borderRadius(25)
                   .onClick(() => {
-                    // TODO: 分享功能
+                    this.shareTrackAsImage();
                   });
               }
               Button('删除轨迹')
@@ -863,8 +936,8 @@ struct TrackDetail {
 
   @Builder
   TimelineItem(name: string, tag: string, meta: string, isStart: boolean, isEnd: boolean, tombId: string, canEditName: boolean) {
-    Row({ space: 12 }) {
-      // 时间轴圆点
+    Row({ space: 8 }) {
+      // 时间轴圆点（与文字更近）
       Column() {
         Circle({ width: 10, height: 10 })
           .fill(isStart ? $r('app.color.success') : (isEnd ? $r('app.color.destructive') : $r('app.color.primary')));
@@ -913,7 +986,7 @@ struct TrackDetail {
         }
       }
       .layoutWeight(1)
-      .padding(12)
+      .padding(8)
       .backgroundColor($r('app.color.card_background'))
       .borderRadius(10)
       .shadow({ radius: 2, color: '#0A000000', offsetX: 0, offsetY: 1 })
@@ -933,7 +1006,7 @@ struct TrackDetail {
     }
     .width('100%')
     .alignItems(VerticalAlign.Top)
-    .margin({ bottom: 8, left: 12 });
+    .margin({ bottom: 8, left: 8 });
   }
 
   /** 保存编辑后的标题 */

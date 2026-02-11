@@ -69,7 +69,7 @@ struct CreateOrEditTrack {
 
       Scroll() {
         Column({ space: 14 }) {
-          // 提示
+          // 提示（整体上移，减少顶部留白）
           Row({ space: 8 }) {
             Text('💡')
               .fontSize(14);
@@ -137,7 +137,7 @@ struct CreateOrEditTrack {
           .alignItems(HorizontalAlign.Start);
         }
         .width('100%')
-        .padding(16);
+        .padding({ left: 16, right: 16, top: 8, bottom: 16 });
       }
       .layoutWeight(1)
       .width('100%')

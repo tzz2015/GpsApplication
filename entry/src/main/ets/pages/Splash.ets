@@ -42,16 +42,13 @@ struct Splash {
     Stack() {
       // 居中内容（固定在正中，不受底部提示影响）
       Column({ space: 0 }) {
-        Column() {
-          Text('🏔️')
-            .fontSize(42);
-        }
-        .width(80)
-        .height(80)
-        .borderRadius(20)
-        .backgroundColor('#22FFFFFF')
-        .justifyContent(FlexAlign.Center)
-        .backdropBlur(20);
+        Image($r('app.media.startIcon'))
+          .width(80)
+          .height(80)
+          .borderRadius(20)
+          .objectFit(ImageFit.Contain)
+          .backgroundColor('#22FFFFFF')
+          .backdropBlur(20);
 
         Text('遨游轨迹')
           .fontSize(28)

@@ -13,7 +13,6 @@ import { CloudStorageService } from '../common/CloudStorageService';
 struct ProfileEdit {
   @State nickname: string = '';
   @State familyName: string = '';
-  @State signature: string = '';
   @State avatarUrl: string = '';
   @State isSaving: boolean = false;
   @State isUploadingAvatar: boolean = false;
@@ -28,7 +27,6 @@ struct ProfileEdit {
     if (user) {
       this.nickname = user.displayName;
       this.familyName = user.familyName;
-      this.signature = user.signature;
       this.avatarUrl = user.avatarUrl;
     }
   }
@@ -39,7 +37,6 @@ struct ProfileEdit {
     await AuthStore.updateUser(context, {
       displayName: this.nickname,
       familyName: this.familyName,
-      signature: this.signature,
       avatarUrl: this.avatarUrl
     });
     // 同步到 Cloud DB，重装后登录可恢复昵称
@@ -172,25 +169,6 @@ struct ProfileEdit {
                 .backgroundColor($r('app.color.app_background'))
                 .borderRadius(10)
                 .padding({ left: 12, right: 12 });
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Start);
-
-            Column({ space: 6 }) {
-              Text('个性签名')
-                .fontSize(13)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.label_secondary'));
-              TextArea({ placeholder: '一句话介绍自己', text: this.signature })
-                .onChange((value: string) => {
-                  this.signature = value;
-                })
-                .width('100%')
-                .height(80)
-                .fontSize(16)
-                .backgroundColor($r('app.color.app_background'))
-                .borderRadius(10)
-                .padding(12);
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start);

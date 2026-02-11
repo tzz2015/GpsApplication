@@ -62,7 +62,7 @@ struct TrackRecord {
   @State mapCenterLat: number = 23.7275;
   @State mapCenterLng: number = 108.3426;
   @State showLayerPanel: boolean = false;
-  @State currentMapType: number = 3; // 1=标准, 2=卫星, 3=地形（默认地形）
+  @State currentMapType: number = 0; // 0=标准, 1=卫星, 2=地形（默认标准）
   @State is3DMode: boolean = false;
   private mapOptions?: mapCommon.MapOptions;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
@@ -151,6 +151,7 @@ struct TrackRecord {
         target: { latitude: this.mapCenterLat, longitude: this.mapCenterLng },
         zoom: 16
       },
+      mapType: 0,
       myLocationControlsEnabled: true,
       scaleControlsEnabled: true
     };
@@ -163,11 +164,11 @@ struct TrackRecord {
         } catch (e) {
           hilog.info(LOG_DOMAIN, LOG_TAG, 'setMyLocationEnabled: %{public}s', JSON.stringify(e));
         }
-        // 默认设置地形图层
+        // 默认设置标准图层
         try {
-          controller.setMapType(3);
+          controller.setMapType(0);
         } catch (e) {
-          hilog.info(LOG_DOMAIN, LOG_TAG, 'setMapType terrain: %{public}s', JSON.stringify(e));
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'setMapType standard: %{public}s', JSON.stringify(e));
         }
         // 定位到当前位置
         this.moveToCurrentLocation();
@@ -446,11 +447,28 @@ struct TrackRecord {
     }
   }
 
-  /** 添加打卡点 */
+  /** 添加打卡点（尽量使用当前高精度定位，减少误差） */
   private async confirmAddSpot(): Promise<void> {
     const name = this.dialogInputText.trim() || '打卡点';
     this.showSpotDialog = false;
     this.dialogInputText = '';
+
+    let lat = this.lastLat;
+    let lng = this.lastLng;
+    let alt = this.currentAltitude;
+    try {
+      const request: geoLocationManager.SingleLocationRequest = {
+        locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY,
+        locatingTimeoutMs: 5000
+      };
+      const loc = await geoLocationManager.getCurrentLocation(request);
+      if (loc && loc.latitude !== 0) {
+        lat = loc.latitude;
+        lng = loc.longitude;
+        alt = Math.round(loc.altitude);
+      }
+    } catch (_e) {
+    }
 
     const context = this.getUIContext().getHostContext() as common.Context;
     const spot: TrackModel.TombSpot = {
@@ -460,9 +478,9 @@ struct TrackRecord {
       name: name,
       personInfo: '',
       remark: '',
-      latitude: this.lastLat,
-      longitude: this.lastLng,
-      altitude: this.currentAltitude,
+      latitude: lat,
+      longitude: lng,
+      altitude: alt,
       contentText: '',
       imageUris: '[]',
       createdAt: Date.now(),
@@ -690,9 +708,9 @@ struct TrackRecord {
         if (this.showLayerPanel) {
           Column() {
             Row({ space: 12 }) {
-              this.LayerOption('标准', '#3478F6', 1);
-              this.LayerOption('卫星', '#34C759', 2);
-              this.LayerOption('地形', '#FF9500', 3);
+              this.LayerOption('标准', '#3478F6', 0);
+              this.LayerOption('卫星', '#34C759', 1);
+              this.LayerOption('地形', '#FF9500', 2);
             }
             .padding(16)
             .backgroundColor($r('app.color.card_background'))
