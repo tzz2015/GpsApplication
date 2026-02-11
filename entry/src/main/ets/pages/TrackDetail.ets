@@ -43,6 +43,7 @@ struct TrackDetail {
   @State editingSpotId: string = '';
   @State showShareCover: boolean = false;
   @State shareImagePath: string = '';
+  @State isGeneratingShare: boolean = false;
   private trackId: string = '';
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private mapController?: map.MapComponentController;
@@ -445,7 +446,7 @@ struct TrackDetail {
     });
   }
 
-  /** 分享轨迹：先放大地图截图，再展示包含标题/起终点/打卡点等信息的分享卡 */
+  /** 分享轨迹：截取地图并展示包含标题/起终点/打卡点等信息的分享卡 */
   private async shareTrackAsImage(): Promise<void> {
     if (!this.mapController) {
       try {
@@ -455,7 +456,7 @@ struct TrackDetail {
       return;
     }
 
-    // 直接使用当前地图视图截图（已由 fitCameraToBounds 适配好轨迹范围）
+    this.isGeneratingShare = true;
     const context = this.getUIContext().getHostContext() as common.Context;
     const tempDir = context.cacheDir;
     const tempPath = tempDir + '/share_' + this.trackId + '_' + Date.now().toString() + '.jpg';
@@ -471,6 +472,7 @@ struct TrackDetail {
       pixelMap.release();
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'share snapshot: %{public}s', JSON.stringify(e));
+      this.isGeneratingShare = false;
       try {
         promptAction.showToast({ message: '生成分享图失败' });
       } catch (_t) {
@@ -478,6 +480,7 @@ struct TrackDetail {
       return;
     }
 
+    this.isGeneratingShare = false;
     this.shareImagePath = tempPath;
     this.showShareCover = true;
   }
@@ -557,6 +560,8 @@ struct TrackDetail {
       .width('100%');
 
       Scroll() {
+        // 包裹容器，用 padding 留出左右间距
+        Column() {
         // ===== 分享卡片 =====
         Column() {
           // 标题
@@ -574,7 +579,7 @@ struct TrackDetail {
             .height(260)
             .objectFit(ImageFit.Cover)
             .borderRadius(8)
-            .margin({ left: 16, right: 16 });
+            .padding({ left: 16, right: 16 });
 
           // 统计数据
           if (this.track) {
@@ -675,8 +680,10 @@ struct TrackDetail {
         .width('100%')
         .backgroundColor(Color.White)
         .borderRadius(16)
-        .margin({ left: 20, right: 20 })
         .id('shareCard');
+        }
+        .width('100%')
+        .padding({ left: 20, right: 20 });
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
@@ -985,7 +992,7 @@ struct TrackDetail {
                     });
                   });
               } else {
-                Button('分享轨迹')
+                Button(this.isGeneratingShare ? '生成中…' : '分享轨迹')
                   .width('100%')
                   .height(50)
                   .fontSize(17)
@@ -993,6 +1000,7 @@ struct TrackDetail {
                   .fontColor(Color.White)
                   .backgroundColor($r('app.color.primary'))
                   .borderRadius(25)
+                  .enabled(!this.isGeneratingShare)
                   .onClick(() => {
                     this.shareTrackAsImage();
                   });
@@ -1139,6 +1147,28 @@ struct TrackDetail {
       .backgroundColor('#66000000')
       .justifyContent(FlexAlign.Center)
       .zIndex(100);
+    }
+
+    // 生成分享图 Loading 遮罩
+    if (this.isGeneratingShare) {
+      Column() {
+        Column({ space: 12 }) {
+          LoadingProgress()
+            .width(40)
+            .height(40)
+            .color(Color.White);
+          Text('正在生成分享图…')
+            .fontSize(14)
+            .fontColor(Color.White);
+        }
+        .padding(24)
+        .backgroundColor('#CC000000')
+        .borderRadius(16);
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .zIndex(200);
     }
     }
     .width('100%')

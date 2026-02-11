@@ -17,7 +17,7 @@
         "description": "$string:MapAbility_desc",
         "icon": "$media:layered_image",
         "label": "$string:MapAbility_label",
-        "startWindowIcon": "$media:startIcon",
+        "startWindowIcon": "$media:start_window_icon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true
       }

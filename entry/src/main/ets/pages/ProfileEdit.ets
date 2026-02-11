@@ -181,6 +181,7 @@ struct ProfileEdit {
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.None)
       .backgroundColor($r('app.color.app_background'));
 
       Button(this.isSaving ? '保存中…' : '保存')
