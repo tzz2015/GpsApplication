@@ -137,7 +137,7 @@ struct CreateOrEditTrack {
           .alignItems(HorizontalAlign.Start);
         }
         .width('100%')
-        .padding({ left: 16, right: 16, top: 8, bottom: 16 });
+        .padding({ left: 16, right: 16, top: 0, bottom: 16 });
       }
       .layoutWeight(1)
       .width('100%')

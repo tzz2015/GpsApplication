@@ -1,4 +1,4 @@
-import { promptAction } from '@kit.ArkUI';
+import { promptAction, componentSnapshot } from '@kit.ArkUI';
 import { MapComponent, mapCommon, map } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
@@ -41,6 +41,8 @@ struct TrackDetail {
   @State showEditSpotNameDialog: boolean = false;
   @State editInputText: string = '';
   @State editingSpotId: string = '';
+  @State showShareCover: boolean = false;
+  @State shareImagePath: string = '';
   private trackId: string = '';
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private mapController?: map.MapComponentController;
@@ -58,7 +60,21 @@ struct TrackDetail {
       if (!err) {
         this.mapController = controller;
         this.mapReady = true;
-        // 如果数据已加载完，立即绘制轨迹
+        // 先将地图移动到已知的起点位置（GCJ02），避免显示默认坐标
+        if (this.mapCenterLat !== 23.7275 || this.mapCenterLng !== 108.3426) {
+          try {
+            const gcj02 = await this.convertToGCJ02(this.mapCenterLat, this.mapCenterLng);
+            controller.moveCamera(map.newCameraPosition({
+              target: gcj02,
+              zoom: 15,
+              tilt: 0,
+              bearing: 0
+            }));
+          } catch (_e) {
+            hilog.info(LOG_DOMAIN, LOG_TAG, 'init moveCamera: %{public}s', JSON.stringify(_e));
+          }
+        }
+        // 如果数据已加载完，绘制轨迹并适配相机
         if (this.dataReady) {
           this.moveCameraAndDraw();
         }
@@ -99,6 +115,11 @@ struct TrackDetail {
       }
     }
     this.tombSpots = await TrackStore.getTombSpotsByTrackId(context, this.trackId);
+    // 修正 spotCount（可能在记录时未正确保存）
+    if (this.track && this.track.spotCount !== this.tombSpots.length) {
+      this.track.spotCount = this.tombSpots.length;
+      await TrackStore.updateTrack(context, this.trackId, { spotCount: this.tombSpots.length });
+    }
     this.dataReady = true;
 
     // 如果地图已就绪，移动相机并绘制轨迹
@@ -424,7 +445,7 @@ struct TrackDetail {
     });
   }
 
-  /** 分享轨迹：生成地图截图，可选保存到本地或删除 */
+  /** 分享轨迹：先放大地图截图，再展示包含标题/起终点/打卡点等信息的分享卡 */
   private async shareTrackAsImage(): Promise<void> {
     if (!this.mapController) {
       try {
@@ -433,13 +454,15 @@ struct TrackDetail {
       }
       return;
     }
+
+    // 直接使用当前地图视图截图（已由 fitCameraToBounds 适配好轨迹范围）
     const context = this.getUIContext().getHostContext() as common.Context;
     const tempDir = context.cacheDir;
     const tempPath = tempDir + '/share_' + this.trackId + '_' + Date.now().toString() + '.jpg';
     try {
       const pixelMap: image.PixelMap = await this.mapController.snapshot();
       const packer = image.createImagePacker();
-      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 85 };
+      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 90 };
       const data: ArrayBuffer = await packer.packToData(pixelMap, packOpts);
       const f = fileIo.openSync(tempPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
       fileIo.writeSync(f.fd, data);
@@ -454,45 +477,248 @@ struct TrackDetail {
       }
       return;
     }
-    this.getUIContext().getPromptAction().showDialog({
-      title: '分享图已生成',
-      message: '是否保存到本地？不保存将删除该图片。',
-      buttons: [
-        { text: '不保存', color: '#666666' },
-        { text: '保存', color: '#3478F6' }
-      ]
-    }).then((result: promptAction.ShowDialogSuccessResponse) => {
-      if (result.index === 1) {
-        const saveDir = context.filesDir + '/Download';
-        try {
-          fileIo.mkdirSync(saveDir, false);
-        } catch (_e) {
-        }
-        const name = '轨迹_' + (this.track && this.track.title ? this.track.title : this.trackId) + '_' + Date.now().toString() + '.jpg';
-        const savePath = saveDir + '/' + name;
-        try {
-          fileIo.copyFileSync(tempPath, savePath);
-          try {
-            promptAction.showToast({ message: '已保存至 应用文件/Download' });
-          } catch (_t) {
-          }
-        } catch (copyErr) {
-          try {
-            promptAction.showToast({ message: '保存失败' });
-          } catch (_t) {
-          }
-        }
-      }
+
+    this.shareImagePath = tempPath;
+    this.showShareCover = true;
+  }
+
+  /** 保存分享卡：先用 componentSnapshot 截取整张卡片，再存为文件 */
+  private async saveShareCard(): Promise<void> {
+    const context = this.getUIContext().getHostContext() as common.Context;
+    const saveDir = context.filesDir + '/Download';
+    try {
+      fileIo.mkdirSync(saveDir, false);
+    } catch (_e) {
+    }
+    const name = '轨迹_' + (this.track && this.track.title ? this.track.title : this.trackId) + '_' + Date.now().toString() + '.jpg';
+    const savePath = saveDir + '/' + name;
+
+    try {
+      // 用 componentSnapshot 截取分享卡片
+      const pixelMap: image.PixelMap = await componentSnapshot.get('shareCard');
+      const packer = image.createImagePacker();
+      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 90 };
+      const data: ArrayBuffer = await packer.packToData(pixelMap, packOpts);
+      const f = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      fileIo.writeSync(f.fd, data);
+      fileIo.closeSync(f);
+      packer.release();
+      pixelMap.release();
       try {
-        fileIo.unlinkSync(tempPath);
-      } catch (_e) {
+        promptAction.showToast({ message: '已保存至 应用文件/Download' });
+      } catch (_t) {
       }
-    }).catch(() => {
+    } catch (snapErr) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'componentSnapshot: %{public}s, fallback to map only', JSON.stringify(snapErr));
+      // 降级：仅保存地图截图
       try {
-        fileIo.unlinkSync(tempPath);
-      } catch (_e) {
+        fileIo.copyFileSync(this.shareImagePath, savePath);
+        try {
+          promptAction.showToast({ message: '已保存地图截图至 应用文件/Download' });
+        } catch (_t) {
+        }
+      } catch (_copyErr) {
+        try {
+          promptAction.showToast({ message: '保存失败' });
+        } catch (_t) {
+        }
       }
-    });
+    }
+
+    // 清理临时文件
+    try {
+      fileIo.unlinkSync(this.shareImagePath);
+    } catch (_e) {
+    }
+    this.showShareCover = false;
+    this.shareImagePath = '';
+  }
+
+  /** 分享图预览浮层：展示完整分享卡（标题 + 地图 + 起点/打卡点/终点 + 统计），可保存或删除 */
+  @Builder
+  shareImageCover(): void {
+    Column() {
+      // 顶部关闭
+      Row() {
+        Blank();
+        Text('✕')
+          .fontSize(22)
+          .fontColor(Color.White)
+          .padding(16)
+          .onClick(() => {
+            try {
+              fileIo.unlinkSync(this.shareImagePath);
+            } catch (_e) {
+            }
+            this.showShareCover = false;
+            this.shareImagePath = '';
+          });
+      }
+      .width('100%');
+
+      Scroll() {
+        // ===== 分享卡片 =====
+        Column() {
+          // 标题
+          Text(this.track ? this.track.title : '轨迹分享')
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.label_primary'))
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .padding({ top: 20, bottom: 12 });
+
+          // 地图截图
+          Image('file://' + this.shareImagePath)
+            .width('100%')
+            .height(260)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(8)
+            .margin({ left: 16, right: 16 });
+
+          // 统计数据
+          if (this.track) {
+            Row() {
+              Column({ space: 2 }) {
+                Text(TrackModel.formatDistance(this.track.totalDistance))
+                  .fontSize(16)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor($r('app.color.primary'));
+                Text('总距离')
+                  .fontSize(11)
+                  .fontColor($r('app.color.label_tertiary'));
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Center);
+
+              Column({ space: 2 }) {
+                Text(TrackModel.formatDuration(this.track.totalDuration || 0))
+                  .fontSize(16)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor($r('app.color.primary'));
+                Text('用时')
+                  .fontSize(11)
+                  .fontColor($r('app.color.label_tertiary'));
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Center);
+
+              Column({ space: 2 }) {
+                Text(this.tombSpots.length.toString())
+                  .fontSize(16)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor($r('app.color.primary'));
+                Text('打卡点')
+                  .fontSize(11)
+                  .fontColor($r('app.color.label_tertiary'));
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Center);
+            }
+            .width('100%')
+            .padding({ top: 16, bottom: 12, left: 16, right: 16 });
+          }
+
+          // 起点 / 打卡点 / 终点（横向标签流式布局，节省空间）
+          Flex({ wrap: FlexWrap.Wrap }) {
+            if (this.track && this.track.startName.length > 0) {
+              Row({ space: 4 }) {
+                Circle({ width: 8, height: 8 }).fill('#34C759');
+                Text(this.track.startName)
+                  .fontSize(12)
+                  .fontColor($r('app.color.label_primary'));
+              }
+              .padding({ left: 8, right: 10, top: 4, bottom: 4 })
+              .backgroundColor('#F0F7F0')
+              .borderRadius(12)
+              .alignItems(VerticalAlign.Center)
+              .margin({ right: 6, bottom: 6 });
+            }
+            ForEach(this.tombSpots, (spot: TrackModel.TombSpot, idx: number) => {
+              Row({ space: 4 }) {
+                Circle({ width: 8, height: 8 }).fill('#3478F6');
+                Text(spot.name)
+                  .fontSize(12)
+                  .fontColor($r('app.color.label_primary'));
+              }
+              .padding({ left: 8, right: 10, top: 4, bottom: 4 })
+              .backgroundColor('#EEF3FF')
+              .borderRadius(12)
+              .alignItems(VerticalAlign.Center)
+              .margin({ right: 6, bottom: 6 });
+            }, (spot: TrackModel.TombSpot) => spot.tombId);
+            if (this.track && this.track.endName.length > 0) {
+              Row({ space: 4 }) {
+                Circle({ width: 8, height: 8 }).fill('#FF3B30');
+                Text(this.track.endName)
+                  .fontSize(12)
+                  .fontColor($r('app.color.label_primary'));
+              }
+              .padding({ left: 8, right: 10, top: 4, bottom: 4 })
+              .backgroundColor('#FFF0F0')
+              .borderRadius(12)
+              .alignItems(VerticalAlign.Center)
+              .margin({ right: 6, bottom: 6 });
+            }
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 4, bottom: 12 });
+
+          // 品牌标注
+          Text('—— 遨游轨迹 ——')
+            .fontSize(11)
+            .fontColor($r('app.color.label_tertiary'))
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .padding({ bottom: 16 });
+        }
+        .width('100%')
+        .backgroundColor(Color.White)
+        .borderRadius(16)
+        .margin({ left: 20, right: 20 })
+        .id('shareCard');
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+      .width('100%');
+
+      // 底部按钮
+      Row({ space: 16 }) {
+        Button('删除')
+          .layoutWeight(1)
+          .height(50)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.destructive'))
+          .backgroundColor($r('app.color.card_background'))
+          .borderRadius(25)
+          .onClick(() => {
+            try {
+              fileIo.unlinkSync(this.shareImagePath);
+            } catch (_e) {
+            }
+            this.showShareCover = false;
+            this.shareImagePath = '';
+          });
+        Button('保存')
+          .layoutWeight(1)
+          .height(50)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(Color.White)
+          .backgroundColor($r('app.color.primary'))
+          .borderRadius(25)
+          .onClick(() => {
+            this.saveShareCard();
+          });
+      }
+      .width('100%')
+      .padding({ left: 20, right: 20, bottom: 32, top: 16 })
+      .backgroundColor('#EE000000');
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#DD000000');
   }
 
   /** 删除轨迹 */
@@ -916,7 +1142,8 @@ struct TrackDetail {
     }
     }
     .width('100%')
-    .height('100%');
+    .height('100%')
+    .bindContentCover(this.showShareCover, this.shareImageCover());
   }
 
   @Builder

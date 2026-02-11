@@ -62,7 +62,7 @@ struct TrackRecord {
   @State mapCenterLat: number = 23.7275;
   @State mapCenterLng: number = 108.3426;
   @State showLayerPanel: boolean = false;
-  @State currentMapType: number = 0; // 0=标准, 1=卫星, 2=地形（默认标准）
+  @State currentMapType: number = 1; // 1=标准, 2=卫星, 3=地形（对应 HMS MapType 枚举值）
   @State is3DMode: boolean = false;
   private mapOptions?: mapCommon.MapOptions;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
@@ -151,7 +151,7 @@ struct TrackRecord {
         target: { latitude: this.mapCenterLat, longitude: this.mapCenterLng },
         zoom: 16
       },
-      mapType: 0,
+      mapType: 1,
       myLocationControlsEnabled: true,
       scaleControlsEnabled: true
     };
@@ -164,9 +164,9 @@ struct TrackRecord {
         } catch (e) {
           hilog.info(LOG_DOMAIN, LOG_TAG, 'setMyLocationEnabled: %{public}s', JSON.stringify(e));
         }
-        // 默认设置标准图层
+        // 默认设置标准图层（1 = STANDARD）
         try {
-          controller.setMapType(0);
+          controller.setMapType(1);
         } catch (e) {
           hilog.info(LOG_DOMAIN, LOG_TAG, 'setMapType standard: %{public}s', JSON.stringify(e));
         }
@@ -330,12 +330,59 @@ struct TrackRecord {
     }
   }
 
-  /** 截取地图当前视图作为轨迹封面图 */
+  /** 截取地图当前视图作为轨迹封面图（先适配轨迹范围并放大，再截图） */
   private async captureMapCover(context: common.Context): Promise<string> {
     if (!this.mapController) {
       return '';
     }
     try {
+      // 先将相机适配到轨迹范围并额外放大 2 级，让轨迹在截图中更突出
+      if (this.recordPoints.length >= 2) {
+        const gcj02Points: mapCommon.LatLng[] = [];
+        for (let i = 0; i < this.recordPoints.length; i++) {
+          const converted = await this.convertToGCJ02(
+            this.recordPoints[i].latitude,
+            this.recordPoints[i].longitude
+          );
+          gcj02Points.push(converted);
+        }
+        let minLat = gcj02Points[0].latitude;
+        let maxLat = gcj02Points[0].latitude;
+        let minLng = gcj02Points[0].longitude;
+        let maxLng = gcj02Points[0].longitude;
+        for (let i = 1; i < gcj02Points.length; i++) {
+          const p = gcj02Points[i];
+          if (p.latitude < minLat) { minLat = p.latitude; }
+          if (p.latitude > maxLat) { maxLat = p.latitude; }
+          if (p.longitude < minLng) { minLng = p.longitude; }
+          if (p.longitude > maxLng) { maxLng = p.longitude; }
+        }
+        const centerLat = (minLat + maxLat) / 2;
+        const centerLng = (minLng + maxLng) / 2;
+        const latDiff = maxLat - minLat;
+        const lngDiff = maxLng - minLng;
+        const maxDiff = Math.max(latDiff, lngDiff);
+        let zoom = 16;
+        if (maxDiff > 0.1) { zoom = 11; }
+        else if (maxDiff > 0.05) { zoom = 12; }
+        else if (maxDiff > 0.02) { zoom = 13; }
+        else if (maxDiff > 0.01) { zoom = 14; }
+        else if (maxDiff > 0.005) { zoom = 15; }
+        else if (maxDiff > 0.002) { zoom = 16; }
+        else { zoom = 17; }
+        // 再额外放大 1 级
+        zoom = Math.min(zoom + 1, 20);
+        this.mapController.moveCamera(map.newCameraPosition({
+          target: { latitude: centerLat, longitude: centerLng },
+          zoom: zoom,
+          tilt: 0,
+          bearing: 0
+        }));
+        // 等待地图渲染
+        await new Promise<void>((resolve: Function) => {
+          setTimeout(() => { resolve(); }, 600);
+        });
+      }
       const pixelMap: image.PixelMap = await this.mapController.snapshot();
       // 保存为本地文件
       const dir = context.filesDir;
@@ -496,11 +543,12 @@ struct TrackRecord {
       this.allTrackPoints = [];
     }
 
-    // 保存轨迹统计
+    // 保存轨迹统计（含打卡点数量）
     await TrackStore.updateTrack(context, this.trackId, {
       totalDistance: this.totalDistance,
       maxAltitude: this.maxAltitude,
-      totalDuration: this.elapsedTime
+      totalDuration: this.elapsedTime,
+      spotCount: this.tombSpots.length
     });
 
     // 跳到打卡点详情页填写图文
@@ -539,7 +587,7 @@ struct TrackRecord {
     // 先尝试截取地图作为封面图
     const coverPath = await this.captureMapCover(context);
 
-    // 更新轨迹为已完成
+    // 更新轨迹为已完成（含最终打卡点数量）
     await TrackStore.updateTrack(context, this.trackId, {
       status: TrackModel.TRACK_STATUS_DONE,
       endName: name,
@@ -548,6 +596,7 @@ struct TrackRecord {
       totalDistance: this.totalDistance,
       totalDuration: this.elapsedTime,
       maxAltitude: this.maxAltitude,
+      spotCount: this.tombSpots.length,
       coverImageUrl: coverPath
     });
 
@@ -581,7 +630,8 @@ struct TrackRecord {
     await TrackStore.updateTrack(context, this.trackId, {
       totalDistance: this.totalDistance,
       totalDuration: this.elapsedTime,
-      maxAltitude: this.maxAltitude
+      maxAltitude: this.maxAltitude,
+      spotCount: this.tombSpots.length
     });
 
     this.getUIContext().getRouter().back();
@@ -708,9 +758,9 @@ struct TrackRecord {
         if (this.showLayerPanel) {
           Column() {
             Row({ space: 12 }) {
-              this.LayerOption('标准', '#3478F6', 0);
-              this.LayerOption('卫星', '#34C759', 1);
-              this.LayerOption('地形', '#FF9500', 2);
+              this.LayerOption('标准', '#3478F6', 1);
+              this.LayerOption('卫星', '#34C759', 2);
+              this.LayerOption('地形', '#FF9500', 3);
             }
             .padding(16)
             .backgroundColor($r('app.color.card_background'))

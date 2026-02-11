@@ -120,21 +120,23 @@ struct Main {
   @Builder
   HomeTabContent() {
     Column() {
-      // 状态栏占位
-      Row()
+      // 状态栏占位 + 标题区（白色背景）
+      Column() {
+        Row()
+          .width('100%')
+          .height(this.statusBarHeight);
+        Row({ space: 12 }) {
+          Text('遨游轨迹')
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.label_primary'));
+          Blank();
+        }
         .width('100%')
-        .height(this.statusBarHeight);
-
-      // 顶部标题
-      Row({ space: 12 }) {
-        Text('遨游轨迹')
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.label_primary'));
-        Blank();
+        .padding({ left: 20, right: 20, top: 12, bottom: 4 });
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 12, bottom: 4 });
+      .backgroundColor(Color.White);
 
       // 顶部 Tab 切换
       Tabs({ barPosition: BarPosition.Start, index: this.currentTopIndex }) {
@@ -150,6 +152,7 @@ struct Main {
       }
       .barMode(BarMode.Fixed)
       .barHeight(44)
+      .barBackgroundColor(Color.White)
       .onChange((index: number) => {
         this.currentTopIndex = index;
       })
@@ -618,7 +621,7 @@ struct Main {
         .margin({ top: 8 });
       }
       .width('100%')
-      .padding({ top: 32 + this.statusBarHeight, bottom: 24, left: 20, right: 20 })
+      .padding({ top: 16 + this.statusBarHeight, bottom: 24, left: 20, right: 20 })
       .linearGradient({
         angle: 160,
         colors: [['#3478F6', 0], ['#1E56CC', 0.5], ['#0D3BA8', 1]]
@@ -640,15 +643,15 @@ struct Main {
           this.MenuItem('📄', '隐私政策', '', '#34C759', () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
           });
-          Divider().color($r('app.color.separator')).margin({ left: 56 });
+          Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
           this.MenuItem('📋', '用户协议', '', '#34C759', () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
           });
-          Divider().color($r('app.color.separator')).margin({ left: 56 });
+          Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
           this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', '#5856D6', () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/About' });
           });
-          Divider().color($r('app.color.separator')).margin({ left: 56 });
+          Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
           this.MenuItem('💬', '意见反馈', '', '#FF3B30', () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/Feedback' });
           });
@@ -753,7 +756,7 @@ struct Main {
     }
     .width('100%')
     .height(52)
-    .padding({ left: 12, right: 16 })
+    .padding({ left: 16, right: 16 })
     .onClick(onClick);
   }
 }

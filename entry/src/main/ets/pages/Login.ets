@@ -165,17 +165,12 @@ struct Login {
 
         // ---- Logo 和标语 ----
         Column({ space: 16 }) {
-          Column() {
-            Text('🗺')
-              .fontSize(52);
-          }
-          .width(88)
-          .height(88)
-          .borderRadius(22)
-          .backgroundColor('#22FFFFFF')
-          .justifyContent(FlexAlign.Center)
-          .backdropBlur(20)
-          .shadow({ radius: 16, color: '#331A3DB8', offsetX: 0, offsetY: 6 });
+          Image($r('app.media.startIcon'))
+            .width(88)
+            .height(88)
+            .borderRadius(22)
+            .objectFit(ImageFit.Cover)
+            .shadow({ radius: 16, color: '#331A3DB8', offsetX: 0, offsetY: 6 });
 
           Text('遨游轨迹')
             .fontSize(28)

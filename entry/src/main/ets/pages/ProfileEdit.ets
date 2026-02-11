@@ -83,7 +83,7 @@ struct ProfileEdit {
 
       Scroll() {
         Column() {
-          // 头像区域（可点击更换）
+          // 头像区域（可点击更换），顶部无留白
           Column({ space: 12 }) {
             Stack() {
               if (this.avatarUrl.length > 0) {
