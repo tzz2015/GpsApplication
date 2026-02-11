@@ -240,8 +240,8 @@ struct TombSpotDetail {
     this.getUIContext().getPromptAction().showDialog({
       message: '确定删除该打卡点及其图文内容？',
       buttons: [
-        { text: '取消', color: '#666666' },
-        { text: '确定删除', color: '#FF3B30' }
+        { text: $r('app.string.dialog_cancel'), color: $r('app.color.dialog_secondary_text') },
+        { text: $r('app.string.dialog_confirm_delete'), color: $r('app.color.destructive') }
       ]
     }).then((result: promptAction.ShowDialogSuccessResponse) => {
       if (result.index === 1) {
@@ -305,7 +305,7 @@ struct TombSpotDetail {
           Button('关闭')
             .fontSize(16)
             .fontColor(Color.White)
-            .backgroundColor('#66000000')
+            .backgroundColor($r('app.color.overlay_dark'))
             .layoutWeight(1)
             .height(48)
             .onClick(() => {
@@ -314,7 +314,7 @@ struct TombSpotDetail {
           Button(this.isDownloading ? '保存中…' : '下载')
             .fontSize(16)
             .fontColor(Color.White)
-            .backgroundColor('#66000000')
+            .backgroundColor($r('app.color.overlay_dark'))
             .layoutWeight(1)
             .height(48)
             .enabled(!this.isDownloading)
@@ -326,11 +326,11 @@ struct TombSpotDetail {
       }
       .width('100%')
       .padding({ left: 16, right: 16, bottom: 16, top: 12 })
-      .backgroundColor('#CC000000');
+      .backgroundColor($r('app.color.overlay_dark_strong'));
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#EE000000');
+    .backgroundColor($r('app.color.overlay_dark_modal'));
   }
 
   build() {
@@ -414,7 +414,7 @@ struct TombSpotDetail {
 
           // 图文记录区
           Column({ space: 12 }) {
-            Text('📝 图文记录')
+            Text($r('app.string.tomb_spot_section'))
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.label_primary'))
@@ -439,7 +439,7 @@ struct TombSpotDetail {
                   .lineHeight(24)
                   .width('100%');
               } else {
-                Text('暂无图文记录，点击编辑添加')
+                Text($r('app.string.tomb_spot_empty'))
                   .fontSize(14)
                   .fontColor($r('app.color.label_tertiary'))
                   .fontStyle(FontStyle.Italic)
@@ -495,7 +495,7 @@ struct TombSpotDetail {
                     Text('+')
                       .fontSize(28)
                       .fontColor($r('app.color.label_tertiary'));
-                    Text('添加照片')
+                    Text($r('app.string.tomb_spot_add_photo'))
                       .fontSize(11)
                       .fontColor($r('app.color.label_tertiary'));
                   }
@@ -525,7 +525,7 @@ struct TombSpotDetail {
 
           // 人物信息
           Column({ space: 12 }) {
-            Text('👤 人物信息')
+            Text($r('app.string.tomb_spot_person_section'))
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.label_primary'))
@@ -569,7 +569,7 @@ struct TombSpotDetail {
                   .width('100%');
               }
               if (this.personInfo.length === 0 && this.remark.length === 0) {
-                Text('暂无人物信息')
+                Text($r('app.string.tomb_spot_person_empty'))
                   .fontSize(14)
                   .fontColor($r('app.color.label_tertiary'))
                   .fontStyle(FontStyle.Italic)
@@ -604,7 +604,7 @@ struct TombSpotDetail {
                 .fontSize(this.fromRecording ? 15 : 17)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(Color.White)
-                .backgroundColor(this.fromRecording ? '#3478F6' : $r('app.color.primary'))
+                .backgroundColor(this.fromRecording ? $r('app.color.primary') : $r('app.color.primary'))
                 .borderRadius(this.fromRecording ? 22 : 25)
                 .onClick(() => {
                   this.saveSpotData();

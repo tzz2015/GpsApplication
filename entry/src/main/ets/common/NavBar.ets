@@ -18,11 +18,12 @@ export struct NavBar {
       // 导航栏主体
       Row() {
         if (this.showBack) {
-          Row({ space: 6 }) {
-            Text('<')
-              .fontSize(18)
-              .fontColor($r('app.color.primary'))
-              .fontWeight(FontWeight.Bold);
+          Row({ space: 2 }) {
+            Image($r('app.media.icon_back'))
+              .width(14)
+              .height(14)
+              .objectFit(ImageFit.Contain)
+              .fillColor($r('app.color.primary'));
             Text($r('app.string.nav_back'))
               .fontSize(16)
               .fontColor($r('app.color.primary'));

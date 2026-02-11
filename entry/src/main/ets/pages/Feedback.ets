@@ -81,7 +81,7 @@ struct Feedback {
           // 反馈内容卡片，顶部无留白
           Column({ space: 16 }) {
             Column({ space: 6 }) {
-              Text('反馈内容 *')
+              Text($r('app.string.feedback_content_label'))
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.label_secondary'));
@@ -100,7 +100,7 @@ struct Feedback {
             .alignItems(HorizontalAlign.Start);
 
             Column({ space: 6 }) {
-              Text('联系方式（选填，便于我们回复）')
+              Text($r('app.string.feedback_contact_label'))
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.label_secondary'));

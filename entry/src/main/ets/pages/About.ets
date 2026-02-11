@@ -21,7 +21,7 @@ struct About {
           .borderRadius(20)
           .objectFit(ImageFit.Contain);
 
-        Text('遨游轨迹')
+        Text($r('app.string.app_name'))
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.label_primary'));
@@ -30,7 +30,7 @@ struct About {
           .fontSize(14)
           .fontColor($r('app.color.label_tertiary'));
 
-        Text('记录扫墓轨迹，守护家族记忆')
+        Text($r('app.string.about_tagline'))
           .fontSize(15)
           .fontColor($r('app.color.label_secondary'))
           .margin({ top: 8 });
@@ -38,7 +38,7 @@ struct About {
         Column().layoutWeight(1);
 
         Column({ space: 4 }) {
-          Text('记录祖先墓地位置，让祭祖文化更容易延续')
+          Text($r('app.string.about_desc'))
             .fontSize(12)
             .fontColor($r('app.color.label_tertiary'))
             .textAlign(TextAlign.Center);

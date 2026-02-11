@@ -682,7 +682,7 @@ struct TrackRecord {
           .height(40)
           .backgroundColor($r('app.color.card_background'))
           .borderRadius(12)
-          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_large'), offsetX: 0, offsetY: 2 })
           .onClick(() => {
             if (this.isRecording) {
               this.showInterruptDialog = true;
@@ -702,16 +702,16 @@ struct TrackRecord {
               Text('☰')
                 .fontSize(16)
                 .fontColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
-              Text('图层')
+              Text($r('app.string.record_layer'))
                 .fontSize(12)
                 .fontColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
             }
           }
           .width(56)
           .height(40)
-          .backgroundColor(this.showLayerPanel ? '#3478F6' : $r('app.color.card_background'))
+          .backgroundColor(this.showLayerPanel ? $r('app.color.primary') : $r('app.color.card_background'))
           .borderRadius(12)
-          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_large'), offsetX: 0, offsetY: 2 })
           .onClick(() => {
             this.showLayerPanel = !this.showLayerPanel;
           });
@@ -725,9 +725,9 @@ struct TrackRecord {
           }
           .width(40)
           .height(40)
-          .backgroundColor(this.is3DMode ? '#3478F6' : $r('app.color.card_background'))
+          .backgroundColor(this.is3DMode ? $r('app.color.primary') : $r('app.color.card_background'))
           .borderRadius(12)
-          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_large'), offsetX: 0, offsetY: 2 })
           .onClick(async () => {
             this.is3DMode = !this.is3DMode;
             if (this.mapController) {
@@ -758,14 +758,14 @@ struct TrackRecord {
         if (this.showLayerPanel) {
           Column() {
             Row({ space: 12 }) {
-              this.LayerOption('标准', '#3478F6', 1);
-              this.LayerOption('卫星', '#34C759', 2);
-              this.LayerOption('地形', '#FF9500', 3);
+              this.LayerOption($r('app.string.map_type_standard'), $r('app.color.primary'), 1);
+              this.LayerOption($r('app.string.map_type_satellite'), $r('app.color.success'), 2);
+              this.LayerOption($r('app.string.map_type_terrain'), $r('app.color.warning'), 3);
             }
             .padding(16)
             .backgroundColor($r('app.color.card_background'))
             .borderRadius(12)
-            .shadow({ radius: 12, color: '#1A000000', offsetX: 0, offsetY: 4 });
+            .shadow({ radius: 12, color: $r('app.color.shadow_large'), offsetX: 0, offsetY: 4 });
           }
           .position({ x: '100%', y: 160 + this.statusBarHeight })
           .translate({ x: -220 })
@@ -799,7 +799,7 @@ struct TrackRecord {
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.label_primary'));
-            Text('距离')
+            Text($r('app.string.record_distance'))
               .fontSize(11)
               .fontColor($r('app.color.label_tertiary'));
           }
@@ -811,7 +811,7 @@ struct TrackRecord {
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.label_primary'));
-            Text('时长')
+            Text($r('app.string.record_duration'))
               .fontSize(11)
               .fontColor($r('app.color.label_tertiary'));
           }
@@ -823,7 +823,7 @@ struct TrackRecord {
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.label_primary'));
-            Text('海拔')
+            Text($r('app.string.record_altitude'))
               .fontSize(11)
               .fontColor($r('app.color.label_tertiary'));
           }
@@ -887,7 +887,7 @@ struct TrackRecord {
               Column({ space: 4 }) {
                 Text('📍')
                   .fontSize(20);
-                Text('打卡')
+                Text($r('app.string.record_spot'))
                   .fontSize(10)
                   .fontColor($r('app.color.label_secondary'));
               }
@@ -910,7 +910,7 @@ struct TrackRecord {
             .height(64)
             .backgroundColor($r('app.color.accent'))
             .borderRadius(32)
-            .shadow({ radius: 12, color: '#33FF6B35', offsetX: 0, offsetY: 4 })
+            .shadow({ radius: 12, color: $r('app.color.accent_alpha'), offsetX: 0, offsetY: 4 })
             .onClick(() => {
               this.togglePause();
             });
@@ -920,7 +920,7 @@ struct TrackRecord {
               Column({ space: 4 }) {
                 Text('⏹')
                   .fontSize(20);
-                Text('终点')
+                Text($r('app.string.record_end'))
                   .fontSize(10)
                   .fontColor(Color.White);
               }
@@ -941,7 +941,7 @@ struct TrackRecord {
       .padding({ left: 20, right: 20, top: 16, bottom: 16 + this.bottomSafeHeight })
       .backgroundColor($r('app.color.card_background'))
       .borderRadius({ topLeft: 20, topRight: 20 })
-      .shadow({ radius: 16, color: '#1A000000', offsetX: 0, offsetY: -4 });
+      .shadow({ radius: 16, color: $r('app.color.shadow_large'), offsetX: 0, offsetY: -4 });
 
     }
     .width('100%')
@@ -983,12 +983,12 @@ struct TrackRecord {
     if (this.showInterruptDialog) {
       Column() {
         Column() {
-          Text('中断记录')
+          Text($r('app.string.interrupt_title'))
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.label_primary'))
             .margin({ bottom: 8 });
-          Text('当前轨迹正在记录中，是否暂时退出？\n退出后可在轨迹详情页继续记录。')
+          Text($r('app.string.interrupt_message'))
             .fontSize(14)
             .fontColor($r('app.color.label_secondary'))
             .textAlign(TextAlign.Center)
@@ -1022,11 +1022,11 @@ struct TrackRecord {
         .padding(24)
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(20)
-        .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
+        .shadow({ radius: 24, color: $r('app.color.shadow_medium'), offsetX: 0, offsetY: 8 });
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#66000000')
+      .backgroundColor($r('app.color.overlay_dark'))
       .justifyContent(FlexAlign.Center)
       .zIndex(100)
       .onClick(() => {
@@ -1039,7 +1039,7 @@ struct TrackRecord {
   }
 
   @Builder
-  LayerOption(label: string, dotColor: string, mapType: number) {
+  LayerOption(label: string | Resource, dotColor: string | Resource, mapType: number) {
     Column({ space: 6 }) {
       Column() {
         Circle({ width: 24, height: 24 })
@@ -1048,13 +1048,13 @@ struct TrackRecord {
       .width(52)
       .height(52)
       .borderRadius(10)
-      .backgroundColor(this.currentMapType === mapType ? '#EEF3FF' : '#F5F5F5')
+      .backgroundColor(this.currentMapType === mapType ? $r('app.color.menu_selected_bg') : $r('app.color.layer_inactive_bg'))
       .borderWidth(this.currentMapType === mapType ? 2 : 0)
-      .borderColor('#3478F6')
+      .borderColor($r('app.color.primary'))
       .justifyContent(FlexAlign.Center);
       Text(label)
         .fontSize(12)
-        .fontColor(this.currentMapType === mapType ? '#3478F6' : $r('app.color.label_secondary'));
+        .fontColor(this.currentMapType === mapType ? $r('app.color.primary') : $r('app.color.label_secondary'));
     }
     .alignItems(HorizontalAlign.Center)
     .onClick(() => {
@@ -1125,11 +1125,11 @@ struct TrackRecord {
       .padding(24)
       .backgroundColor($r('app.color.card_background'))
       .borderRadius(20)
-      .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
+      .shadow({ radius: 24, color: $r('app.color.shadow_medium'), offsetX: 0, offsetY: 8 });
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#66000000')
+    .backgroundColor($r('app.color.overlay_dark'))
     .justifyContent(FlexAlign.Center)
     .zIndex(100);
   }

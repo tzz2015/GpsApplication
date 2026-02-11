@@ -71,9 +71,9 @@ struct CreateOrEditTrack {
         Column({ space: 14 }) {
           // 提示（整体上移，减少顶部留白）
           Row({ space: 8 }) {
-            Text('💡')
+            Text($r('app.string.create_track_tip_icon'))
               .fontSize(14);
-            Text('建议填写本次扫墓的地区、主要祖先姓氏、日期等信息，方便日后查找。')
+            Text($r('app.string.create_track_desc_tip_full'))
               .fontSize(12)
               .fontColor($r('app.color.primary'))
               .lineHeight(18)
@@ -87,11 +87,11 @@ struct CreateOrEditTrack {
           // 轨迹名称
           Column({ space: 4 }) {
             Row() {
-              Text('轨迹名称')
+              Text($r('app.string.create_track_name_label'))
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.label_secondary'));
-              Text(' *')
+              Text($r('app.string.create_track_required'))
                 .fontSize(13)
                 .fontColor($r('app.color.destructive'));
             }
@@ -113,7 +113,7 @@ struct CreateOrEditTrack {
 
           // 轨迹简介
           Column({ space: 4 }) {
-            Text('轨迹简介')
+            Text($r('app.string.create_track_desc_label'))
               .fontSize(13)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.label_secondary'));
@@ -129,7 +129,7 @@ struct CreateOrEditTrack {
               .padding(12)
               .borderWidth(1.5)
               .borderColor($r('app.color.separator'));
-            Text('建议说明本次扫墓的地区、主要祖先、日期等')
+            Text($r('app.string.create_track_desc_tip_short'))
               .fontSize(11)
               .fontColor($r('app.color.label_tertiary'));
           }
@@ -163,7 +163,7 @@ struct CreateOrEditTrack {
       .width('100%')
       .padding({ left: 20, right: 20, top: 8, bottom: 20 })
       .backgroundColor($r('app.color.card_background'))
-      .shadow({ radius: 6, color: '#0D000000', offsetX: 0, offsetY: -2 });
+      .shadow({ radius: 6, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: -2 });
     }
     .width('100%')
     .height('100%')

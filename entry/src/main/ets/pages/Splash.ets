@@ -47,28 +47,28 @@ struct Splash {
           .height(80)
           .borderRadius(20)
           .objectFit(ImageFit.Contain)
-          .backgroundColor('#22FFFFFF')
+          .backgroundColor($r('app.color.icon_overlay_light'))
           .backdropBlur(20);
 
-        Text('遨游轨迹')
+        Text($r('app.string.app_name'))
           .fontSize(28)
           .fontWeight(800)
           .fontColor(Color.White)
           .letterSpacing(2)
           .margin({ top: 20 });
 
-        Text('记录每一段值得传承的路程')
+        Text($r('app.string.splash_tagline'))
           .fontSize(14)
-          .fontColor('#CCFFFFFF')
+          .fontColor($r('app.color.splash_title_secondary'))
           .margin({ top: 8 });
       }
       .alignItems(HorizontalAlign.Center);
 
       // 底部提示（绝对定位，不影响中间布局）
       if (this.showHint) {
-        Text('点击进入 →')
+        Text($r('app.string.splash_enter'))
           .fontSize(13)
-          .fontColor('#66FFFFFF')
+          .fontColor($r('app.color.splash_enter_text'))
           .position({ bottom: 60 })
           .width('100%')
           .textAlign(TextAlign.Center)
@@ -86,7 +86,7 @@ struct Splash {
     .alignContent(Alignment.Center)
     .linearGradient({
       angle: 160,
-      colors: [['#2E5AE8', 0], ['#1A3DB8', 0.5], ['#0F2680', 1]]
+      colors: [[$r('app.color.splash_gradient_start'), 0], [$r('app.color.splash_gradient_mid'), 0.5], [$r('app.color.splash_gradient_end'), 1]]
     });
   }
 }

@@ -111,7 +111,7 @@ struct ProfileEdit {
               .width(28)
               .height(28)
               .borderRadius(14)
-              .backgroundColor('#3478F6')
+              .backgroundColor($r('app.color.camera_icon_bg'))
               .justifyContent(FlexAlign.Center)
               .borderWidth(2)
               .borderColor(Color.White)
@@ -136,7 +136,7 @@ struct ProfileEdit {
           // 表单
           Column({ space: 16 }) {
             Column({ space: 6 }) {
-              Text('昵称')
+              Text($r('app.string.profile_edit_nickname_label'))
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.label_secondary'));
@@ -155,7 +155,7 @@ struct ProfileEdit {
             .alignItems(HorizontalAlign.Start);
 
             Column({ space: 6 }) {
-              Text('所属家族')
+              Text($r('app.string.profile_edit_family_label'))
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.label_secondary'));

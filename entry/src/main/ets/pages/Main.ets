@@ -126,7 +126,7 @@ struct Main {
           .width('100%')
           .height(this.statusBarHeight);
         Row({ space: 12 }) {
-          Text('遨游轨迹')
+          Text($r('app.string.app_name'))
             .fontSize(24)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.label_primary'));
@@ -143,12 +143,12 @@ struct Main {
         TabContent() {
           this.MyTracksList();
         }
-        .tabBar(this.TopTabItem(0, '我的轨迹'));
+        .tabBar(this.TopTabItem(0, $r('app.string.tab_my_tracks')));
 
         TabContent() {
           this.PublicTracksList();
         }
-        .tabBar(this.TopTabItem(1, '公开轨迹'));
+        .tabBar(this.TopTabItem(1, $r('app.string.tab_all_tracks')));
       }
       .barMode(BarMode.Fixed)
       .barHeight(44)
@@ -164,7 +164,7 @@ struct Main {
   }
 
   @Builder
-  TopTabItem(index: number, title: string) {
+  TopTabItem(index: number, title: string | Resource) {
     Column() {
       Text(title)
         .fontSize(15)
@@ -208,7 +208,7 @@ struct Main {
               Text('+')
                 .fontSize(18)
                 .fontColor($r('app.color.primary'));
-              Text('新建扫墓轨迹')
+              Text($r('app.string.main_new_track_btn'))
                 .fontSize(15)
                 .fontWeight(FontWeight.Medium)
                 .fontColor($r('app.color.primary'));
@@ -265,16 +265,16 @@ struct Main {
         Column({ space: 12 }) {
           Text('📍')
             .fontSize(48);
-          Text('还没有轨迹')
+          Text($r('app.string.empty_my_tracks_title'))
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.label_primary'));
-          Text('点击下方按钮创建第一条扫墓轨迹\n记录祖先墓地位置，让后代也能找到')
+          Text($r('app.string.empty_my_tracks_hint'))
             .fontSize(14)
             .fontColor($r('app.color.label_tertiary'))
             .textAlign(TextAlign.Center)
             .lineHeight(22);
-          Button('创建第一条轨迹')
+          Button($r('app.string.empty_my_tracks_action'))
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
             .fontColor(Color.White)
@@ -334,7 +334,7 @@ struct Main {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           if (item.status === TrackModel.TRACK_STATUS_DONE) {
-            Text('已完成')
+            Text($r('app.string.status_done'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.success'))
@@ -342,7 +342,7 @@ struct Main {
               .padding({ left: 8, right: 8, top: 2, bottom: 2 })
               .borderRadius(10);
           } else {
-            Text('编辑中')
+            Text($r('app.string.status_editing'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.warning'))
@@ -392,7 +392,7 @@ struct Main {
     .width('100%')
     .backgroundColor($r('app.color.card_background'))
     .borderRadius(12)
-    .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
+    .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 })
     .clip(true)
     .onClick(() => {
       this.getUIContext().getRouter().pushUrl({
@@ -442,11 +442,11 @@ struct Main {
         Column({ space: 12 }) {
           Text('🌍')
             .fontSize(48);
-          Text('暂无公开轨迹')
+          Text($r('app.string.empty_all_tracks_title'))
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.label_primary'));
-          Text('将你的轨迹设为公开，让更多人看到')
+          Text($r('app.string.empty_all_tracks_hint'))
             .fontSize(14)
             .fontColor($r('app.color.label_tertiary'));
         }
@@ -471,11 +471,11 @@ struct Main {
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text('公开')
+        Text($r('app.string.visibility_public'))
           .fontSize(11)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#3478F6')
-          .backgroundColor('#EEF3FF')
+          .fontColor($r('app.color.primary'))
+          .backgroundColor($r('app.color.menu_selected_bg'))
           .padding({ left: 8, right: 8, top: 2, bottom: 2 })
           .borderRadius(10);
       }
@@ -485,7 +485,7 @@ struct Main {
       Row({ space: 4 }) {
         Text('👤')
           .fontSize(11);
-        Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : '轨迹用户')
+        Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : $r('app.string.profile_default_user'))
           .fontSize(12)
           .fontColor($r('app.color.label_secondary'));
         Text('·')
@@ -529,7 +529,7 @@ struct Main {
     .padding(16)
     .backgroundColor($r('app.color.card_background'))
     .borderRadius(12)
-    .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
+    .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 })
     .onClick(() => {
       this.getUIContext().getRouter().pushUrl({
         url: 'pages/TrackDetail',
@@ -558,18 +558,18 @@ struct Main {
           .width(72)
           .height(72)
           .borderRadius(36)
-          .backgroundColor('#E8E8ED')
+          .backgroundColor($r('app.color.menu_item_inactive'))
           .justifyContent(FlexAlign.Center);
         }
         Text(this.currentUser && this.currentUser.displayName.length > 0 ?
-          this.currentUser.displayName : '轨迹用户')
+          this.currentUser.displayName : $r('app.string.profile_default_user'))
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
           .fontColor(Color.White);
         if (this.currentUser && this.currentUser.familyName.length > 0) {
           Text(this.currentUser.familyName)
             .fontSize(13)
-            .fontColor('#BBFFFFFF');
+            .fontColor($r('app.color.login_title_secondary'));
         }
 
         // 统计
@@ -579,44 +579,44 @@ struct Main {
               .fontSize(22)
               .fontWeight(FontWeight.Bold)
               .fontColor(Color.White);
-            Text('轨迹')
+            Text($r('app.string.main_stat_tracks'))
               .fontSize(11)
-              .fontColor('#AAFFFFFF');
+              .fontColor($r('app.color.login_button_secondary'));
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center);
 
-          Column().width(1).height(30).backgroundColor('#33FFFFFF');
+          Column().width(1).height(30).backgroundColor($r('app.color.menu_divider'));
 
           Column({ space: 2 }) {
             Text(this.getSpotCount().toString())
               .fontSize(22)
               .fontWeight(FontWeight.Bold)
               .fontColor(Color.White);
-            Text('打卡点')
+            Text($r('app.string.main_stat_spots'))
               .fontSize(11)
-              .fontColor('#AAFFFFFF');
+              .fontColor($r('app.color.login_button_secondary'));
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center);
 
-          Column().width(1).height(30).backgroundColor('#33FFFFFF');
+          Column().width(1).height(30).backgroundColor($r('app.color.menu_divider'));
 
           Column({ space: 2 }) {
             Text(this.getTotalDistance())
               .fontSize(22)
               .fontWeight(FontWeight.Bold)
               .fontColor(Color.White);
-            Text('总里程')
+            Text($r('app.string.main_stat_total_distance'))
               .fontSize(11)
-              .fontColor('#AAFFFFFF');
+              .fontColor($r('app.color.login_button_secondary'));
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center);
         }
         .width('100%')
         .padding(12)
-        .backgroundColor('#22FFFFFF')
+        .backgroundColor($r('app.color.icon_overlay_light'))
         .borderRadius(12)
         .margin({ top: 8 });
       }
@@ -624,41 +624,41 @@ struct Main {
       .padding({ top: 16 + this.statusBarHeight, bottom: 24, left: 20, right: 20 })
       .linearGradient({
         angle: 160,
-        colors: [['#3478F6', 0], ['#1E56CC', 0.5], ['#0D3BA8', 1]]
+        colors: [[$r('app.color.primary'), 0], [$r('app.color.primary_dark'), 0.5], [$r('app.color.gradient_end'), 1]]
       })
       .alignItems(HorizontalAlign.Center);
 
       // 菜单
       Column({ space: 12 }) {
         Column() {
-          this.MenuItem('👤', '编辑个人信息', '', '#3478F6', () => {
+          this.MenuItem('👤', $r('app.string.menu_edit_profile'), '', $r('app.color.primary'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/ProfileEdit' });
           });
         }
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)
-        .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 });
+        .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 });
 
         Column() {
-          this.MenuItem('📄', '隐私政策', '', '#34C759', () => {
+          this.MenuItem('📄', $r('app.string.menu_privacy'), '', $r('app.color.success'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
-          this.MenuItem('📋', '用户协议', '', '#34C759', () => {
+          this.MenuItem('📋', $r('app.string.menu_user_agreement'), '', $r('app.color.success'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
-          this.MenuItem('ℹ', '关于遨游轨迹', 'V1.0', '#5856D6', () => {
+          this.MenuItem('ℹ', $r('app.string.menu_about'), 'V1.0', $r('app.color.primary'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/About' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
-          this.MenuItem('💬', '意见反馈', '', '#FF3B30', () => {
+          this.MenuItem('💬', $r('app.string.menu_feedback'), '', $r('app.color.destructive'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/Feedback' });
           });
         }
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)
-        .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 });
+        .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 });
 
         // 开发调试：Cloud DB 诊断
         Column({ space: 8 }) {
@@ -666,7 +666,7 @@ struct Main {
             .width('100%')
             .height(48)
             .fontSize(14)
-            .fontColor('#3478F6')
+            .fontColor($r('app.color.primary'))
             .backgroundColor($r('app.color.card_background'))
             .borderRadius(12)
             .enabled(!this.isDiagnosing)
@@ -688,12 +688,12 @@ struct Main {
               .fontColor($r('app.color.label_secondary'))
               .width('100%')
               .padding(12)
-              .backgroundColor('#F5F5F5')
+              .backgroundColor($r('app.color.layer_inactive_bg'))
               .borderRadius(8);
           }
         }
 
-        Button('退出登录')
+        Button($r('app.string.profile_logout'))
           .width('100%')
           .height(48)
           .fontSize(15)
@@ -703,10 +703,10 @@ struct Main {
           .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
           .onClick(() => {
             this.getUIContext().getPromptAction().showDialog({
-              message: '确定退出当前帐号？',
+              message: $r('app.string.confirm_logout'),
               buttons: [
-                { text: '取消', color: '#666666' },
-                { text: '确定', color: '#FF3B30' }
+                { text: $r('app.string.dialog_cancel'), color: $r('app.color.dialog_secondary_text') },
+                { text: $r('app.string.dialog_confirm'), color: $r('app.color.destructive') }
               ]
             }).then((result: promptAction.ShowDialogSuccessResponse) => {
               if (result.index === 1) {
@@ -728,7 +728,7 @@ struct Main {
   }
 
   @Builder
-  MenuItem(icon: string, title: string, value: string, iconBgColor: string, onClick: () => void) {
+  MenuItem(icon: string, title: string | Resource, value: string, iconBgColor: string | Resource, onClick: () => void) {
     Row() {
       Column() {
         Text(icon)

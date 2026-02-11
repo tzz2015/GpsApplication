@@ -544,7 +544,7 @@ struct TrackDetail {
       // 顶部关闭
       Row() {
         Blank();
-        Text('✕')
+        Text($r('app.string.share_close'))
           .fontSize(22)
           .fontColor(Color.White)
           .padding(16)
@@ -589,7 +589,7 @@ struct TrackDetail {
                   .fontSize(16)
                   .fontWeight(FontWeight.Bold)
                   .fontColor($r('app.color.primary'));
-                Text('总距离')
+                Text($r('app.string.stat_distance'))
                   .fontSize(11)
                   .fontColor($r('app.color.label_tertiary'));
               }
@@ -601,7 +601,7 @@ struct TrackDetail {
                   .fontSize(16)
                   .fontWeight(FontWeight.Bold)
                   .fontColor($r('app.color.primary'));
-                Text('用时')
+                Text($r('app.string.stat_duration'))
                   .fontSize(11)
                   .fontColor($r('app.color.label_tertiary'));
               }
@@ -613,7 +613,7 @@ struct TrackDetail {
                   .fontSize(16)
                   .fontWeight(FontWeight.Bold)
                   .fontColor($r('app.color.primary'));
-                Text('打卡点')
+                Text($r('app.string.stat_spots'))
                   .fontSize(11)
                   .fontColor($r('app.color.label_tertiary'));
               }
@@ -628,39 +628,39 @@ struct TrackDetail {
           Flex({ wrap: FlexWrap.Wrap }) {
             if (this.track && this.track.startName.length > 0) {
               Row({ space: 4 }) {
-                Circle({ width: 8, height: 8 }).fill('#34C759');
+                Circle({ width: 8, height: 8 }).fill($r('app.color.success'));
                 Text(this.track.startName)
                   .fontSize(12)
                   .fontColor($r('app.color.label_primary'));
               }
               .padding({ left: 8, right: 10, top: 4, bottom: 4 })
-              .backgroundColor('#F0F7F0')
+              .backgroundColor($r('app.color.spot_start_bg'))
               .borderRadius(12)
               .alignItems(VerticalAlign.Center)
               .margin({ right: 6, bottom: 6 });
             }
             ForEach(this.tombSpots, (spot: TrackModel.TombSpot, idx: number) => {
               Row({ space: 4 }) {
-                Circle({ width: 8, height: 8 }).fill('#3478F6');
+                Circle({ width: 8, height: 8 }).fill($r('app.color.primary'));
                 Text(spot.name)
                   .fontSize(12)
                   .fontColor($r('app.color.label_primary'));
               }
               .padding({ left: 8, right: 10, top: 4, bottom: 4 })
-              .backgroundColor('#EEF3FF')
+              .backgroundColor($r('app.color.spot_checkpoint_bg'))
               .borderRadius(12)
               .alignItems(VerticalAlign.Center)
               .margin({ right: 6, bottom: 6 });
             }, (spot: TrackModel.TombSpot) => spot.tombId);
             if (this.track && this.track.endName.length > 0) {
               Row({ space: 4 }) {
-                Circle({ width: 8, height: 8 }).fill('#FF3B30');
+                Circle({ width: 8, height: 8 }).fill($r('app.color.destructive'));
                 Text(this.track.endName)
                   .fontSize(12)
                   .fontColor($r('app.color.label_primary'));
               }
               .padding({ left: 8, right: 10, top: 4, bottom: 4 })
-              .backgroundColor('#FFF0F0')
+              .backgroundColor($r('app.color.spot_end_bg'))
               .borderRadius(12)
               .alignItems(VerticalAlign.Center)
               .margin({ right: 6, bottom: 6 });
@@ -670,7 +670,7 @@ struct TrackDetail {
           .padding({ left: 16, right: 16, top: 4, bottom: 12 });
 
           // 品牌标注
-          Text('—— 遨游轨迹 ——')
+          Text($r('app.string.brand_tag'))
             .fontSize(11)
             .fontColor($r('app.color.label_tertiary'))
             .width('100%')
@@ -691,7 +691,7 @@ struct TrackDetail {
 
       // 底部按钮
       Row({ space: 16 }) {
-        Button('删除')
+        Button($r('app.string.track_detail_delete_btn'))
           .layoutWeight(1)
           .height(50)
           .fontSize(17)
@@ -707,7 +707,7 @@ struct TrackDetail {
             this.showShareCover = false;
             this.shareImagePath = '';
           });
-        Button('保存')
+        Button($r('app.string.track_detail_save'))
           .layoutWeight(1)
           .height(50)
           .fontSize(17)
@@ -721,11 +721,11 @@ struct TrackDetail {
       }
       .width('100%')
       .padding({ left: 20, right: 20, bottom: 32, top: 16 })
-      .backgroundColor('#EE000000');
+      .backgroundColor($r('app.color.overlay_dark_modal'));
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#DD000000');
+    .backgroundColor($r('app.color.overlay_dark_modal'));
   }
 
   /** 删除轨迹 */
@@ -733,8 +733,8 @@ struct TrackDetail {
     this.getUIContext().getPromptAction().showDialog({
       message: '确定删除这条轨迹？删除后无法恢复。',
       buttons: [
-        { text: '取消', color: '#666666' },
-        { text: '确定删除', color: '#FF3B30' }
+        { text: $r('app.string.dialog_cancel'), color: $r('app.color.dialog_secondary_text') },
+        { text: $r('app.string.dialog_confirm_delete'), color: $r('app.color.destructive') }
       ]
     }).then((result: promptAction.ShowDialogSuccessResponse) => {
       if (result.index === 1) {
@@ -796,7 +796,7 @@ struct TrackDetail {
                     });
                 }
                 if (this.isEditing) {
-                  Text('编辑中')
+                  Text($r('app.string.status_editing'))
                     .fontSize(11)
                     .fontWeight(FontWeight.Medium)
                     .fontColor($r('app.color.warning'))
@@ -804,7 +804,7 @@ struct TrackDetail {
                     .padding({ left: 8, right: 8, top: 2, bottom: 2 })
                     .borderRadius(10);
                 } else {
-                  Text('已完成')
+                  Text($r('app.string.status_done'))
                     .fontSize(11)
                     .fontWeight(FontWeight.Medium)
                     .fontColor($r('app.color.success'))
@@ -853,13 +853,13 @@ struct TrackDetail {
                 Text('⚠')
                   .fontSize(18);
                 Column({ space: 2 }) {
-                  Text('轨迹尚未完成')
+                  Text($r('app.string.track_not_finished'))
                     .fontSize(14)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor('#B45309');
-                  Text('请继续记录并设置终点来完成此轨迹')
+                    .fontColor($r('app.color.warning_text'));
+                  Text($r('app.string.track_not_finished_hint'))
                     .fontSize(12)
-                    .fontColor('#B45309');
+                    .fontColor($r('app.color.warning_text'));
                 }
               }
               .width('100%')
@@ -876,11 +876,11 @@ struct TrackDetail {
                   Text('🔒')
                     .fontSize(18);
                   Column({ space: 2 }) {
-                    Text('可见范围')
+                    Text($r('app.string.visibility_label'))
                       .fontSize(14)
                       .fontWeight(FontWeight.Medium)
                       .fontColor($r('app.color.label_primary'));
-                    Text('设置轨迹对其他人是否可见')
+                    Text($r('app.string.visibility_hint'))
                       .fontSize(12)
                       .fontColor($r('app.color.label_tertiary'));
                   }
@@ -888,7 +888,7 @@ struct TrackDetail {
                 .layoutWeight(1);
 
                 Row() {
-                  Text('私有')
+                  Text($r('app.string.visibility_private'))
                     .fontSize(12)
                     .fontWeight(FontWeight.Medium)
                     .fontColor(this.isPrivate ? Color.White : $r('app.color.label_tertiary'))
@@ -900,7 +900,7 @@ struct TrackDetail {
                         this.toggleVisibility();
                       }
                     });
-                  Text('公开')
+                  Text($r('app.string.visibility_public'))
                     .fontSize(12)
                     .fontWeight(FontWeight.Medium)
                     .fontColor(!this.isPrivate ? Color.White : $r('app.color.label_tertiary'))
@@ -922,12 +922,12 @@ struct TrackDetail {
               .margin({ left: 16, right: 16, top: 12 })
               .backgroundColor($r('app.color.card_background'))
               .borderRadius(12)
-              .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 1 });
+              .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 1 });
             }
 
             // 路线详情（打卡点时间轴）
             Column() {
-              Text('📍 路线详情')
+              Text($r('app.string.route_detail_with_icon'))
                 .fontSize(16)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.label_primary'))
@@ -953,7 +953,7 @@ struct TrackDetail {
               // 终点或等待
               if (this.isEditing) {
                 Row() {
-                  Text('⏳ 等待继续记录...')
+                  Text($r('app.string.wait_continue_record'))
                     .fontSize(14)
                     .fontColor($r('app.color.label_tertiary'));
                 }
@@ -1036,7 +1036,7 @@ struct TrackDetail {
     if (this.showEditTitleDialog) {
       Column() {
         Column() {
-          Text('编辑轨迹名称')
+          Text($r('app.string.edit_track_name'))
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.label_primary'))
@@ -1064,7 +1064,7 @@ struct TrackDetail {
                 this.showEditTitleDialog = false;
                 this.editInputText = '';
               });
-            Button('保存')
+            Button($r('app.string.track_detail_save'))
               .layoutWeight(1)
               .height(44)
               .fontSize(15)
@@ -1081,11 +1081,11 @@ struct TrackDetail {
         .padding(24)
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(20)
-        .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
+        .shadow({ radius: 24, color: $r('app.color.shadow_medium'), offsetX: 0, offsetY: 8 });
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#66000000')
+      .backgroundColor($r('app.color.overlay_dark'))
       .justifyContent(FlexAlign.Center)
       .zIndex(100);
     }
@@ -1094,7 +1094,7 @@ struct TrackDetail {
     if (this.showEditSpotNameDialog) {
       Column() {
         Column() {
-          Text('编辑打卡点名称')
+          Text($r('app.string.edit_spot_name'))
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.label_primary'))
@@ -1123,7 +1123,7 @@ struct TrackDetail {
                 this.editInputText = '';
                 this.editingSpotId = '';
               });
-            Button('保存')
+            Button($r('app.string.track_detail_save'))
               .layoutWeight(1)
               .height(44)
               .fontSize(15)
@@ -1140,11 +1140,11 @@ struct TrackDetail {
         .padding(24)
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(20)
-        .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 });
+        .shadow({ radius: 24, color: $r('app.color.shadow_medium'), offsetX: 0, offsetY: 8 });
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#66000000')
+      .backgroundColor($r('app.color.overlay_dark'))
       .justifyContent(FlexAlign.Center)
       .zIndex(100);
     }
@@ -1157,12 +1157,12 @@ struct TrackDetail {
             .width(40)
             .height(40)
             .color(Color.White);
-          Text('正在生成分享图…')
+          Text($r('app.string.generating_share'))
             .fontSize(14)
             .fontColor(Color.White);
         }
         .padding(24)
-        .backgroundColor('#CC000000')
+        .backgroundColor($r('app.color.overlay_dark_strong'))
         .borderRadius(16);
       }
       .width('100%')
@@ -1215,7 +1215,7 @@ struct TrackDetail {
               .fontSize(10)
               .fontWeight(FontWeight.Medium)
               .fontColor(isStart ? $r('app.color.success') : $r('app.color.destructive'))
-              .backgroundColor(isStart ? $r('app.color.success_light') : '#FFE8E6')
+              .backgroundColor(isStart ? $r('app.color.success_light') : $r('app.color.destructive_light'))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .borderRadius(4);
           }
@@ -1246,7 +1246,7 @@ struct TrackDetail {
       .padding(8)
       .backgroundColor($r('app.color.card_background'))
       .borderRadius(10)
-      .shadow({ radius: 2, color: '#0A000000', offsetX: 0, offsetY: 1 })
+      .shadow({ radius: 2, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 1 })
       .onClick(() => {
         if (tombId.length > 0) {
           this.getUIContext().getRouter().pushUrl({

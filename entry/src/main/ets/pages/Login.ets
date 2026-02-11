@@ -170,15 +170,15 @@ struct Login {
             .height(88)
             .borderRadius(22)
             .objectFit(ImageFit.Cover)
-            .shadow({ radius: 16, color: '#331A3DB8', offsetX: 0, offsetY: 6 });
+            .shadow({ radius: 16, color: $r('app.color.login_icon_shadow'), offsetX: 0, offsetY: 6 });
 
-          Text('遨游轨迹')
+          Text($r('app.string.app_name'))
             .fontSize(28)
             .fontWeight(FontWeight.Bold)
             .fontColor(Color.White);
-          Text('记录扫墓轨迹，守护家族记忆')
+          Text($r('app.string.app_tagline'))
             .fontSize(15)
-            .fontColor('#BBFFFFFF');
+            .fontColor($r('app.color.login_title_secondary'));
         }
         .alignItems(HorizontalAlign.Center);
 
@@ -190,7 +190,7 @@ struct Login {
           if (this.loginError.length > 0) {
             Text(this.loginError)
               .fontSize(13)
-              .fontColor('#FF6B6B')
+              .fontColor($r('app.color.login_error'))
               .width('100%')
               .textAlign(TextAlign.Center);
           }
@@ -213,9 +213,9 @@ struct Login {
             .height(50);
 
           // 首次登录提示
-          Text('首次登录将自动创建账户')
+          Text($r('app.string.login_first_time'))
             .fontSize(12)
-            .fontColor('#88FFFFFF')
+            .fontColor($r('app.color.login_subtitle'))
             .textAlign(TextAlign.Center)
             .width('100%');
 
@@ -225,7 +225,7 @@ struct Login {
               .width('100%')
               .height(40)
               .fontSize(14)
-              .fontColor('#AAFFFFFF')
+              .fontColor($r('app.color.login_button_secondary'))
               .backgroundColor(Color.Transparent)
               .borderRadius(20)
               .enabled(this.agreed && !this.isLoggingIn)
@@ -247,21 +247,21 @@ struct Login {
           .onChange((value: boolean) => {
             this.onAgreementChange(value);
           });
-        Text('已阅读并同意')
+        Text($r('app.string.login_agree_prefix'))
           .fontSize(12)
-          .fontColor('#99FFFFFF');
-        Text('《隐私政策》')
+          .fontColor($r('app.color.login_hint'));
+        Text($r('app.string.login_agree_privacy'))
           .fontSize(12)
-          .fontColor('#DDFFFFFF')
+          .fontColor($r('app.color.login_link'))
           .onClick(() => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
           });
-        Text('与')
+        Text($r('app.string.login_agree_and'))
           .fontSize(12)
-          .fontColor('#99FFFFFF');
-        Text('《用户协议》')
+          .fontColor($r('app.color.login_hint'));
+        Text($r('app.string.login_agree_user_agreement'))
           .fontSize(12)
-          .fontColor('#DDFFFFFF')
+          .fontColor($r('app.color.login_link'))
           .onClick(() => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
           });
@@ -274,7 +274,7 @@ struct Login {
     .height('100%')
     .linearGradient({
       angle: 160,
-      colors: [['#3478F6', 0], ['#1E56CC', 0.5], ['#0D3BA8', 1]]
+      colors: [[$r('app.color.primary'), 0], [$r('app.color.primary_dark'), 0.5], [$r('app.color.gradient_end'), 1]]
     });
   }
 }
