@@ -29,10 +29,10 @@ export class CloudDBService {
     if (!CloudDBService._zone) {
       try {
         CloudDBService._zone = cloudDatabase.zone(ZONE_NAME);
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Database zone initialized: %{public}s', ZONE_NAME);
+        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Database zone initialized: %{public}s', ZONE_NAME);
       } catch (e) {
         const err = e as BusinessError;
-        hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Database zone init FAILED: code=%{public}d, msg=%{public}s',
+        hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Database zone init FAILED: code=%{public}d, msg=%{public}s',
           err.code, err.message);
         throw new Error('Database zone init failed: ' + err.message);
       }
@@ -66,31 +66,31 @@ export class CloudDBService {
             autoCreateUser: true,
             credentialInfo: { 'kind': 'hwid' }
           });
-          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ AGC Auth signIn success');
+          hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] AGC Auth signIn success');
           user = await auth.getCurrentUser();
         } catch (signErr) {
           const se = signErr as BusinessError;
-          hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ AGC Auth signIn failed: code=%{public}d', se.code || 0);
+          hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] AGC Auth signIn failed: code=%{public}d', se.code || 0);
         }
       }
       if (user !== null) {
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ AGC Auth user exists, uid=%{public}s', user.getUid());
+        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] AGC Auth user exists, uid=%{public}s', user.getUid());
       }
     } catch (e) {
       const err = e as BusinessError;
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ getCurrentUser failed: code=%{public}d', err.code || 0);
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] getCurrentUser failed: code=%{public}d', err.code || 0);
     }
 
     try {
       cloudCommon.init({ authProvider: auth.getAuthProvider() });
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ CloudCommon AuthProvider registered');
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] CloudCommon AuthProvider registered');
     } catch (e) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ cloudCommon.init skipped');
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] cloudCommon.init skipped');
     }
 
     const hasUser = await CloudDBService.hasAgcAuthUser();
     if (!hasUser) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ AGC Auth 未登录，Cloud DB 写入将无权限（请关闭 World 时先登录）');
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] AGC Auth 未登录，Cloud DB 写入将无权限（请关闭 World 时先登录）');
     }
     return hasUser;
   }
@@ -120,13 +120,13 @@ export class CloudDBService {
           readTimeout: 5000
         });
         const code = resp.responseCode;
-        results.push('✅ HTTP ' + testUrl + ' → ' + code.toString());
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0a] HTTP %{public}s → %{public}d', testUrl, code);
+        results.push('[OK] HTTP ' + testUrl + ' → ' + code.toString());
+        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [0a] HTTP %{public}s → %{public}d', testUrl, code);
         httpRequest.destroy();
       } catch (httpErr) {
         const he = httpErr as BusinessError;
-        results.push('❌ HTTP ' + testUrl + ' → code=' + (he.code || 0).toString());
-        hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0a] HTTP %{public}s → code=%{public}d, msg=%{public}s',
+        results.push('[ERR] HTTP ' + testUrl + ' → code=' + (he.code || 0).toString());
+        hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [0a] HTTP %{public}s → code=%{public}d, msg=%{public}s',
           testUrl, he.code || 0, he.message || '');
       }
     }
@@ -137,12 +137,12 @@ export class CloudDBService {
       if (user !== null) {
         const uid: string = user.getUid();
         const displayName: string = user.getDisplayName();
-        results.push('✅ AGC Auth 已登录: uid=' + uid + ', name=' + displayName);
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0b] AGC Auth 已登录: uid=%{public}s, name=%{public}s',
+        results.push('[OK] AGC Auth 已登录: uid=' + uid + ', name=' + displayName);
+        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [0b] AGC Auth 已登录: uid=%{public}s, name=%{public}s',
           uid, displayName);
       } else {
-        results.push('⚠️ AGC Auth 未登录');
-        hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ [0b] AGC Auth 未登录');
+        results.push('[WARN] AGC Auth 未登录');
+        hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] [0b] AGC Auth 未登录');
 
         // 尝试 HWID 登录
         try {
@@ -151,43 +151,43 @@ export class CloudDBService {
             credentialInfo: { 'kind': 'hwid' }
           });
           const signedUser: AuthUser = signInResult.getUser();
-          results.push('✅ HWID 登录成功: uid=' + signedUser.getUid());
-          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0b] HWID 登录成功: uid=%{public}s', signedUser.getUid());
+          results.push('[OK] HWID 登录成功: uid=' + signedUser.getUid());
+          hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [0b] HWID 登录成功: uid=%{public}s', signedUser.getUid());
         } catch (signErr) {
           const se = signErr as BusinessError;
-          results.push('❌ HWID 登录失败: code=' + (se.code || 0).toString());
-          hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0b] HWID 登录失败: code=%{public}d, msg=%{public}s',
+          results.push('[ERR] HWID 登录失败: code=' + (se.code || 0).toString());
+          hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [0b] HWID 登录失败: code=%{public}d, msg=%{public}s',
             se.code || 0, se.message || '');
 
           // ★ 再尝试匿名登录
           try {
             const anonResult = await auth.signInAnonymously();
             const anonUser: AuthUser = anonResult.getUser();
-            results.push('✅ 匿名登录成功: uid=' + anonUser.getUid());
-            hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [0b] 匿名登录成功: uid=%{public}s', anonUser.getUid());
+            results.push('[OK] 匿名登录成功: uid=' + anonUser.getUid());
+            hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [0b] 匿名登录成功: uid=%{public}s', anonUser.getUid());
           } catch (anonErr) {
             const ae = anonErr as BusinessError;
-            results.push('❌ 匿名登录也失败: code=' + (ae.code || 0).toString());
-            hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0b] 匿名登录失败: code=%{public}d, msg=%{public}s',
+            results.push('[ERR] 匿名登录也失败: code=' + (ae.code || 0).toString());
+            hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [0b] 匿名登录失败: code=%{public}d, msg=%{public}s',
               ae.code || 0, ae.message || '');
           }
         }
       }
     } catch (e) {
       const err = e as BusinessError;
-      results.push('❌ getCurrentUser 失败: code=' + (err.code || 0).toString());
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [0b] getCurrentUser 失败: code=%{public}d', err.code || 0);
+      results.push('[ERR] getCurrentUser 失败: code=' + (err.code || 0).toString());
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [0b] getCurrentUser 失败: code=%{public}d', err.code || 0);
     }
 
     // ★ 第 1 步：注册 AuthProvider
     try {
       cloudCommon.init({ authProvider: auth.getAuthProvider() });
-      results.push('✅ CloudCommon AuthProvider 已注册');
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [1/5] CloudCommon AuthProvider 已注册');
+      results.push('[OK] CloudCommon AuthProvider 已注册');
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [1/5] CloudCommon AuthProvider 已注册');
     } catch (e) {
       const err = e as BusinessError;
-      results.push('❌ CloudCommon init 失败: ' + (err.message || ''));
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [1/5] CloudCommon init 失败: %{public}s', err.message || '');
+      results.push('[ERR] CloudCommon init 失败: ' + (err.message || ''));
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [1/5] CloudCommon init 失败: %{public}s', err.message || '');
     }
 
     // 2. 测试 Zone 初始化
@@ -195,12 +195,12 @@ export class CloudDBService {
       // 重置 zone 以重新获取（带上新的 AuthProvider）
       CloudDBService._zone = null;
       CloudDBService.getZone();
-      results.push('✅ Zone "aoyou" 初始化成功');
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [2/5] Zone 初始化成功');
+      results.push('[OK] Zone "aoyou" 初始化成功');
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [2/5] Zone 初始化成功');
     } catch (e) {
       const err = e as BusinessError;
-      results.push('❌ Zone 初始化失败: code=' + (err.code || 0).toString() + ', ' + (err.message || ''));
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [2/5] Zone 初始化失败: code=%{public}d, msg=%{public}s',
+      results.push('[ERR] Zone 初始化失败: code=' + (err.code || 0).toString() + ', ' + (err.message || ''));
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [2/5] Zone 初始化失败: code=%{public}d, msg=%{public}s',
         err.code || 0, err.message || '');
       hilog.info(LOG_DOMAIN, LOG_TAG, '====== Cloud DB 诊断结束 ======');
       return results.join('\n');
@@ -215,12 +215,12 @@ export class CloudDBService {
       testUser.updatedAt = new Date();
 
       const count = await CloudDBService.getZone().upsert(testUser);
-      results.push('✅ 写入测试成功, count=' + count.toString());
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [3/5] upsert 测试成功, count=%{public}d', count);
+      results.push('[OK] 写入测试成功, count=' + count.toString());
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [3/5] upsert 测试成功, count=%{public}d', count);
     } catch (e) {
       const err = e as BusinessError;
-      results.push('❌ 写入失败: code=' + (err.code || 0).toString() + ', ' + (err.message || ''));
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [3/5] upsert 失败: code=%{public}d, msg=%{public}s',
+      results.push('[ERR] 写入失败: code=' + (err.code || 0).toString() + ', ' + (err.message || ''));
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [3/5] upsert 失败: code=%{public}d, msg=%{public}s',
         err.code || 0, err.message || '');
     }
 
@@ -229,12 +229,12 @@ export class CloudDBService {
       const condition = new cloudDatabase.DatabaseQuery(UserEntity);
       condition.equalTo('userId', '__diag_test__');
       const result: UserEntity[] = await CloudDBService.getZone().query(condition);
-      results.push('✅ 查询测试成功, 返回 ' + result.length.toString() + ' 条');
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [4/5] query 测试成功, count=%{public}d', result.length);
+      results.push('[OK] 查询测试成功, 返回 ' + result.length.toString() + ' 条');
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [4/5] query 测试成功, count=%{public}d', result.length);
     } catch (e) {
       const err = e as BusinessError;
-      results.push('❌ 查询失败: code=' + (err.code || 0).toString() + ', ' + (err.message || ''));
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ [4/5] query 失败: code=%{public}d, msg=%{public}s',
+      results.push('[ERR] 查询失败: code=' + (err.code || 0).toString() + ', ' + (err.message || ''));
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] [4/5] query 失败: code=%{public}d, msg=%{public}s',
         err.code || 0, err.message || '');
     }
 
@@ -243,12 +243,12 @@ export class CloudDBService {
       const testUser = new UserEntity();
       testUser.userId = '__diag_test__';
       await CloudDBService.getZone().delete(testUser);
-      results.push('✅ 清理测试数据成功');
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ [5/5] 清理测试数据成功');
+      results.push('[OK] 清理测试数据成功');
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [5/5] 清理测试数据成功');
     } catch (e) {
       const err = e as BusinessError;
-      results.push('⚠️ 清理失败(可忽略): ' + (err.message || ''));
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ [5/5] 清理失败: %{public}s', err.message || '');
+      results.push('[WARN] 清理失败(可忽略): ' + (err.message || ''));
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] [5/5] 清理失败: %{public}s', err.message || '');
     }
 
     hilog.info(LOG_DOMAIN, LOG_TAG, '====== Cloud DB 诊断结束 ======');
@@ -264,11 +264,11 @@ export class CloudDBService {
     try {
       hilog.info(LOG_DOMAIN, LOG_TAG, 'Upsert user: userId=%{public}s', user.userId || 'null');
       const count = await CloudDBService.getZone().upsert(user);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Upsert user success, count: %{public}d', count);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Upsert user success, count: %{public}d', count);
       return count;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Upsert user failed: code=%{public}d, msg=%{public}s',
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Upsert user failed: code=%{public}d, msg=%{public}s',
         err.code, err.message);
       return 0;
     }
@@ -303,11 +303,11 @@ export class CloudDBService {
       hilog.info(LOG_DOMAIN, LOG_TAG, 'Upsert track: id=%{public}s, title=%{public}s',
         track.trackId || 'null', track.title || 'null');
       const count = await CloudDBService.getZone().upsert(track);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Upsert track success, count: %{public}d', count);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Upsert track success, count: %{public}d', count);
       return count;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Upsert track failed: code=%{public}d, msg=%{public}s',
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Upsert track failed: code=%{public}d, msg=%{public}s',
         err.code, err.message);
       return 0;
     }

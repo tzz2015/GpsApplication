@@ -5,13 +5,26 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storeFile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.p12",
-          "storePassword": "0000001A92180A35278B5AF486B9DDFB4AF5F764E2A5ABD736432974ADBC85555051FF4429389DE714BE",
+          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.cer",
           "keyAlias": "lyy",
-          "keyPassword": "0000001A720C7B5F31DB69C5A1F0C44806D9E8758A4FE48A9C6718DB3E2B559F72427D69BEDF29503E8D",
-          "signAlg": "SHA256withECDSA",
+          "keyPassword": "0000001A9680EF79AFF997F965CFD5CED1749B53575E5F87A905DDA8AB6CA65947240E1F604713F1312A",
           "profile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debugDebug.p7b",
-          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.cer"
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.p12",
+          "storePassword": "0000001ADADA355F8502738295CCC5F77FAA6A079FE147274A937DFB9C0F5B3443530C2C7EBCC0171D81"
+        }
+      },
+      {
+        "name": "release",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.cer",
+          "keyAlias": "lyy",
+          "keyPassword": "0000001AFBD40393DFC0E34976D0984B1D8BBAAFB5070C7BFA544D8F40DCA888DCB6BFBF57ABB0F22A22",
+          "profile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debugDebug.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.p12",
+          "storePassword": "0000001A6CCE41D244E89D34BD0876CA64F726EBE6F16729B4C6C9396397CBCE8B920039468DA4D18D72"
         }
       }
     ],
@@ -19,6 +32,19 @@
       {
         "name": "default",
         "signingConfig": "default",
+        "targetSdkVersion": "6.0.0(20)",
+        "compatibleSdkVersion": "6.0.0(20)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      },
+      {
+        "name": "release",
+        "signingConfig": "release",
         "targetSdkVersion": "6.0.0(20)",
         "compatibleSdkVersion": "6.0.0(20)",
         "runtimeOS": "HarmonyOS",
@@ -58,7 +84,8 @@
         {
           "name": "default",
           "applyToProducts": [
-            "default"
+            "default",
+            "release"
           ]
         }
       ]
@@ -70,7 +97,8 @@
         {
           "name": "default",
           "applyToProducts": [
-            "default"
+            "default",
+            "release"
           ]
         }
       ]
@@ -82,7 +110,8 @@
         {
           "name": "default",
           "applyToProducts": [
-            "default"
+            "default",
+            "release"
           ]
         }
       ]

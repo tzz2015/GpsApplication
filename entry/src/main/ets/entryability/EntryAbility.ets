@@ -25,9 +25,9 @@ export default class EntryAbility extends UIAbility {
       const file = this.context.resourceManager.getRawFileContentSync('agconnect-services.json');
       const json: string = buffer.from(file.buffer).toString();
       auth.init(this.context, json);
-      hilog.info(DOMAIN, TAG, '✅ AGC Auth SDK initialized');
+      hilog.info(DOMAIN, TAG, '[OK] AGC Auth SDK initialized');
     } catch (err) {
-      hilog.error(DOMAIN, TAG, '❌ AGC Auth init failed: %{public}s', JSON.stringify(err));
+      hilog.error(DOMAIN, TAG, '[ERR] AGC Auth init failed: %{public}s', JSON.stringify(err));
     }
 
     // ★ 立即启动 Auth 登录 + AuthProvider 注册（不等 loadContent）

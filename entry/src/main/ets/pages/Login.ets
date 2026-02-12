@@ -253,6 +253,7 @@ struct Login {
         Text($r('app.string.login_agree_privacy'))
           .fontSize(12)
           .fontColor($r('app.color.login_link'))
+          .decoration({ type: TextDecorationType.Underline })
           .onClick(() => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
           });
@@ -262,6 +263,7 @@ struct Login {
         Text($r('app.string.login_agree_user_agreement'))
           .fontSize(12)
           .fontColor($r('app.color.login_link'))
+          .decoration({ type: TextDecorationType.Underline })
           .onClick(() => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
           });
@@ -273,8 +275,8 @@ struct Login {
     .width('100%')
     .height('100%')
     .linearGradient({
-      angle: 160,
-      colors: [[$r('app.color.primary'), 0], [$r('app.color.primary_dark'), 0.5], [$r('app.color.gradient_end'), 1]]
+      angle: 170,
+      colors: [[$r('app.color.gradient_end'), 0], [$r('app.color.primary_deeper'), 0.4], [$r('app.color.primary'), 1]]
     });
   }
 }

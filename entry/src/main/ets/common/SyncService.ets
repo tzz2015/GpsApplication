@@ -45,18 +45,18 @@ export class SyncService {
     hilog.info(LOG_DOMAIN, LOG_TAG, '--- syncUser start ---');
 
     if (!SyncService.isNetworkAvailable()) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncUser: 无网络，跳过');
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] syncUser: 无网络，跳过');
       return;
     }
     if (!(await CloudDBService.hasAgcAuthUser())) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncUser: AGC Auth 未登录，无写入权限，跳过');
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] syncUser: AGC Auth 未登录，无写入权限，跳过');
       return;
     }
 
     try {
       const authUser = await AuthStore.getCurrentUser(context);
       if (!authUser) {
-        hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncUser: 本地无用户数据');
+        hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] syncUser: 本地无用户数据');
         return;
       }
       hilog.info(LOG_DOMAIN, LOG_TAG, 'syncUser: userId=%{public}s, name=%{public}s',
@@ -71,9 +71,9 @@ export class SyncService {
       userEntity.updatedAt = new Date(authUser.updatedAt);
 
       await CloudDBService.upsertUser(userEntity);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ syncUser 完成');
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] syncUser 完成');
     } catch (e) {
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ syncUser 失败: %{public}s', JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] syncUser 失败: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -88,7 +88,7 @@ export class SyncService {
       return;
     }
     if (!(await CloudDBService.hasAgcAuthUser())) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ syncTrack: AGC Auth 未登录，无写入权限，跳过');
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] syncTrack: AGC Auth 未登录，无写入权限，跳过');
       return;
     }
 
@@ -107,7 +107,7 @@ export class SyncService {
           // 上传成功，更新本地存储的封面 URL
           track.coverImageUrl = cloudCoverUrl;
           await TrackStore.updateTrack(context, trackId, { coverImageUrl: cloudCoverUrl });
-          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Track cover uploaded & local updated');
+          hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Track cover uploaded & local updated');
         }
       }
 
@@ -128,7 +128,7 @@ export class SyncService {
           if (updatedUrisJson !== spot.imageUris) {
             spot.imageUris = updatedUrisJson;
             await TrackStore.updateTombSpot(context, spot.tombId, { imageUris: updatedUrisJson });
-            hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Spot images uploaded: %{public}s', spot.tombId);
+            hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Spot images uploaded: %{public}s', spot.tombId);
           }
         }
 
@@ -214,7 +214,7 @@ export class SyncService {
         avatarUrl: cloudUser.avatarUrl || '',
         familyName: cloudUser.familyName || ''
       });
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ restoreUserFromCloud: nickname=%{public}s', cloudUser.nickname);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] restoreUserFromCloud: nickname=%{public}s', cloudUser.nickname);
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'restoreUserFromCloud failed: %{public}s', JSON.stringify(e));
     }
@@ -275,7 +275,7 @@ export class SyncService {
       }
 
       if (cloudTracks.length > 0) {
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ restoreMyTracksFromCloud done: %{public}d tracks', cloudTracks.length);
+        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] restoreMyTracksFromCloud done: %{public}d tracks', cloudTracks.length);
       }
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'restoreMyTracksFromCloud failed: %{public}s', JSON.stringify(e));

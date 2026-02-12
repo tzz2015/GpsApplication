@@ -363,8 +363,10 @@ struct TombSpotDetail {
                   .fontColor($r('app.color.label_primary'))
                   .layoutWeight(1);
                 Button() {
-                  Text('✏')
-                    .fontSize(14);
+                  Image($r('app.media.ic_edit'))
+                    .width(16)
+                    .height(16)
+                    .fillColor($r('app.color.primary'));
                 }
                 .width(28)
                 .height(28)
@@ -385,24 +387,42 @@ struct TombSpotDetail {
             // 位置信息
             if (this.spot) {
               Row({ space: 8 }) {
-                Text('📍 ' + this.spot.latitude.toFixed(4) + '°N ' + this.spot.longitude.toFixed(4) + '°E')
-                  .fontSize(12)
-                  .fontColor($r('app.color.label_secondary'))
-                  .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-                  .backgroundColor($r('app.color.app_background'))
-                  .borderRadius(20);
-                Text('⛰ 海拔 ' + this.spot.altitude.toString() + 'm')
-                  .fontSize(12)
-                  .fontColor($r('app.color.label_secondary'))
-                  .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-                  .backgroundColor($r('app.color.app_background'))
-                  .borderRadius(20);
+                Row({ space: 4 }) {
+                  Image($r('app.media.ic_location_pin'))
+                    .width(12)
+                    .height(12)
+                    .fillColor($r('app.color.label_secondary'));
+                  Text(this.spot.latitude.toFixed(4) + '°N ' + this.spot.longitude.toFixed(4) + '°E')
+                    .fontSize(12)
+                    .fontColor($r('app.color.label_secondary'));
+                }
+                .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                .backgroundColor($r('app.color.app_background'))
+                .borderRadius(20);
+                Row({ space: 4 }) {
+                  Image($r('app.media.ic_mountain'))
+                    .width(12)
+                    .height(12)
+                    .fillColor($r('app.color.label_secondary'));
+                  Text('海拔 ' + this.spot.altitude.toString() + 'm')
+                    .fontSize(12)
+                    .fontColor($r('app.color.label_secondary'));
+                }
+                .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                .backgroundColor($r('app.color.app_background'))
+                .borderRadius(20);
               }
               .width('100%');
 
-              Text('📅 ' + TrackModel.formatDate(this.spot.createdAt))
-                .fontSize(12)
-                .fontColor($r('app.color.label_tertiary'));
+              Row({ space: 4 }) {
+                Image($r('app.media.ic_calendar'))
+                  .width(12)
+                  .height(12)
+                  .fillColor($r('app.color.label_tertiary'));
+                Text(TrackModel.formatDate(this.spot.createdAt))
+                  .fontSize(12)
+                  .fontColor($r('app.color.label_tertiary'));
+              }
             }
           }
           .width('100%')
@@ -462,9 +482,10 @@ struct TombSpotDetail {
                       });
                     if (this.isEditing) {
                       Button() {
-                        Text('✕')
-                          .fontSize(12)
-                          .fontColor(Color.White);
+                        Image($r('app.media.ic_close'))
+                          .width(12)
+                          .height(12)
+                          .fillColor(Color.White);
                       }
                       .width(20)
                       .height(20)
@@ -492,9 +513,10 @@ struct TombSpotDetail {
 
                 if (this.isEditing) {
                   Column() {
-                    Text('+')
-                      .fontSize(28)
-                      .fontColor($r('app.color.label_tertiary'));
+                    Image($r('app.media.ic_plus'))
+                      .width(28)
+                      .height(28)
+                      .fillColor($r('app.color.label_tertiary'));
                     Text($r('app.string.tomb_spot_add_photo'))
                       .fontSize(11)
                       .fontColor($r('app.color.label_tertiary'));

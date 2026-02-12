@@ -180,7 +180,7 @@ struct TrackDetail {
       try {
         await this.mapController.addPolyline({
           points: gcj02Points,
-          color: 0xFFFF6B35,
+          color: 0xFF2563EB,
           width: 12,
           visible: true
         });
@@ -221,7 +221,7 @@ struct TrackDetail {
         try {
           await this.mapController.addPolyline({
             points: waypoints,
-            color: 0xFFFF6B35,
+            color: 0xFF2563EB,
             width: 10,
             visible: true
           });
@@ -243,7 +243,7 @@ struct TrackDetail {
         await this.mapController.addCircle({
           center: startP,
           radius: 8,
-          fillColor: 0xFF34C759,
+          fillColor: 0xFF10B981,
           strokeColor: 0xFFFFFFFF,
           strokeWidth: 3,
           visible: true
@@ -270,7 +270,7 @@ struct TrackDetail {
         await this.mapController.addCircle({
           center: endP,
           radius: 8,
-          fillColor: 0xFFFF3B30,
+          fillColor: 0xFFEF4444,
           strokeColor: 0xFFFFFFFF,
           strokeWidth: 3,
           visible: true
@@ -331,12 +331,12 @@ struct TrackDetail {
         continue;
       }
       const gcj02 = await this.convertToGCJ02(spot.latitude, spot.longitude);
-      // 蓝色圆点作为视觉标记
+      // 黄色/琥珀色圆点作为视觉标记（打卡点，符合原型）
       try {
         await this.mapController.addCircle({
           center: gcj02,
           radius: 6,
-          fillColor: 0xFF3478F6,
+          fillColor: 0xFFF59E0B,
           strokeColor: 0xFFFFFFFF,
           strokeWidth: 3,
           visible: true
@@ -788,8 +788,10 @@ struct TrackDetail {
                   .layoutWeight(1);
                 // 编辑图标（仅创建者可见）
                 if (this.isOwner && !this.isPublicView) {
-                  Text('✏️')
-                    .fontSize(16)
+                  Image($r('app.media.ic_edit'))
+                    .width(18)
+                    .height(18)
+                    .fillColor($r('app.color.primary'))
                     .onClick(() => {
                       this.editInputText = this.track ? this.track.title : '';
                       this.showEditTitleDialog = true;
@@ -850,8 +852,10 @@ struct TrackDetail {
             // 编辑中状态提示
             if (this.isEditing) {
               Row({ space: 10 }) {
-                Text('⚠')
-                  .fontSize(18);
+                Image($r('app.media.ic_warning'))
+                  .width(20)
+                  .height(20)
+                  .fillColor($r('app.color.warning'));
                 Column({ space: 2 }) {
                   Text($r('app.string.track_not_finished'))
                     .fontSize(14)
@@ -873,8 +877,10 @@ struct TrackDetail {
             if (!this.isEditing) {
               Row() {
                 Row({ space: 10 }) {
-                  Text('🔒')
-                    .fontSize(18);
+                  Image($r('app.media.ic_lock'))
+                    .width(20)
+                    .height(20)
+                    .fillColor($r('app.color.primary'));
                   Column({ space: 2 }) {
                     Text($r('app.string.visibility_label'))
                       .fontSize(14)
@@ -936,7 +942,7 @@ struct TrackDetail {
 
               // 起点
               if (this.track && this.track.startName.length > 0) {
-                this.TimelineItem('🌱 ' + this.track.startName, '起点',
+                this.TimelineItem(this.track.startName, '起点',
                   TrackModel.formatDate(this.track.createdAt), true, false, '', false);
               }
 
@@ -966,7 +972,7 @@ struct TrackDetail {
                 .borderColor($r('app.color.separator'))
                 .borderStyle(BorderStyle.Dashed);
               } else if (this.track && this.track.endName.length > 0) {
-                this.TimelineItem('🏁 ' + this.track.endName, '终点',
+                this.TimelineItem(this.track.endName, '终点',
                   '', false, true, '', false);
               }
             }
@@ -977,7 +983,7 @@ struct TrackDetail {
             // 底部操作
             Column({ space: 8 }) {
               if (this.isEditing) {
-                Button('▶ 继续记录')
+                Button('继续记录')
                   .width('100%')
                   .height(50)
                   .fontSize(17)
@@ -1194,12 +1200,24 @@ struct TrackDetail {
   @Builder
   TimelineItem(name: string, tag: string, meta: string, isStart: boolean, isEnd: boolean, tombId: string, canEditName: boolean) {
     Row({ space: 8 }) {
-      // 时间轴圆点（与文字更近）
+      // 时间轴图标
       Column() {
-        Circle({ width: 10, height: 10 })
-          .fill(isStart ? $r('app.color.success') : (isEnd ? $r('app.color.destructive') : $r('app.color.primary')));
+        if (isStart) {
+          Image($r('app.media.ic_seedling'))
+            .width(16)
+            .height(16)
+            .fillColor($r('app.color.success'));
+        } else if (isEnd) {
+          Image($r('app.media.ic_flag_finish'))
+            .width(16)
+            .height(16)
+            .fillColor($r('app.color.destructive'));
+        } else {
+          Circle({ width: 10, height: 10 })
+            .fill($r('app.color.primary'));
+        }
       }
-      .width(10)
+      .width(16)
       .margin({ top: 4 });
 
       // 内容
@@ -1221,8 +1239,10 @@ struct TrackDetail {
           }
           // 编辑打卡点名称图标（仅创建者）
           if (canEditName && tombId.length > 0) {
-            Text('✏️')
-              .fontSize(14)
+            Image($r('app.media.ic_edit'))
+              .width(16)
+              .height(16)
+              .fillColor($r('app.color.primary'))
               .onClick(() => {
                 // 从打卡点列表中找到对应名称
                 for (let i = 0; i < this.tombSpots.length; i++) {

@@ -197,7 +197,7 @@ struct Main {
     }
     .padding({ top: 8, bottom: 8 })
     .layoutWeight(1)
-    .minHeight(44);
+    .constraintSize({ minHeight: 44 });
   }
 
   // ==================== 我的轨迹列表 ====================
@@ -209,21 +209,22 @@ struct Main {
           // 新建按钮
           ListItem() {
             Row({ space: 6 }) {
-              Text('+')
-                .fontSize(18)
-                .fontColor($r('app.color.primary'));
+              Image($r('app.media.ic_plus'))
+                .width(18)
+                .height(18)
+                .fillColor($r('app.color.accent'));
               Text($r('app.string.main_new_track_btn'))
                 .fontSize(15)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.primary'));
+                .fontColor($r('app.color.accent_dark'));
             }
             .width('100%')
             .height(48)
             .justifyContent(FlexAlign.Center)
-            .backgroundColor($r('app.color.card_background'))
+            .backgroundColor($r('app.color.accent_light'))
             .borderRadius(12)
             .borderWidth(2)
-            .borderColor($r('app.color.primary'))
+            .borderColor($r('app.color.accent'))
             .borderStyle(BorderStyle.Dashed)
             .onClick(() => {
               this.getUIContext().getRouter().pushUrl({ url: 'pages/CreateOrEditTrack' });
@@ -267,8 +268,10 @@ struct Main {
       } else {
         // 空状态
         Column({ space: 12 }) {
-          Text('📍')
-            .fontSize(48);
+          Image($r('app.media.ic_location_pin'))
+            .width(48)
+            .height(48)
+            .fillColor($r('app.color.primary'));
           Text($r('app.string.empty_my_tracks_title'))
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
@@ -309,7 +312,7 @@ struct Main {
         .fontColor(Color.White);
       Text(label)
         .fontSize(11)
-        .fontColor('#CCFFFFFF');
+        .fontColor($r('app.color.login_button_secondary'));
     }
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Center);
@@ -372,18 +375,36 @@ struct Main {
         }
 
         Row({ space: 16 }) {
-          Text('📍 ' + TrackModel.formatDistance(item.totalDistance))
-            .fontSize(12)
-            .fontColor($r('app.color.label_secondary'));
-          if (item.maxAltitude > 0) {
-            Text('⛰ ' + item.maxAltitude.toString() + 'm')
+          Row({ space: 4 }) {
+            Image($r('app.media.ic_location_pin'))
+              .width(14)
+              .height(14)
+              .fillColor($r('app.color.label_secondary'));
+            Text(TrackModel.formatDistance(item.totalDistance))
               .fontSize(12)
               .fontColor($r('app.color.label_secondary'));
           }
+          if (item.maxAltitude > 0) {
+            Row({ space: 4 }) {
+              Image($r('app.media.ic_mountain'))
+                .width(14)
+                .height(14)
+                .fillColor($r('app.color.label_secondary'));
+              Text(item.maxAltitude.toString() + 'm')
+                .fontSize(12)
+                .fontColor($r('app.color.label_secondary'));
+            }
+          }
           if (item.totalDuration > 0) {
-            Text('⏱ ' + TrackModel.formatDuration(item.totalDuration))
-              .fontSize(12)
-              .fontColor($r('app.color.label_secondary'));
+            Row({ space: 4 }) {
+              Image($r('app.media.ic_timer'))
+                .width(14)
+                .height(14)
+                .fillColor($r('app.color.label_secondary'));
+              Text(TrackModel.formatDuration(item.totalDuration))
+                .fontSize(12)
+                .fontColor($r('app.color.label_secondary'));
+            }
           }
         }
         .width('100%')
@@ -444,8 +465,10 @@ struct Main {
         .scrollBar(BarState.Off);
       } else {
         Column({ space: 12 }) {
-          Text('🌍')
-            .fontSize(48);
+          Image($r('app.media.ic_globe'))
+            .width(48)
+            .height(48)
+            .fillColor($r('app.color.primary'));
           Text($r('app.string.empty_all_tracks_title'))
             .fontSize(17)
             .fontWeight(FontWeight.Medium)
@@ -487,8 +510,10 @@ struct Main {
 
       // 作者信息
       Row({ space: 4 }) {
-        Text('👤')
-          .fontSize(11);
+        Image($r('app.media.ic_user'))
+          .width(12)
+          .height(12)
+          .fillColor($r('app.color.label_secondary'));
         Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : $r('app.string.profile_default_user'))
           .fontSize(12)
           .fontColor($r('app.color.label_secondary'));
@@ -512,18 +537,36 @@ struct Main {
       }
 
       Row({ space: 16 }) {
-        Text('📍 ' + TrackModel.formatDistance(item.totalDistance))
-          .fontSize(12)
-          .fontColor($r('app.color.label_secondary'));
-        if (item.spotCount > 0) {
-          Text('🏁 ' + item.spotCount.toString() + '个打卡点')
+        Row({ space: 4 }) {
+          Image($r('app.media.ic_location_pin'))
+            .width(14)
+            .height(14)
+            .fillColor($r('app.color.label_secondary'));
+          Text(TrackModel.formatDistance(item.totalDistance))
             .fontSize(12)
             .fontColor($r('app.color.label_secondary'));
         }
+        if (item.spotCount > 0) {
+          Row({ space: 4 }) {
+            Image($r('app.media.ic_flag_finish'))
+              .width(14)
+              .height(14)
+              .fillColor($r('app.color.label_secondary'));
+            Text(item.spotCount.toString() + '个打卡点')
+              .fontSize(12)
+              .fontColor($r('app.color.label_secondary'));
+          }
+        }
         if (item.maxAltitude > 0) {
-          Text('⛰ ' + item.maxAltitude.toString() + 'm')
-            .fontSize(12)
-            .fontColor($r('app.color.label_secondary'));
+          Row({ space: 4 }) {
+            Image($r('app.media.ic_mountain'))
+              .width(14)
+              .height(14)
+              .fillColor($r('app.color.label_secondary'));
+            Text(item.maxAltitude.toString() + 'm')
+              .fontSize(12)
+              .fontColor($r('app.color.label_secondary'));
+          }
         }
       }
       .width('100%')
@@ -556,8 +599,10 @@ struct Main {
             .objectFit(ImageFit.Cover);
         } else {
           Column() {
-            Text('👤')
-              .fontSize(32);
+            Image($r('app.media.ic_user'))
+              .width(36)
+              .height(36)
+              .fillColor(Color.White);
           }
           .width(72)
           .height(72)
@@ -635,7 +680,7 @@ struct Main {
       // 菜单
       Column({ space: 12 }) {
         Column() {
-          this.MenuItem('👤', $r('app.string.menu_edit_profile'), '', $r('app.color.primary'), () => {
+          this.MenuItem($r('app.media.ic_user'), $r('app.string.menu_edit_profile'), '', $r('app.color.primary'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/ProfileEdit' });
           });
         }
@@ -644,19 +689,19 @@ struct Main {
         .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 });
 
         Column() {
-          this.MenuItem('📄', $r('app.string.menu_privacy'), '', $r('app.color.success'), () => {
+          this.MenuItem($r('app.media.ic_document'), $r('app.string.menu_privacy'), '', $r('app.color.menu_icon_sky'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
-          this.MenuItem('📋', $r('app.string.menu_user_agreement'), '', $r('app.color.success'), () => {
+          this.MenuItem($r('app.media.ic_clipboard'), $r('app.string.menu_user_agreement'), '', $r('app.color.menu_icon_sky'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
-          this.MenuItem('ℹ', $r('app.string.menu_about'), 'V1.0', $r('app.color.primary'), () => {
+          this.MenuItem($r('app.media.ic_info'), $r('app.string.menu_about'), 'V1.0', $r('app.color.primary'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/About' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
-          this.MenuItem('💬', $r('app.string.menu_feedback'), '', $r('app.color.destructive'), () => {
+          this.MenuItem($r('app.media.ic_chat'), $r('app.string.menu_feedback'), '', $r('app.color.accent'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/Feedback' });
           });
         }
@@ -666,7 +711,7 @@ struct Main {
 
         // 开发调试：Cloud DB 诊断
         Column({ space: 8 }) {
-          Button(this.isDiagnosing ? '诊断中...' : '🔧 诊断 Cloud DB 连通性')
+          Button(this.isDiagnosing ? '诊断中...' : '诊断 Cloud DB 连通性')
             .width('100%')
             .height(48)
             .fontSize(14)
@@ -681,7 +726,7 @@ struct Main {
                 this.diagResult = result;
                 this.isDiagnosing = false;
               }).catch((e: Error) => {
-                this.diagResult = '❌ 诊断异常: ' + JSON.stringify(e);
+                this.diagResult = '诊断异常: ' + JSON.stringify(e);
                 this.isDiagnosing = false;
               });
             });
@@ -704,7 +749,7 @@ struct Main {
           .fontColor($r('app.color.destructive'))
           .backgroundColor($r('app.color.card_background'))
           .borderRadius(12)
-          .shadow({ radius: 4, color: '#0D000000', offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 })
           .onClick(() => {
             this.getUIContext().getPromptAction().showDialog({
               message: $r('app.string.confirm_logout'),
@@ -732,11 +777,13 @@ struct Main {
   }
 
   @Builder
-  MenuItem(icon: string, title: string | Resource, value: string, iconBgColor: string | Resource, onClick: () => void) {
+  MenuItem(icon: Resource, title: string | Resource, value: string, iconBgColor: string | Resource, onClick: () => void) {
     Row() {
       Column() {
-        Text(icon)
-          .fontSize(16);
+        Image(icon)
+          .width(18)
+          .height(18)
+          .fillColor(Color.White);
       }
       .width(32)
       .height(32)
@@ -754,9 +801,10 @@ struct Main {
           .fontColor($r('app.color.label_tertiary'))
           .margin({ right: 8 });
       }
-      Text('›')
-        .fontSize(18)
-        .fontColor($r('app.color.label_tertiary'));
+      Image($r('app.media.ic_arrow_right'))
+        .width(16)
+        .height(16)
+        .fillColor($r('app.color.label_tertiary'));
     }
     .width('100%')
     .height(52)

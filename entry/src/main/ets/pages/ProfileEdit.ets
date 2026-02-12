@@ -94,8 +94,10 @@ struct ProfileEdit {
                   .objectFit(ImageFit.Cover);
               } else {
                 Column() {
-                  Text('👤')
-                    .fontSize(36);
+                  Image($r('app.media.ic_user'))
+                    .width(40)
+                    .height(40)
+                    .fillColor(Color.White);
                 }
                 .width(80)
                 .height(80)
@@ -105,8 +107,17 @@ struct ProfileEdit {
               }
               // 相机角标
               Column() {
-                Text(this.isUploadingAvatar ? '…' : '📷')
-                  .fontSize(14);
+                if (this.isUploadingAvatar) {
+                  LoadingProgress()
+                    .width(14)
+                    .height(14)
+                    .color(Color.White);
+                } else {
+                  Image($r('app.media.ic_camera'))
+                    .width(14)
+                    .height(14)
+                    .fillColor(Color.White);
+                }
               }
               .width(28)
               .height(28)

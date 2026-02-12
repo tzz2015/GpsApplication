@@ -136,11 +136,11 @@ export class CloudStorageService {
       fileIo.closeSync(srcFile);
 
       const sizeKB: number = Math.round(compressedData.byteLength / 1024);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Image compressed: %{public}s (%{public}dKB)', destPath, sizeKB);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Image compressed: %{public}s (%{public}dKB)', destPath, sizeKB);
       return destPath;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Compress image failed [%{public}s]: code=%{public}d, msg=%{public}s',
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Compress image failed [%{public}s]: code=%{public}d, msg=%{public}s',
         srcPath, err.code || 0, err.message || '');
       return '';
     }
@@ -213,11 +213,11 @@ export class CloudStorageService {
       fileIo.closeSync(dstFile);
 
       const sizeKB: number = Math.round(compressedData.byteLength / 1024);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Avatar cropped & saved: %{public}s (%{public}dKB)', destPath, sizeKB);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Avatar cropped & saved: %{public}s (%{public}dKB)', destPath, sizeKB);
       return destPath;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Avatar crop failed [%{public}s]: code=%{public}d, msg=%{public}s',
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Avatar crop failed [%{public}s]: code=%{public}d, msg=%{public}s',
         srcPath, err.code || 0, err.message || '');
       return '';
     }
@@ -247,7 +247,7 @@ export class CloudStorageService {
       hilog.info(LOG_DOMAIN, LOG_TAG, '⬆️ Uploading: %{public}s (%{public}dKB) → %{public}s',
         localPath, Math.round(stat.size / 1024), cloudPath);
     } catch (statErr) {
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Local file not found: %{public}s', localPath);
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Local file not found: %{public}s', localPath);
       return '';
     }
 
@@ -282,17 +282,17 @@ export class CloudStorageService {
         };
 
         uploadTask.on('completed', (): void => {
-          hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Upload task completed: %{public}s', cloudPath);
+          hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Upload task completed: %{public}s', cloudPath);
           finish(true);
         });
         uploadTask.on('failed', (): void => {
-          hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Upload task failed: %{public}s', cloudPath);
+          hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Upload task failed: %{public}s', cloudPath);
           finish(false);
         });
 
         // 超时保护（默认 3 分钟，弱网/大图可避免误判）
         timeoutId = setTimeout((): void => {
-          hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ Upload task timeout (%{public}ds): %{public}s',
+          hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] Upload task timeout (%{public}ds): %{public}s',
             UPLOAD_TASK_TIMEOUT_MS / 1000, cloudPath);
           finish(false);
         }, UPLOAD_TASK_TIMEOUT_MS);
@@ -300,7 +300,7 @@ export class CloudStorageService {
         // 启动上传任务
         uploadTask.start((err: BusinessError): void => {
           if (err) {
-            hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Task start error: code=%{public}d, msg=%{public}s',
+            hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Task start error: code=%{public}d, msg=%{public}s',
               err.code, err.message);
             finish(false);
           } else {
@@ -322,7 +322,7 @@ export class CloudStorageService {
       }
     } catch (uploadErr) {
       const ue = uploadErr as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ uploadFile failed [%{public}s]: code=%{public}d, msg=%{public}s',
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] uploadFile failed [%{public}s]: code=%{public}d, msg=%{public}s',
         cloudPath, ue.code || 0, ue.message || '');
       return '';
     }
@@ -338,16 +338,16 @@ export class CloudStorageService {
           hilog.info(LOG_DOMAIN, LOG_TAG, 'Retry getDownloadURL (%{public}d/3): %{public}s', retry + 1, cloudPath);
         }
         const downloadUrl: string = await bucket.getDownloadURL(cloudPath);
-        hilog.info(LOG_DOMAIN, LOG_TAG, '✅ getDownloadURL: %{public}s', downloadUrl);
+        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] getDownloadURL: %{public}s', downloadUrl);
         return downloadUrl;
       } catch (urlErr) {
         const uerr = urlErr as BusinessError;
-        hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ getDownloadURL attempt %{public}d failed [%{public}s]: code=%{public}d, msg=%{public}s',
+        hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] getDownloadURL attempt %{public}d failed [%{public}s]: code=%{public}d, msg=%{public}s',
           retry + 1, cloudPath, uerr.code || 0, uerr.message || '');
       }
     }
     // 3 次都失败，文件已上传但拿不到 URL
-    hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ getDownloadURL all retries failed, file uploaded but URL unavailable');
+    hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] getDownloadURL all retries failed, file uploaded but URL unavailable');
     return '';
   }
 
@@ -388,7 +388,7 @@ export class CloudStorageService {
     const cacheName = 'cover_upload_' + trackId + '.jpg';
     const compressedPath: string = await CloudStorageService.compressImageToCache(context, localPath, cacheName);
     if (compressedPath.length === 0) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ Cover compress failed, keep local path');
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] Cover compress failed, keep local path');
       return localPath;
     }
 
@@ -494,11 +494,11 @@ export class CloudStorageService {
         fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
       fileIo.writeSync(f.fd, data);
       fileIo.closeSync(f);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ downloadImageUrlToCache: %{public}s', fileName);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] downloadImageUrlToCache: %{public}s', fileName);
       return destPath;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ downloadImageUrlToCache failed [%{public}s]: %{public}s',
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] downloadImageUrlToCache failed [%{public}s]: %{public}s',
         fileName, err.message || '');
       return '';
     }
@@ -552,11 +552,11 @@ export class CloudStorageService {
     try {
       const bucket: cloudStorage.StorageBucket = cloudStorage.bucket();
       await bucket.deleteFile(cloudPath);
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ File deleted: %{public}s', cloudPath);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] File deleted: %{public}s', cloudPath);
       return true;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ Delete file failed [%{public}s]: code=%{public}d, msg=%{public}s',
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Delete file failed [%{public}s]: code=%{public}d, msg=%{public}s',
         cloudPath, err.code || 0, err.message || '');
       return false;
     }
@@ -572,7 +572,7 @@ export class CloudStorageService {
       return url;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(LOG_DOMAIN, LOG_TAG, '❌ getDownloadURL failed [%{public}s]: code=%{public}d, msg=%{public}s',
+      hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] getDownloadURL failed [%{public}s]: code=%{public}d, msg=%{public}s',
         cloudPath, err.code || 0, err.message || '');
       return '';
     }
@@ -648,10 +648,10 @@ export class CloudStorageService {
         }
       }
 
-      hilog.info(LOG_DOMAIN, LOG_TAG, '✅ Track files cleaned: %{public}s', trackId);
+      hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Track files cleaned: %{public}s', trackId);
     } catch (e) {
       const err = e as BusinessError;
-      hilog.warn(LOG_DOMAIN, LOG_TAG, '⚠️ Delete track files failed: %{public}s', err.message || '');
+      hilog.warn(LOG_DOMAIN, LOG_TAG, '[WARN] Delete track files failed: %{public}s', err.message || '');
     }
   }
 }

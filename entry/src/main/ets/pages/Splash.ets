@@ -86,7 +86,12 @@ struct Splash {
     .alignContent(Alignment.Center)
     .linearGradient({
       angle: 160,
-      colors: [[$r('app.color.splash_gradient_start'), 0], [$r('app.color.splash_gradient_mid'), 0.5], [$r('app.color.splash_gradient_end'), 1]]
+      colors: [
+        [$r('app.color.splash_gradient_end'), 0],
+        [$r('app.color.splash_gradient_mid'), 0.3],
+        [$r('app.color.primary'), 0.65],
+        [$r('app.color.splash_gradient_start'), 1]
+      ]
     });
   }
 }

@@ -424,7 +424,7 @@ struct TrackRecord {
       }
       const polylineOption: mapCommon.MapPolylineOptions = {
         points: gcj02Points,
-        color: 0xFFFF6B35, // 橙色轨迹线
+        color: 0xFF2563EB,
         width: 14,
         visible: true
       };
@@ -673,10 +673,11 @@ struct TrackRecord {
         // 返回按钮（左上角，考虑状态栏高度）
         Row() {
           Button() {
-            Text('‹')
-              .fontSize(24)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.label_primary'));
+            Image($r('app.media.icon_back'))
+              .width(14)
+              .height(14)
+              .objectFit(ImageFit.Contain)
+              .fillColor($r('app.color.primary'))
           }
           .width(40)
           .height(40)
@@ -699,9 +700,10 @@ struct TrackRecord {
           // 图层切换（图标+文字，便于识别）
           Button() {
             Row({ space: 4 }) {
-              Text('☰')
-                .fontSize(16)
-                .fontColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
+              Image($r('app.media.ic_globe'))
+                .width(16)
+                .height(16)
+                .fillColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
               Text($r('app.string.record_layer'))
                 .fontSize(12)
                 .fontColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
@@ -836,8 +838,10 @@ struct TrackRecord {
         // 已打卡点快捷入口
         if (this.tombSpots.length > 0) {
           Row() {
-            Text('📍')
-              .fontSize(16);
+            Image($r('app.media.ic_location_pin'))
+              .width(16)
+              .height(16)
+              .fillColor($r('app.color.primary'));
             Text(`已添加 ${this.tombSpots.length} 个打卡点`)
               .fontSize(13)
               .fontWeight(FontWeight.Medium)
@@ -851,9 +855,10 @@ struct TrackRecord {
                 .layoutWeight(1);
             }
             Blank();
-            Text('›')
-              .fontSize(16)
-              .fontColor($r('app.color.label_tertiary'));
+            Image($r('app.media.ic_arrow_right'))
+              .width(14)
+              .height(14)
+              .fillColor($r('app.color.label_tertiary'));
           }
           .width('100%')
           .padding(12)
@@ -885,8 +890,10 @@ struct TrackRecord {
             // 打卡点按钮
             Button() {
               Column({ space: 4 }) {
-                Text('📍')
-                  .fontSize(20);
+                Image($r('app.media.ic_location_pin'))
+                  .width(22)
+                  .height(22)
+                  .fillColor($r('app.color.primary'));
                 Text($r('app.string.record_spot'))
                   .fontSize(10)
                   .fontColor($r('app.color.label_secondary'));
@@ -902,9 +909,10 @@ struct TrackRecord {
 
             // 暂停/继续按钮
             Button() {
-              Text(this.isPaused ? '▶' : '⏸')
-                .fontSize(24)
-                .fontColor(Color.White);
+              Image(this.isPaused ? $r('app.media.ic_play') : $r('app.media.ic_pause'))
+                .width(28)
+                .height(28)
+                .fillColor(Color.White);
             }
             .width(64)
             .height(64)
@@ -918,8 +926,10 @@ struct TrackRecord {
             // 终点按钮
             Button() {
               Column({ space: 4 }) {
-                Text('⏹')
-                  .fontSize(20);
+                Image($r('app.media.ic_stop'))
+                  .width(22)
+                  .height(22)
+                  .fillColor(Color.White);
                 Text($r('app.string.record_end'))
                   .fontSize(10)
                   .fontColor(Color.White);
