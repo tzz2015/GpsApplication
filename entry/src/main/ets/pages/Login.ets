@@ -53,7 +53,9 @@ struct Login {
       atManager.requestPermissionsFromUser(context, [
         'ohos.permission.INTERNET',
         'ohos.permission.LOCATION',
-        'ohos.permission.APPROXIMATELY_LOCATION'
+        'ohos.permission.APPROXIMATELY_LOCATION',
+        'ohos.permission.LOCATION_IN_BACKGROUND',
+        'ohos.permission.KEEP_BACKGROUND_RUNNING'
       ]).then(() => {
         hilog.info(LOG_DOMAIN, LOG_TAG, 'Permissions granted');
       }).catch((err: BusinessError) => {

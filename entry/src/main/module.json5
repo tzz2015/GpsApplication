@@ -29,6 +29,9 @@
               "ohos.want.action.home"
             ]
           }
+        ],
+        "backgroundModes": [
+          "location"
         ]
       }
     ],
@@ -56,12 +59,20 @@
       {
         "name": "ohos.permission.LOCATION",
         "reason": "$string:location_des",
-        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+        "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
       },
       {
         "name": "ohos.permission.APPROXIMATELY_LOCATION",
         "reason": "$string:location_des",
-        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+        "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
+      },
+      {
+        "name": "ohos.permission.LOCATION_IN_BACKGROUND",
+        "reason": "$string:location_des",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
       }
     ],
     "metadata": [
