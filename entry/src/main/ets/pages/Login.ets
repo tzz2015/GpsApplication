@@ -1,4 +1,5 @@
 import { LoginWithHuaweiIDButton, loginComponentManager } from '@kit.AccountKit';
+import { window } from '@kit.ArkUI';
 import { abilityAccessCtrl, common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -43,6 +44,24 @@ struct Login {
     this.requestPermissions();
     // 初始化协议状态：未同意
     this.controller.setAgreementStatus(loginComponentManager.AgreementStatus.NOT_ACCEPTED);
+  }
+
+  onPageShow(): void {
+    // 登录页为深色渐变背景，状态栏内容需要白色
+    try {
+      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      window.getLastWindow(ctx).then((win: window.Window) => {
+        win.setWindowSystemBarProperties({
+          statusBarContentColor: '#FFFFFFFF'
+        } as window.SystemBarProperties).catch((e: BusinessError) => {
+          hilog.warn(LOG_DOMAIN, LOG_TAG, 'setStatusBar: %{public}s', JSON.stringify(e));
+        });
+      }).catch((e: BusinessError) => {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'getLastWindow: %{public}s', JSON.stringify(e));
+      });
+    } catch (e) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'onPageShow statusBar: %{public}s', JSON.stringify(e));
+    }
   }
 
   /** 申请定位等权限 */

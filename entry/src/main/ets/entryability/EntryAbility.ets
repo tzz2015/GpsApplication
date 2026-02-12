@@ -49,9 +49,11 @@ export default class EntryAbility extends UIAbility {
     // 设置沉浸式状态栏并配置系统栏样式（满足云测状态栏项）
     windowStage.getMainWindow().then((windowClass: window.Window) => {
       windowClass.setWindowLayoutFullScreen(true).then(() => {
+        // 沉浸式：状态栏全透明，页面内容自然延伸到状态栏后面
+        // 初始白色内容，因为首屏 Splash / Login 都是深色渐变背景
         const sysBarProps: window.SystemBarProperties = {
-          statusBarColor: '#FFFFFF',
-          statusBarContentColor: '#FF000000',
+          statusBarColor: '#00000000',
+          statusBarContentColor: '#FFFFFFFF',
           navigationBarColor: '#FFFFFF',
           navigationBarContentColor: '#FF000000'
         };

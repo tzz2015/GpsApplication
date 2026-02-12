@@ -1,5 +1,7 @@
 import { promptAction } from '@kit.ArkUI';
+import { window } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
@@ -30,13 +32,71 @@ struct Main {
   @State currentUser: AuthUser | null = null;
   @State diagResult: string = '';
   @State isDiagnosing: boolean = false;
+  /** 缓存窗口实例，避免每次切换 Tab 都异步获取 */
+  private cachedWindow: window.Window | null = null;
 
   aboutToAppear(): void {
     this.loadAllData();
+    // 提前缓存窗口实例
+    this.cacheWindowInstance();
   }
 
   onPageShow(): void {
     this.loadAllData();
+    // 恢复当前 Tab 对应的状态栏颜色（从其他页面返回时）
+    this.updateStatusBarColor(this.currentBottomIndex);
+  }
+
+  onPageHide(): void {
+    // 离开 Main 页面时（进入子页面），将状态栏重置为白底黑字
+    this.updateStatusBarColor(0);
+  }
+
+  /** 提前获取并缓存窗口实例 */
+  private cacheWindowInstance(): void {
+    try {
+      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      window.getLastWindow(ctx).then((win: window.Window) => {
+        this.cachedWindow = win;
+      }).catch((e: BusinessError) => {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'cacheWindow: %{public}s', JSON.stringify(e));
+      });
+    } catch (e) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cacheWindowInstance: %{public}s', JSON.stringify(e));
+    }
+  }
+
+  /**
+   * 沉浸式状态栏：背景始终透明，只切换内容颜色（时间/电量/信号图标的黑白）
+   * - 首页（白色背景）→ 黑色内容
+   * - 个人中心（蓝色渐变头部）→ 白色内容
+   */
+  private updateStatusBarColor(tabIndex: number): void {
+    // 只切换 statusBarContentColor，不动背景色（始终透明）
+    const contentColor: string = tabIndex === 1 ? '#FFFFFFFF' : '#FF000000';
+    const props: window.SystemBarProperties = {
+      statusBarContentColor: contentColor
+    };
+    if (this.cachedWindow) {
+      this.cachedWindow.setWindowSystemBarProperties(props).catch((e: BusinessError) => {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'setStatusBar: %{public}s', JSON.stringify(e));
+      });
+    } else {
+      // 兜底：缓存尚未就绪时重新获取
+      try {
+        const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
+        window.getLastWindow(ctx).then((win: window.Window) => {
+          this.cachedWindow = win;
+          win.setWindowSystemBarProperties(props).catch((e: BusinessError) => {
+            hilog.warn(LOG_DOMAIN, LOG_TAG, 'setStatusBar: %{public}s', JSON.stringify(e));
+          });
+        }).catch((e: BusinessError) => {
+          hilog.warn(LOG_DOMAIN, LOG_TAG, 'getLastWindow: %{public}s', JSON.stringify(e));
+        });
+      } catch (e) {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'updateStatusBarColor: %{public}s', JSON.stringify(e));
+      }
+    }
   }
 
   private loadAllData(): void {
@@ -110,6 +170,7 @@ struct Main {
     .barBackgroundColor($r('app.color.tab_bar_background'))
     .onChange((index: number) => {
       this.currentBottomIndex = index;
+      this.updateStatusBarColor(index);
     })
     .width('100%')
     .height('100%')

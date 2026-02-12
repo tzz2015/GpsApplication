@@ -969,7 +969,7 @@ struct TrackRecord {
           Column() {
             Row({ space: 12 }) {
               this.LayerOption($r('app.string.map_type_standard'), $r('app.color.primary'), mapCommon.MapType.STANDARD);
-              this.LayerOption($r('app.string.map_type_satellite'), $r('app.color.warning'), mapCommon.MapType.TERRAIN);
+              this.LayerOption($r('app.string.map_type_satellite'), $r('app.color.warning'), mapCommon.MapType.SATELLITE);
             }
             .padding(16)
             .backgroundColor($r('app.color.card_background'))
