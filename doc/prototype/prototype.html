@@ -4,30 +4,44 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>遨游轨迹 - HarmonyOS App 原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ==================== 全局重置与基础变量 ==================== */
+/* ==================== 全局重置与基础变量（ui-ux-pro-max 蓝色设计系统） ==================== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --primary: #3478F6;
-  --primary-dark: #2860D8;
-  --primary-light: #EBF2FF;
-  --accent: #FF6B35;
-  --accent-light: #FFF0E8;
-  --success: #34C759;
-  --warning: #FF9500;
-  --danger: #FF3B30;
-  --bg: #F5F6FA;
+  /* 主色 — 蓝色信任感 */
+  --primary: #2563EB;
+  --primary-dark: #1D4ED8;
+  --primary-light: #EFF6FF;
+  --accent: #0EA5E9;
+  --accent-light: #F0F9FF;
+  --success: #059669;
+  --success-light: #ECFDF5;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+  --danger: #DC2626;
+  --danger-light: #FEF2F2;
+  /* 中性色与背景 */
+  --bg: #F8FAFC;
   --card: #FFFFFF;
-  --text-primary: #1A1A2E;
-  --text-secondary: #6B7280;
-  --text-hint: #9CA3AF;
-  --border: #E5E7EB;
-  --shadow: 0 2px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-hint: #64748B;
+  --border: #E2E8F0;
+  /* 阴影 */
+  --shadow: 0 1px 3px rgba(15,23,42,0.06);
+  --shadow-lg: 0 4px 14px rgba(15,23,42,0.08);
+  --shadow-xl: 0 8px 30px rgba(15,23,42,0.12);
+  /* 圆角 */
+  --radius-sm: 8px;
   --radius: 12px;
-  --radius-lg: 20px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-full: 999px;
+  /* 安全区与 Tab */
   --safe-top: 44px;
   --safe-bottom: 34px;
   --tab-height: 56px;
@@ -35,10 +49,10 @@
 
 html, body {
   width: 100%; height: 100%;
-  font-family: -apple-system, 'HarmonyOS Sans', 'PingFang SC', 'Helvetica Neue', sans-serif;
-  font-size: 14px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'HarmonyOS Sans', sans-serif;
+  font-size: 16px;
   color: var(--text-primary);
-  background: #1A1A2E;
+  background: #0F172A;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -52,7 +66,7 @@ html, body {
   background: var(--bg);
   border-radius: 40px;
   overflow: hidden;
-  box-shadow: 0 0 0 8px #333, 0 0 0 10px #555, var(--shadow-lg);
+  box-shadow: 0 0 0 8px #334155, 0 0 0 10px #64748B, var(--shadow-xl);
 }
 
 /* ==================== 状态栏 ==================== */
@@ -134,12 +148,12 @@ html, body {
   transition: color 0.2s;
   font-size: 10px;
 }
-.tab-item.active { color: var(--primary); }
+.tab-item.active { color: var(--primary); font-weight: 600; }
 .tab-item .tab-icon {
   width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
 }
+.tab-item .tab-icon svg { width: 24px; height: 24px; }
 .tab-item .tab-label { font-weight: 500; }
 
 /* ==================== 通用组件样式 ==================== */
@@ -154,12 +168,12 @@ html, body {
 }
 .btn-primary {
   background: var(--primary);
-  color: #fff;
+  color: #FFFEFB;
 }
 .btn-primary:hover { background: var(--primary-dark); }
 .btn-accent {
   background: var(--accent);
-  color: #fff;
+  color: #FFFEFB;
 }
 .btn-outline {
   background: transparent;
@@ -213,8 +227,8 @@ html, body {
   border-radius: var(--radius-full);
   font-size: 11px; font-weight: 600;
 }
-.badge-success { background: #E8F9EE; color: var(--success); }
-.badge-warning { background: #FFF5E6; color: var(--warning); }
+.badge-success { background: var(--success-light); color: var(--success); }
+.badge-warning { background: var(--warning-light); color: var(--warning); }
 .badge-primary { background: var(--primary-light); color: var(--primary); }
 
 .tag {
@@ -244,7 +258,7 @@ html, body {
 .modal-overlay.active { display: flex; }
 .modal-content {
   background: var(--card);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   width: 375px;
   max-height: 70vh;
   padding: 20px 20px calc(20px + var(--safe-bottom));
@@ -271,37 +285,45 @@ html, body {
 
 /* ==================== P0-1 启动页 ==================== */
 #page-splash {
-  background: linear-gradient(160deg, #2E5AE8 0%, #1A3DB8 50%, #0F2680 100%);
+  background: linear-gradient(165deg, #1E40AF 0%, #2563EB 40%, #0EA5E9 100%);
   align-items: center; justify-content: center;
-  color: #fff;
+  color: #FFFFFF;
 }
 #page-splash .splash-logo {
-  width: 80px; height: 80px;
+  width: 88px; height: 88px;
   background: rgba(255,255,255,0.2);
-  border-radius: 20px;
+  border-radius: 22px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 36px;
-  margin-bottom: 16px;
-  backdrop-filter: blur(10px);
+  margin-bottom: 20px;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.3);
 }
+#page-splash .splash-logo svg { width: 44px; height: 44px; }
 #page-splash .splash-name {
   font-size: 28px; font-weight: 800;
   margin-bottom: 8px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 #page-splash .splash-slogan {
-  font-size: 14px; opacity: 0.8;
-  margin-bottom: 40px;
+  font-size: 15px; opacity: 0.95;
+  margin-bottom: 48px;
+  font-weight: 500;
 }
 #page-splash .splash-hint {
-  position: absolute; bottom: calc(var(--safe-bottom) + 20px);
-  font-size: 12px; opacity: 0.5;
+  position: absolute; bottom: calc(var(--safe-bottom) + 24px);
+  font-size: 14px; opacity: 0.9;
+  cursor: pointer;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.15);
+  border-radius: var(--radius-full);
+  transition: background 0.2s;
 }
+#page-splash .splash-hint:hover { background: rgba(255,255,255,0.25); }
 
 /* ==================== P0-2 登录页 ==================== */
 #page-login {
-  background: linear-gradient(170deg, #3478F6 0%, #1E56CC 45%, #0D3BA8 100%);
-  color: #fff;
+  background: linear-gradient(170deg, #1E3A8A 0%, #2563EB 50%, #0EA5E9 100%);
+  color: #FFFFFF;
 }
 .login-container {
   flex: 1;
@@ -312,127 +334,120 @@ html, body {
 }
 .login-logo {
   width: 88px; height: 88px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.2);
   border-radius: 22px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 40px;
   margin-bottom: 20px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.3);
 }
+.login-logo svg { width: 44px; height: 44px; }
 .login-title {
   font-size: 26px; font-weight: 800;
   margin-bottom: 8px;
   letter-spacing: 1px;
 }
 .login-desc {
-  font-size: 14px; opacity: 0.7;
+  font-size: 15px; opacity: 0.9;
   margin-bottom: 60px;
   text-align: center;
   line-height: 1.6;
 }
-.login-btn-area {
-  width: 100%;
-}
+.login-btn-area { width: 100%; }
 .btn-hw-login {
   width: 100%;
-  padding: 0;
-  height: 48px;
+  height: 52px;
   background: #CF0A2C;
   color: #fff;
   border: none;
-  border-radius: 24px;
-  font-size: 16px; font-weight: 500;
+  border-radius: 26px;
+  font-size: 16px; font-weight: 600;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(207,10,44,0.3);
-  letter-spacing: 0.5px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(207,10,44,0.35);
 }
-.btn-hw-login:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(207,10,44,0.4); }
-.btn-hw-login:active { transform: scale(0.98); background: #B0081F; }
-/* 华为账号 Logo SVG 样式 */
-.hw-logo { width: 20px; height: 20px; flex-shrink: 0; }
+.btn-hw-login:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(207,10,44,0.45); }
+.btn-hw-login:active { transform: scale(0.98); }
+.hw-logo { width: 22px; height: 22px; flex-shrink: 0; }
 .login-agreement {
   position: absolute;
   bottom: calc(var(--safe-bottom) + 20px);
   left: 32px; right: 32px;
   text-align: center;
-  font-size: 12px; opacity: 0.6;
+  font-size: 12px; opacity: 0.8;
   line-height: 1.5;
 }
-.login-agreement a { color: #fff; text-decoration: underline; }
+.login-agreement a { color: rgba(255,255,255,0.95); text-decoration: underline; }
 
 /* ==================== P1-0 首页 ==================== */
 #page-home { background: var(--bg); }
 .home-header {
   background: var(--card);
   padding: var(--safe-top) 0 0;
+  border-bottom: 1px solid var(--border);
 }
 .home-header-top {
-  padding: 12px 20px 0;
+  padding: 16px 20px 0;
   display: flex; align-items: center; justify-content: space-between;
 }
 .home-header-title {
-  font-size: 24px; font-weight: 800;
+  font-size: 22px; font-weight: 800;
   color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 .home-header-search {
-  width: 36px; height: 36px;
+  width: 40px; height: 40px;
+  min-width: 40px;
   display: flex; align-items: center; justify-content: center;
   background: var(--bg);
   border-radius: 50%;
   cursor: pointer;
-  font-size: 16px;
   color: var(--text-secondary);
+  transition: background 0.2s;
 }
+.home-header-search:hover { background: var(--primary-light); color: var(--primary); }
 
 /* 顶部 Tab 切换 */
 .home-tabs {
   display: flex;
-  padding: 16px 20px 0;
-  gap: 24px;
+  padding: 18px 20px 0;
+  gap: 28px;
 }
 .home-tab {
   position: relative;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   font-size: 15px;
   font-weight: 600;
   color: var(--text-hint);
   cursor: pointer;
   transition: color 0.2s;
 }
-.home-tab.active {
-  color: var(--primary);
-}
+.home-tab.active { color: var(--primary); }
 .home-tab.active::after {
   content: '';
   position: absolute;
   bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 24px; height: 3px;
+  width: 28px; height: 3px;
   background: var(--primary);
   border-radius: 2px;
 }
 
 /* 统计卡片 */
 .stats-card {
-  margin: 16px 16px 12px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #3478F6, #5B8FF9);
-  border-radius: var(--radius);
+  margin: 20px 20px 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%);
+  border-radius: var(--radius-lg);
   color: #fff;
-  display: flex; align-items: center; gap: 20px;
+  display: flex; align-items: center; gap: 24px;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.25);
 }
-.stats-value {
-  font-size: 32px; font-weight: 800;
-}
-.stats-unit {
-  font-size: 12px; opacity: 0.8;
-  margin-top: 2px;
-}
+.stats-value { font-size: 32px; font-weight: 800; }
+.stats-unit { font-size: 12px; opacity: 0.9; margin-top: 2px; }
 .stats-divider {
-  width: 1px; height: 40px;
-  background: rgba(255,255,255,0.3);
+  width: 1px; height: 44px;
+  background: rgba(255,255,255,0.35);
 }
 
 /* 创建按钮 */
@@ -441,17 +456,17 @@ html, body {
 }
 .btn-create {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   background: var(--card);
   border: 2px dashed var(--primary);
   border-radius: var(--radius);
   color: var(--primary);
   font-size: 15px; font-weight: 600;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.2s, border-color 0.2s;
 }
-.btn-create:hover { background: var(--primary-light); }
+.btn-create:hover { background: var(--primary-light); border-color: var(--primary-dark); }
 
 /* 轨迹列表 */
 .track-list {
@@ -469,13 +484,11 @@ html, body {
 .track-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 .track-card-map {
   height: 120px;
-  background: linear-gradient(135deg, #e8f4e8 0%, #d4e8d4 100%);
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 50%, #BFDBFE 100%);
   position: relative;
   overflow: hidden;
 }
-.track-card-map svg {
-  width: 100%; height: 100%;
-}
+.track-card-map svg { width: 100%; height: 100%; }
 .track-card-info {
   padding: 12px 14px;
 }
@@ -509,9 +522,9 @@ html, body {
   background: var(--primary-light);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 36px;
   margin-bottom: 16px;
 }
+.empty-state .empty-icon svg { width: 40px; height: 40px; color: var(--primary); }
 .empty-state .empty-title {
   font-size: 16px; font-weight: 600;
   color: var(--text-primary);
@@ -528,14 +541,15 @@ html, body {
   padding: 20px 20px 120px;
 }
 .form-tip {
-  padding: 12px 14px;
+  padding: 14px 16px;
   background: var(--primary-light);
-  border-radius: 10px;
-  font-size: 13px;
-  color: var(--primary);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: #1D4ED8;
   margin-bottom: 20px;
   line-height: 1.5;
-  display: flex; gap: 8px;
+  display: flex; gap: 10px;
+  border: 1px solid rgba(37,99,235,0.2);
 }
 .form-tip .tip-icon { font-size: 16px; flex-shrink: 0; }
 .form-actions {
@@ -547,11 +561,11 @@ html, body {
 }
 
 /* ==================== P1-3 轨迹记录页 ==================== */
-#page-recording { background: #E8F0E0; }
+#page-recording { background: var(--bg); }
 .recording-map {
   flex: 1;
   position: relative;
-  background: linear-gradient(135deg, #dcecd4 0%, #c8dfc0 30%, #b8d4ac 60%, #d0e4c8 100%);
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 30%, #BFDBFE 60%, #EFF6FF 100%);
   overflow: hidden;
 }
 .recording-map .map-bg {
@@ -609,7 +623,7 @@ html, body {
 }
 .map-marker .marker-pin {
   width: 28px; height: 36px;
-  background: var(--accent);
+  background: var(--primary);
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   display: flex; align-items: center; justify-content: center;
@@ -637,8 +651,8 @@ html, body {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   background: var(--card);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.1);
   padding: 16px 20px calc(20px + var(--safe-bottom));
   z-index: 20;
 }
@@ -697,9 +711,10 @@ html, body {
 }
 .rec-btn-lg {
   width: 64px; height: 64px;
-  background: var(--accent);
+  background: var(--primary);
   font-size: 24px;
   color: #fff;
+  border: none;
 }
 .rec-btn-stop {
   width: 52px; height: 52px;
@@ -712,7 +727,7 @@ html, body {
 /* ==================== P1-4 轨迹详情页 ==================== */
 .detail-map {
   height: 220px;
-  background: linear-gradient(135deg, #dcecd4 0%, #c8dfc0 50%, #b8d4ac 100%);
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 50%, #BFDBFE 100%);
   position: relative;
   overflow: hidden;
 }
@@ -900,12 +915,12 @@ html, body {
 }
 .share-preview .preview-map {
   height: 120px;
-  background: linear-gradient(135deg, #dcecd4, #b8d4ac);
-  border-radius: 8px;
+  background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+  border-radius: var(--radius-sm);
   margin-bottom: 12px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 28px;
 }
+.share-preview .preview-map svg { width: 40px; height: 40px; color: var(--primary); }
 .share-preview .preview-title {
   font-size: 16px; font-weight: 700;
 }
@@ -939,8 +954,8 @@ html, body {
 
 /* ==================== P3-1 个人中心 ==================== */
 .profile-header {
-  background: linear-gradient(135deg, #3478F6 0%, #1E56CC 100%);
-  padding: calc(var(--safe-top) + 20px) 20px 30px;
+  background: linear-gradient(135deg, #1E40AF 0%, #2563EB 50%, #0EA5E9 100%);
+  padding: calc(var(--safe-top) + 24px) 20px 32px;
   color: #fff;
   text-align: center;
 }
@@ -951,9 +966,10 @@ html, body {
   border-radius: 50%;
   margin: 0 auto 12px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 32px;
   overflow: hidden;
+  color: #fff;
 }
+.profile-avatar svg { flex-shrink: 0; }
 .profile-name {
   font-size: 20px; font-weight: 700;
   margin-bottom: 4px;
@@ -1039,7 +1055,7 @@ html, body {
   box-shadow: var(--shadow);
   transition: background 0.2s;
 }
-.logout-btn:hover { background: #FFF5F5; }
+.logout-btn:hover { background: var(--danger-light); }
 
 /* ==================== P3-2 个人信息编辑页 ==================== */
 .edit-avatar-section {
@@ -1060,13 +1076,14 @@ html, body {
 .edit-avatar .camera-badge {
   position: absolute;
   bottom: 0; right: 0;
-  width: 24px; height: 24px;
+  width: 28px; height: 28px;
   background: var(--primary);
   border-radius: 50%;
   border: 2px solid var(--card);
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; color: #fff;
+  color: #fff;
 }
+.edit-avatar .camera-badge svg { width: 14px; height: 14px; }
 .edit-avatar-hint {
   font-size: 13px; color: var(--text-hint);
 }
@@ -1260,10 +1277,12 @@ html, body {
         <span>&#128267;</span>
       </span>
     </div>
-    <div class="splash-logo">&#128506;</div>
+    <div class="splash-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
     <div class="splash-name">遨游轨迹</div>
     <div class="splash-slogan">记录每一段值得传承的路程</div>
-    <div class="splash-hint" onclick="goPage('login')" style="cursor:pointer">点击进入 →</div>
+    <div class="splash-hint" onclick="goPage('login')">点击进入</div>
   </div>
 
   <!-- ============ P0-2 登录页 ============ -->
@@ -1277,7 +1296,9 @@ html, body {
       </span>
     </div>
     <div class="login-container">
-      <div class="login-logo">&#128506;</div>
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
       <div class="login-title">遨游轨迹</div>
       <div class="login-desc">记录扫墓轨迹，守护家族记忆<br>让祭祖文化更容易延续</div>
       <div class="login-btn-area">
@@ -1314,9 +1335,9 @@ html, body {
     </div>
 
     <div class="home-header">
-      <div class="home-header-top">
+        <div class="home-header-top">
         <div class="home-header-title">遨游轨迹</div>
-        <div class="home-header-search">&#128269;</div>
+        <div class="home-header-search" title="搜索"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
       </div>
       <div class="home-tabs">
         <div class="home-tab active" id="tab-my" onclick="switchHomeTab('my')">我的轨迹</div>
@@ -1358,16 +1379,16 @@ html, body {
               <svg viewBox="0 0 375 120" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="mapBg1" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#dcecd4"/>
-                    <stop offset="100%" style="stop-color:#b8d4ac"/>
+                    <stop offset="0%" style="stop-color:#EFF6FF"/>
+                    <stop offset="100%" style="stop-color:#DBEAFE"/>
                   </linearGradient>
                 </defs>
                 <rect fill="url(#mapBg1)" width="375" height="120"/>
-                <path d="M30,80 Q80,30 140,60 T250,40 Q300,50 350,70" stroke="#FF6B35" stroke-width="3" fill="none" stroke-linecap="round"/>
-                <circle cx="30" cy="80" r="5" fill="#34C759"/>
-                <circle cx="140" cy="60" r="4" fill="#FF6B35"/>
-                <circle cx="200" cy="45" r="4" fill="#FF6B35"/>
-                <circle cx="350" cy="70" r="5" fill="#FF3B30"/>
+                <path d="M30,80 Q80,30 140,60 T250,40 Q300,50 350,70" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <circle cx="30" cy="80" r="5" fill="#2563EB"/>
+                <circle cx="140" cy="60" r="4" fill="#A0522D"/>
+                <circle cx="200" cy="45" r="4" fill="#A0522D"/>
+                <circle cx="350" cy="70" r="5" fill="#A63D3D"/>
               </svg>
             </div>
             <div class="track-card-info">
@@ -1389,10 +1410,10 @@ html, body {
           <div class="track-card" onclick="goPage('detailEditing')">
             <div class="track-card-map">
               <svg viewBox="0 0 375 120" preserveAspectRatio="none">
-                <rect fill="#d4e8d4" width="375" height="120"/>
-                <path d="M20,90 Q100,20 180,50 T340,30" stroke="#3478F6" stroke-width="3" fill="none" stroke-linecap="round"/>
-                <circle cx="20" cy="90" r="5" fill="#34C759"/>
-                <circle cx="180" cy="50" r="4" fill="#FF6B35"/>
+                <rect fill="#E0EDE0" width="375" height="120"/>
+                <path d="M20,90 Q100,20 180,50 T340,30" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <circle cx="20" cy="90" r="5" fill="#2563EB"/>
+                <circle cx="180" cy="50" r="4" fill="#A0522D"/>
               </svg>
             </div>
             <div class="track-card-info">
@@ -1415,12 +1436,12 @@ html, body {
             <div class="track-card-map">
               <svg viewBox="0 0 375 120" preserveAspectRatio="none">
                 <rect fill="#e0e8d8" width="375" height="120"/>
-                <path d="M40,70 Q90,40 150,55 T280,35 Q320,50 360,60" stroke="#FF6B35" stroke-width="3" fill="none" stroke-linecap="round"/>
-                <circle cx="40" cy="70" r="5" fill="#34C759"/>
-                <circle cx="150" cy="55" r="4" fill="#FF6B35"/>
-                <circle cx="230" cy="38" r="4" fill="#FF6B35"/>
-                <circle cx="290" cy="35" r="4" fill="#FF6B35"/>
-                <circle cx="360" cy="60" r="5" fill="#FF3B30"/>
+                <path d="M40,70 Q90,40 150,55 T280,35 Q320,50 360,60" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <circle cx="40" cy="70" r="5" fill="#2563EB"/>
+                <circle cx="150" cy="55" r="4" fill="#A0522D"/>
+                <circle cx="230" cy="38" r="4" fill="#A0522D"/>
+                <circle cx="290" cy="35" r="4" fill="#A0522D"/>
+                <circle cx="360" cy="60" r="5" fill="#A63D3D"/>
               </svg>
             </div>
             <div class="track-card-info">
@@ -1448,10 +1469,10 @@ html, body {
             <div class="track-card-map">
               <svg viewBox="0 0 375 120" preserveAspectRatio="none">
                 <rect fill="#dce8dc" width="375" height="120"/>
-                <path d="M30,80 Q100,25 200,55 T360,40" stroke="#9B59B6" stroke-width="3" fill="none" stroke-linecap="round"/>
-                <circle cx="30" cy="80" r="5" fill="#34C759"/>
-                <circle cx="200" cy="55" r="4" fill="#FF6B35"/>
-                <circle cx="360" cy="40" r="5" fill="#FF3B30"/>
+                <path d="M30,80 Q100,25 200,55 T360,40" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <circle cx="30" cy="80" r="5" fill="#2563EB"/>
+                <circle cx="200" cy="55" r="4" fill="#A0522D"/>
+                <circle cx="360" cy="40" r="5" fill="#A63D3D"/>
               </svg>
             </div>
             <div class="track-card-info">
@@ -1475,11 +1496,11 @@ html, body {
             <div class="track-card-map">
               <svg viewBox="0 0 375 120" preserveAspectRatio="none">
                 <rect fill="#d8e4d0" width="375" height="120"/>
-                <path d="M20,60 Q80,90 150,40 T300,50 Q340,30 370,60" stroke="#E67E22" stroke-width="3" fill="none" stroke-linecap="round"/>
-                <circle cx="20" cy="60" r="5" fill="#34C759"/>
-                <circle cx="150" cy="40" r="4" fill="#FF6B35"/>
-                <circle cx="250" cy="48" r="4" fill="#FF6B35"/>
-                <circle cx="370" cy="60" r="5" fill="#FF3B30"/>
+                <path d="M20,60 Q80,90 150,40 T300,50 Q340,30 370,60" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <circle cx="20" cy="60" r="5" fill="#2563EB"/>
+                <circle cx="150" cy="40" r="4" fill="#A0522D"/>
+                <circle cx="250" cy="48" r="4" fill="#A0522D"/>
+                <circle cx="370" cy="60" r="5" fill="#A63D3D"/>
               </svg>
             </div>
             <div class="track-card-info">
@@ -1503,12 +1524,12 @@ html, body {
             <div class="track-card-map">
               <svg viewBox="0 0 375 120" preserveAspectRatio="none">
                 <rect fill="#e0ecd8" width="375" height="120"/>
-                <path d="M25,85 Q70,30 130,60 T260,25 Q310,45 365,55" stroke="#2ECC71" stroke-width="3" fill="none" stroke-linecap="round"/>
-                <circle cx="25" cy="85" r="5" fill="#34C759"/>
-                <circle cx="130" cy="60" r="4" fill="#FF6B35"/>
-                <circle cx="195" cy="38" r="4" fill="#FF6B35"/>
-                <circle cx="260" cy="25" r="4" fill="#FF6B35"/>
-                <circle cx="365" cy="55" r="5" fill="#FF3B30"/>
+                <path d="M25,85 Q70,30 130,60 T260,25 Q310,45 365,55" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <circle cx="25" cy="85" r="5" fill="#2563EB"/>
+                <circle cx="130" cy="60" r="4" fill="#A0522D"/>
+                <circle cx="195" cy="38" r="4" fill="#A0522D"/>
+                <circle cx="260" cy="25" r="4" fill="#A0522D"/>
+                <circle cx="365" cy="55" r="5" fill="#A63D3D"/>
               </svg>
             </div>
             <div class="track-card-info">
@@ -1534,11 +1555,11 @@ html, body {
     <!-- 底部 TabBar -->
     <div class="tab-bar">
       <div class="tab-item active" onclick="goPage('home')">
-        <div class="tab-icon">&#127968;</div>
+        <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
         <div class="tab-label">首页</div>
       </div>
       <div class="tab-item" onclick="goPage('profile')">
-        <div class="tab-icon">&#128100;</div>
+        <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
         <div class="tab-label">个人中心</div>
       </div>
     </div>
@@ -1586,7 +1607,7 @@ html, body {
   <div class="page" id="page-recording">
     <div class="status-bar">
       <span class="time" style="display:flex;align-items:center;gap:4px">
-        <span style="width:6px;height:6px;background:#FF3B30;border-radius:50%;display:inline-block"></span>
+        <span style="width:6px;height:6px;background:#A63D3D;border-radius:50%;display:inline-block"></span>
         00:15:32
       </span>
       <span class="icons">
@@ -1606,9 +1627,9 @@ html, body {
         <svg viewBox="0 0 375 500" preserveAspectRatio="xMidYMid slice">
           <defs>
             <linearGradient id="mapBg2" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#dcecd4"/>
-              <stop offset="40%" style="stop-color:#c8dfc0"/>
-              <stop offset="100%" style="stop-color:#b8d4ac"/>
+              <stop offset="0%" style="stop-color:#EEF5EE"/>
+              <stop offset="40%" style="stop-color:#E0EDE0"/>
+              <stop offset="100%" style="stop-color:#A7F3D0"/>
             </linearGradient>
             <pattern id="topo" width="60" height="60" patternUnits="userSpaceOnUse">
               <path d="M0,30 Q15,20 30,30 T60,30" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none"/>
@@ -1620,11 +1641,11 @@ html, body {
           <rect fill="url(#topo)" width="375" height="500"/>
           <!-- 轨迹路径 -->
           <path d="M80,400 Q100,370 120,350 L140,320 Q160,290 170,260 L190,230 Q200,210 220,200 L240,185 Q260,170 270,150 L280,130" 
-                stroke="#FF6B35" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"
+                stroke="#2563EB" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"
                 stroke-dasharray="none" opacity="0.9"/>
           <!-- 路径阴影 -->
           <path d="M80,400 Q100,370 120,350 L140,320 Q160,290 170,260 L190,230 Q200,210 220,200 L240,185 Q260,170 270,150 L280,130" 
-                stroke="#FF6B35" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.15"/>
+                stroke="#2563EB" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.15"/>
         </svg>
       </div>
 
@@ -1668,7 +1689,7 @@ html, body {
     <div class="recording-spots-panel" id="recSpotsPanel" style="
       position:absolute; bottom:0; left:0; right:0;
       background:var(--card);
-      border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+      border-radius:var(--radius-xl) var(--radius-xl) 0 0;
       box-shadow:0 -4px 20px rgba(0,0,0,0.1);
       z-index:25;
       transform:translateY(100%);
@@ -1711,15 +1732,15 @@ html, body {
       <div class="recording-stats">
         <div class="recording-stat">
           <div class="stat-value">2.45</div>
-          <div class="stat-label">距离(km)</div>
+          <div class="stat-label">里程(km)</div>
         </div>
         <div class="recording-stat">
           <div class="stat-value">15:32</div>
-          <div class="stat-label">时长(分)</div>
+          <div class="stat-label">用时</div>
         </div>
         <div class="recording-stat">
           <div class="stat-value">168</div>
-          <div class="stat-label">海拔(m)</div>
+          <div class="stat-label">当前海拔(m)</div>
         </div>
       </div>
 
@@ -1765,23 +1786,23 @@ html, body {
         <svg viewBox="0 0 375 220" preserveAspectRatio="xMidYMid slice">
           <defs>
             <linearGradient id="mapBg3" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#dcecd4"/>
-              <stop offset="100%" style="stop-color:#b8d4ac"/>
+              <stop offset="0%" style="stop-color:#EEF5EE"/>
+              <stop offset="100%" style="stop-color:#E0EDE0"/>
             </linearGradient>
           </defs>
           <rect fill="url(#mapBg3)" width="375" height="220"/>
           <path d="M30,180 Q80,140 120,130 L160,100 Q200,70 230,80 L280,60 Q320,40 360,50" 
-                stroke="#FF6B35" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <circle cx="30" cy="180" r="6" fill="#34C759" stroke="#fff" stroke-width="2"/>
-          <circle cx="160" cy="100" r="5" fill="#FF6B35" stroke="#fff" stroke-width="2"/>
-          <circle cx="230" cy="80" r="5" fill="#FF6B35" stroke="#fff" stroke-width="2"/>
-          <circle cx="280" cy="60" r="5" fill="#FF6B35" stroke="#fff" stroke-width="2"/>
-          <circle cx="360" cy="50" r="6" fill="#FF3B30" stroke="#fff" stroke-width="2"/>
-          <text x="30" y="170" font-size="9" fill="#34C759" text-anchor="middle" font-weight="700">起点</text>
-          <text x="160" y="92" font-size="8" fill="#FF6B35" text-anchor="middle" font-weight="600">&#9312;</text>
-          <text x="230" y="72" font-size="8" fill="#FF6B35" text-anchor="middle" font-weight="600">&#9313;</text>
-          <text x="280" y="52" font-size="8" fill="#FF6B35" text-anchor="middle" font-weight="600">&#9314;</text>
-          <text x="360" y="42" font-size="9" fill="#FF3B30" text-anchor="middle" font-weight="700">终点</text>
+                stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="30" cy="180" r="6" fill="#2563EB" stroke="#fff" stroke-width="2"/>
+          <circle cx="160" cy="100" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+          <circle cx="230" cy="80" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+          <circle cx="280" cy="60" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+          <circle cx="360" cy="50" r="6" fill="#A63D3D" stroke="#fff" stroke-width="2"/>
+          <text x="30" y="170" font-size="9" fill="#2563EB" text-anchor="middle" font-weight="700">起点</text>
+          <text x="160" y="92" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9312;</text>
+          <text x="230" y="72" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9313;</text>
+          <text x="280" y="52" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9314;</text>
+          <text x="360" y="42" font-size="9" fill="#A63D3D" text-anchor="middle" font-weight="700">终点</text>
         </svg>
         <div style="position:absolute;right:12px;top:12px;display:flex;gap:8px">
           <button class="map-ctrl-btn" style="width:32px;height:32px;font-size:12px">&#127758;</button>
@@ -1906,20 +1927,20 @@ html, body {
         <svg viewBox="0 0 375 220" preserveAspectRatio="xMidYMid slice">
           <defs>
             <linearGradient id="mapBg3b" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#dcecd4"/>
-              <stop offset="100%" style="stop-color:#b8d4ac"/>
+              <stop offset="0%" style="stop-color:#EEF5EE"/>
+              <stop offset="100%" style="stop-color:#E0EDE0"/>
             </linearGradient>
           </defs>
           <rect fill="url(#mapBg3b)" width="375" height="220"/>
           <path d="M30,180 Q80,140 120,130 L160,100 Q200,70 230,80 L280,60" 
-                stroke="#FF6B35" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <circle cx="30" cy="180" r="6" fill="#34C759" stroke="#fff" stroke-width="2"/>
-          <circle cx="160" cy="100" r="5" fill="#FF6B35" stroke="#fff" stroke-width="2"/>
-          <text x="30" y="170" font-size="9" fill="#34C759" text-anchor="middle" font-weight="700">起点</text>
-          <text x="160" y="92" font-size="8" fill="#FF6B35" text-anchor="middle" font-weight="600">&#9312;</text>
+                stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="30" cy="180" r="6" fill="#2563EB" stroke="#fff" stroke-width="2"/>
+          <circle cx="160" cy="100" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+          <text x="30" y="170" font-size="9" fill="#2563EB" text-anchor="middle" font-weight="700">起点</text>
+          <text x="160" y="92" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9312;</text>
           <!-- 当前位置 GPS 点 -->
           <circle cx="280" cy="60" r="7" fill="rgba(52,120,246,0.2)" stroke="none"/>
-          <circle cx="280" cy="60" r="4" fill="#3478F6" stroke="#fff" stroke-width="2"/>
+          <circle cx="280" cy="60" r="4" fill="#2563EB" stroke="#fff" stroke-width="2"/>
         </svg>
         <div style="position:absolute;right:12px;top:12px;display:flex;gap:8px">
           <button class="map-ctrl-btn" style="width:32px;height:32px;font-size:12px">&#127758;</button>
@@ -2090,7 +2111,7 @@ html, body {
     </div>
     <div class="page-content" style="padding-bottom:0">
       <div class="profile-header">
-        <div class="profile-avatar">&#128100;</div>
+        <div class="profile-avatar"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
         <div class="profile-name">刘阿强</div>
         <div class="profile-subtitle">刘氏 · 广西横县</div>
         <div class="profile-stats-bar">
@@ -2155,11 +2176,11 @@ html, body {
     <!-- 底部 TabBar -->
     <div class="tab-bar">
       <div class="tab-item" onclick="goPage('home')">
-        <div class="tab-icon">&#127968;</div>
+        <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
         <div class="tab-label">首页</div>
       </div>
       <div class="tab-item active" onclick="goPage('profile')">
-        <div class="tab-icon">&#128100;</div>
+        <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
         <div class="tab-label">个人中心</div>
       </div>
     </div>
@@ -2183,8 +2204,8 @@ html, body {
     <div class="page-content">
       <div class="edit-avatar-section">
         <div class="edit-avatar">
-          &#128100;
-          <span class="camera-badge">&#128247;</span>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          <span class="camera-badge" aria-label="更换头像"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
         </div>
         <div class="edit-avatar-hint">点击更换头像</div>
       </div>
@@ -2213,10 +2234,10 @@ html, body {
     <div class="modal-content">
       <div class="modal-header">
         <div class="modal-title">分享轨迹</div>
-        <div class="modal-close" onclick="hideShareModal()">&#10005;</div>
+        <div class="modal-close" onclick="hideShareModal()" aria-label="关闭">×</div>
       </div>
       <div class="share-preview">
-        <div class="preview-map">&#128506;</div>
+        <div class="preview-map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
         <div class="preview-title">刘氏家族清明扫墓</div>
         <div class="preview-info">3.2km · 4个打卡点 · 海拔180m</div>
       </div>
@@ -2245,7 +2266,7 @@ html, body {
   <!-- ============ 设置打卡点弹窗 ============ -->
   <div class="dialog-overlay" id="dialog-setpoint">
     <div class="dialog-box">
-      <div class="dialog-title">&#128205; 设置打卡点</div>
+      <div class="dialog-title">设置打卡点</div>
       <div class="dialog-desc">已记录当前位置坐标，请为此墓地点命名</div>
       <input class="dialog-input" type="text" placeholder="例如：祖父某某之墓" value="二世祖刘德芳墓">
       <div class="dialog-actions">
@@ -2258,7 +2279,7 @@ html, body {
   <!-- ============ 中断记录确认弹窗 ============ -->
   <div class="dialog-overlay" id="dialog-interrupt">
     <div class="dialog-box">
-      <div class="dialog-title">&#9888; 中断记录</div>
+      <div class="dialog-title">中断记录</div>
       <div class="dialog-desc">当前轨迹正在记录中，是否暂时退出？<br><span style="font-size:12px;color:var(--text-hint)">退出后可在轨迹详情页继续记录</span></div>
       <div class="dialog-actions">
         <button class="btn btn-outline" onclick="hideDialog('interrupt')">继续录制</button>
@@ -2270,7 +2291,7 @@ html, body {
   <!-- ============ 设置终点弹窗 ============ -->
   <div class="dialog-overlay" id="dialog-endpoint">
     <div class="dialog-box">
-      <div class="dialog-title">&#127937; 设置终点</div>
+      <div class="dialog-title">设置终点</div>
       <div class="dialog-desc">确认当前位置为轨迹终点并结束记录？</div>
       <input class="dialog-input" type="text" placeholder="请输入终点名称" value="山脚出口">
       <div class="dialog-actions">

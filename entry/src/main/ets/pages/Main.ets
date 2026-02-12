@@ -98,12 +98,12 @@ struct Main {
       TabContent() {
         this.HomeTabContent();
       }
-      .tabBar(this.BottomTabItem(0, '首页', '🏠'));
+      .tabBar(this.BottomTabItem(0, '首页', $r('app.media.ic_tab_home')));
 
       TabContent() {
         this.ProfileTabContent();
       }
-      .tabBar(this.BottomTabItem(1, '个人中心', '👤'));
+      .tabBar(this.BottomTabItem(1, '个人中心', $r('app.media.ic_tab_profile')));
     }
     .barMode(BarMode.Fixed)
     .barHeight(56 + this.bottomSafeHeight)
@@ -183,17 +183,21 @@ struct Main {
   }
 
   @Builder
-  BottomTabItem(index: number, title: string, icon: string) {
+  BottomTabItem(index: number, title: string, icon: Resource) {
     Column({ space: 2 }) {
-      Text(icon)
-        .fontSize(22);
+      Image(icon)
+        .width(18)
+        .height(18)
+        .objectFit(ImageFit.Contain)
+        .fillColor(this.currentBottomIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
       Text(title)
         .fontSize(10)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.currentBottomIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
     }
-    .padding({ top: 6, bottom: 6 })
-    .layoutWeight(1);
+    .padding({ top: 8, bottom: 8 })
+    .layoutWeight(1)
+    .minHeight(44);
   }
 
   // ==================== 我的轨迹列表 ====================

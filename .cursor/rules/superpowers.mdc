@@ -1,0 +1,25 @@
+# Superpowers 开发流程 Skills
+
+本项目已配置 [Superpowers](https://github.com/obra/superpowers)（obra/superpowers）技能集，用于结构化开发流程。
+
+## 何时使用
+
+在以下场景中，应优先查阅并遵循 `.cursor/skills/` 下对应 skill 的说明：
+
+- **规划 / 设计**：`brainstorming` — 先澄清需求、分块呈现设计并保存设计文档，再写代码
+- **分支与工作区**：`using-git-worktrees` — 设计通过后创建独立分支、跑环境、确认测试基线
+- **写实施计划**：`writing-plans` — 把工作拆成 2–5 分钟可完成的小任务，含路径、代码与验证步骤
+- **执行计划**：`executing-plans` 或 `subagent-driven-development` — 按任务执行，带检查点或两阶段评审
+- **测试**：`test-driven-development` — 严格 RED-GREEN-REFACTOR，先写失败测试再写实现
+- **调试**：`systematic-debugging`、`verification-before-completion` — 四阶段根因分析，修完后验证
+- **代码评审**：`requesting-code-review`、`receiving-code-review` — 按计划做评审，按严重程度报告
+- **收尾分支**：`finishing-a-development-branch` — 跑测试、选择合并/PR/保留/丢弃、清理 worktree
+- **了解技能体系**：`using-superpowers` — 如何查找与调用技能、优先级与类型
+
+## 技能位置
+
+所有技能位于 `.cursor/skills/`，每个技能目录下均有 `SKILL.md`。涉及规划、写计划、TDD、调试、评审时，先读对应 skill 再行动。
+
+## 与项目规则的关系
+
+仍须遵守 `.cursor/rules/harmonyos-global.mdc` 及 `doc/` 下需求与架构文档；Superpowers 规定的是**如何做**（流程与节奏），鸿蒙与业务规则规定的是**做什么**（技术栈与功能）。
