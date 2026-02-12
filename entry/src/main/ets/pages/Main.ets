@@ -184,20 +184,20 @@ struct Main {
 
   @Builder
   BottomTabItem(index: number, title: string, icon: Resource) {
-    Column({ space: 2 }) {
+    Column({ space: 4 }) {
       Image(icon)
-        .width(18)
-        .height(18)
+        .width(24)
+        .height(24)
         .objectFit(ImageFit.Contain)
         .fillColor(this.currentBottomIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
       Text(title)
-        .fontSize(10)
+        .fontSize(11)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.currentBottomIndex === index ? $r('app.color.primary') : $r('app.color.label_tertiary'));
     }
-    .padding({ top: 8, bottom: 8 })
+    .padding({ top: 6, bottom: 6 })
     .layoutWeight(1)
-    .constraintSize({ minHeight: 44 });
+    .constraintSize({ minHeight: 48 });
   }
 
   // ==================== 我的轨迹列表 ====================

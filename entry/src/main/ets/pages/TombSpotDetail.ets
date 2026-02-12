@@ -19,6 +19,7 @@ interface TombSpotDetailParams {
   trackId: string;
   trackTitle: string;
   fromRecording: boolean;
+  spotName?: string;
 }
 
 /** 捏合手势回调中事件对象带有的 scale 字段（ArkTS 禁止对象字面量作类型） */
@@ -68,6 +69,10 @@ struct TombSpotDetail {
       this.trackId = params.trackId || '';
       this.trackTitle = params.trackTitle || '';
       this.fromRecording = params.fromRecording || false;
+      // 从录制页传入的名称（数据库可能还没写入，先用路由参数显示）
+      if (params.spotName && params.spotName.length > 0) {
+        this.spotName = params.spotName;
+      }
     }
     this.loadData();
     if (this.fromRecording) {
@@ -666,6 +671,7 @@ struct TombSpotDetail {
         .width('100%');
       }
       .layoutWeight(1)
+      .align(Alignment.Top)
       .scrollBar(BarState.Off)
       .backgroundColor($r('app.color.app_background'));
       }

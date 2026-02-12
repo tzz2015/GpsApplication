@@ -58,6 +58,10 @@ struct TrackRecord {
   @State showEndDialog: boolean = false;
   @State showInterruptDialog: boolean = false;
   @State dialogInputText: string = '';
+  // 弹窗打开时预取的精确定位（消除确认时的 GPS 等待）
+  private pendingDialogLat: number = 0;
+  private pendingDialogLng: number = 0;
+  private pendingDialogAlt: number = 0;
 
   // 地图
   @State mapCenterLat: number = 23.7275;
@@ -117,6 +121,32 @@ struct TrackRecord {
     }
   }
 
+  /** 弹窗打开时立即预取精确定位（用户输入时后台获取，确认时直接使用） */
+  private prefetchDialogLocation(): void {
+    // 先用已有最佳坐标作为兜底
+    this.pendingDialogLat = this.lastLat !== 0 ? this.lastLat : this.mapCenterLat;
+    this.pendingDialogLng = this.lastLng !== 0 ? this.lastLng : this.mapCenterLng;
+    this.pendingDialogAlt = this.currentAltitude;
+    const request: geoLocationManager.SingleLocationRequest = {
+      locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY,
+      locatingTimeoutMs: 8000
+    };
+    geoLocationManager.getCurrentLocation(request).then((loc: geoLocationManager.Location) => {
+      if (loc && loc.latitude !== 0) {
+        this.pendingDialogLat = loc.latitude;
+        this.pendingDialogLng = loc.longitude;
+        this.pendingDialogAlt = Math.round(loc.altitude);
+        // 同步更新当前海拔显示
+        this.currentAltitude = this.pendingDialogAlt;
+        hilog.info(LOG_DOMAIN, LOG_TAG,
+          'Dialog prefetch location: %{public}f, %{public}f, alt=%{public}d',
+          loc.latitude, loc.longitude, this.pendingDialogAlt);
+      }
+    }).catch((_e: Error) => {
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Dialog prefetch fallback to last known');
+    });
+  }
+
   /** 进入页面立即获取精确定位坐标 */
   private getPreciseLocation(): void {
     this.isGettingLocation = true;
@@ -138,8 +168,15 @@ struct TrackRecord {
       hilog.info(LOG_DOMAIN, LOG_TAG,
         'Precise location acquired: %{public}f, %{public}f, alt=%{public}d',
         location.latitude, location.longitude, this.currentPreciseAlt);
-      // 移动地图到精确位置
-      this.moveCameraTo(location.latitude, location.longitude, 16);
+      // 地图已就绪则立即移动到精确位置
+      if (this.mapController) {
+        this.moveCameraTo(location.latitude, location.longitude, 16);
+        try {
+          this.mapController.setMyLocation(location);
+        } catch (_e) {
+          // 忽略
+        }
+      }
     }).catch((e: Error) => {
       this.isGettingLocation = false;
       hilog.error(LOG_DOMAIN, LOG_TAG, 'getPreciseLocation fail: %{public}s', JSON.stringify(e));
@@ -234,8 +271,12 @@ struct TrackRecord {
         } catch (e) {
           hilog.error(LOG_DOMAIN, LOG_TAG, 'setMapType error: %{public}s', JSON.stringify(e));
         }
-        // 定位到当前位置
-        this.moveToCurrentLocation();
+        // 用当前已知最佳坐标立即定位地图（不再重复发起 GPS 请求）
+        if (this.currentPreciseLat !== 0) {
+          await this.moveCameraTo(this.currentPreciseLat, this.currentPreciseLng, 16);
+        } else if (this.mapCenterLat !== 23.7275) {
+          await this.moveCameraTo(this.mapCenterLat, this.mapCenterLng, 16);
+        }
         // 绘制已有轨迹（若 loadExistingData 已完成）
         if (this.recordPoints.length >= 2) {
           this.updatePolyline();
@@ -282,36 +323,6 @@ struct TrackRecord {
     }
   }
 
-  /** 获取当前位置并移动地图 */
-  private moveToCurrentLocation(): void {
-    const request: geoLocationManager.SingleLocationRequest = {
-      locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY,
-      locatingTimeoutMs: 10000
-    };
-    geoLocationManager.getCurrentLocation(request).then(async (location: geoLocationManager.Location) => {
-      this.mapCenterLat = location.latitude;
-      this.mapCenterLng = location.longitude;
-      this.currentAltitude = Math.round(location.altitude);
-      this.lastLat = location.latitude;
-      this.lastLng = location.longitude;
-
-      // 转换坐标并移动地图相机到当前位置
-      await this.moveCameraTo(location.latitude, location.longitude, 16);
-
-      // 在地图上显示当前位置标记
-      if (this.mapController) {
-        try {
-          this.mapController.setMyLocationEnabled(true);
-          this.mapController.setMyLocation(location);
-        } catch (e) {
-          hilog.info(LOG_DOMAIN, LOG_TAG, 'setMyLocation: %{public}s', JSON.stringify(e));
-        }
-      }
-    }).catch((e: Error) => {
-      hilog.error(LOG_DOMAIN, LOG_TAG, 'getCurrentLocation fail: %{public}s', JSON.stringify(e));
-    });
-  }
-
   // 上次有效定位的时间戳，用于速度过滤
   private lastLocationTime: number = 0;
 
@@ -329,28 +340,31 @@ struct TrackRecord {
         locationScenario: geoLocationManager.UserActivityScenario.NAVIGATION
       };
       geoLocationManager.on('locationChange', request, (location: geoLocationManager.Location) => {
-        if (this.isPaused) {
-          return;
-        }
         const lat = location.latitude;
         const lng = location.longitude;
-        const alt = Math.round(location.altitude);
+        const rawAlt: number = location.altitude;
+        const alt = (!isNaN(rawAlt) && isFinite(rawAlt)) ? Math.round(rawAlt) : this.currentAltitude;
         const accuracy = location.accuracy || 0;
         const now = Date.now();
 
-        // 更新当前位置显示（即使不记录轨迹点也要更新地图位置）
+        // 始终更新海拔（不再过滤 0，因为低海拔地区 alt=0 是合法值）
         this.currentAltitude = alt;
         if (alt > this.maxAltitude) {
           this.maxAltitude = alt;
         }
 
-        // 更新地图上的当前位置
+        // 更新地图上的当前位置（即使暂停也显示蓝点）
         if (this.mapController) {
           try {
             this.mapController.setMyLocation(location);
           } catch (_e) {
             // 忽略
           }
+        }
+
+        // 暂停时只更新位置显示，不记录轨迹点
+        if (this.isPaused) {
+          return;
         }
 
         // ① GPS 精度过滤：精度 > 50m 说明信号差，丢弃（放宽到50m，避免山区丢点过多）
@@ -600,42 +614,26 @@ struct TrackRecord {
 
   // ==================== 用户操作 ====================
 
-  /** 设置起点（先获取精确定位再保存） */
-  private async confirmSetStart(): Promise<void> {
+  /** 设置起点（使用弹窗打开时预取的精确定位，不再阻塞等待 GPS） */
+  private confirmSetStart(): void {
     const name = this.dialogInputText.trim() || '起点';
     this.showStartDialog = false;
     this.dialogInputText = '';
 
-    // 先获取最精确的当前位置
-    let startLat = this.currentPreciseLat;
-    let startLng = this.currentPreciseLng;
-    let startAlt = this.currentPreciseAlt;
-    try {
-      const request: geoLocationManager.SingleLocationRequest = {
-        locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY,
-        locatingTimeoutMs: 10000
-      };
-      const loc = await geoLocationManager.getCurrentLocation(request);
-      if (loc && loc.latitude !== 0) {
-        startLat = loc.latitude;
-        startLng = loc.longitude;
-        startAlt = Math.round(loc.altitude);
-        this.currentPreciseLat = startLat;
-        this.currentPreciseLng = startLng;
-        this.currentPreciseAlt = startAlt;
-        hilog.info(LOG_DOMAIN, LOG_TAG,
-          'Start point precise location: %{public}f, %{public}f, alt=%{public}d',
-          startLat, startLng, startAlt);
-      }
-    } catch (_e) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, 'Failed to get precise start location, using cached');
+    // 使用弹窗打开时预取的精确坐标
+    let startLat = this.pendingDialogLat;
+    let startLng = this.pendingDialogLng;
+    let startAlt = this.pendingDialogAlt;
+
+    // 如果预取坐标仍为 0，退化使用已知最佳坐标
+    if (startLat === 0) {
+      startLat = this.currentPreciseLat !== 0 ? this.currentPreciseLat : this.mapCenterLat;
+      startLng = this.currentPreciseLng !== 0 ? this.currentPreciseLng : this.mapCenterLng;
+      startAlt = this.currentPreciseAlt;
     }
 
-    // 如果精确定位坐标仍为 0，退化使用地图中心
-    if (startLat === 0) {
-      startLat = this.mapCenterLat;
-      startLng = this.mapCenterLng;
-    }
+    hilog.info(LOG_DOMAIN, LOG_TAG,
+      'Start point: %{public}f, %{public}f, alt=%{public}d', startLat, startLng, startAlt);
 
     this.startPointName = name;
     this.hasStartPoint = true;
@@ -645,16 +643,21 @@ struct TrackRecord {
     this.lastLng = startLng;
     this.lastLocationTime = Date.now();
     this.currentAltitude = startAlt;
+    this.currentPreciseLat = startLat;
+    this.currentPreciseLng = startLng;
+    this.currentPreciseAlt = startAlt;
 
-    // 保存起点信息到轨迹
+    // 后台保存起点信息（不阻塞 UI）
     const context = this.getUIContext().getHostContext() as common.Context;
-    await TrackStore.updateTrack(context, this.trackId, {
+    TrackStore.updateTrack(context, this.trackId, {
       startName: name,
       startLat: startLat,
       startLng: startLng
+    }).catch((e: Error) => {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'Save start point: %{public}s', JSON.stringify(e));
     });
 
-    // 开始定位和计时
+    // 立即开始定位和计时
     this.startLocationTracking();
     this.startTimer();
   }
@@ -672,30 +675,17 @@ struct TrackRecord {
     }
   }
 
-  /** 添加打卡点（尽量使用当前高精度定位，减少误差） */
-  private async confirmAddSpot(): Promise<void> {
+  /** 添加打卡点（使用预取定位，先跳转再后台保存，避免卡顿） */
+  private confirmAddSpot(): void {
     const name = this.dialogInputText.trim() || '打卡点';
     this.showSpotDialog = false;
     this.dialogInputText = '';
 
-    let lat = this.lastLat;
-    let lng = this.lastLng;
-    let alt = this.currentAltitude;
-    try {
-      const request: geoLocationManager.SingleLocationRequest = {
-        locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY,
-        locatingTimeoutMs: 5000
-      };
-      const loc = await geoLocationManager.getCurrentLocation(request);
-      if (loc && loc.latitude !== 0) {
-        lat = loc.latitude;
-        lng = loc.longitude;
-        alt = Math.round(loc.altitude);
-      }
-    } catch (_e) {
-    }
+    // 使用弹窗打开时预取的精确坐标
+    const lat = this.pendingDialogLat !== 0 ? this.pendingDialogLat : this.lastLat;
+    const lng = this.pendingDialogLng !== 0 ? this.pendingDialogLng : this.lastLng;
+    const alt = this.pendingDialogAlt !== 0 ? this.pendingDialogAlt : this.currentAltitude;
 
-    const context = this.getUIContext().getHostContext() as common.Context;
     const spot: TrackModel.TombSpot = {
       tombId: TrackModel.generateId('tomb'),
       trackId: this.trackId,
@@ -712,24 +702,10 @@ struct TrackRecord {
       updatedAt: Date.now()
     };
 
-    await TrackStore.saveTombSpot(context, spot);
+    // 先更新内存状态
     this.tombSpots.push(spot);
 
-    // 保存已采集的轨迹点到本地
-    if (this.allTrackPoints.length > 0) {
-      await TrackStore.saveTrackPoints(context, this.trackId, this.allTrackPoints);
-      this.allTrackPoints = [];
-    }
-
-    // 保存轨迹统计（含打卡点数量）
-    await TrackStore.updateTrack(context, this.trackId, {
-      totalDistance: this.totalDistance,
-      maxAltitude: this.maxAltitude,
-      totalDuration: this.elapsedTime,
-      spotCount: this.tombSpots.length
-    });
-
-    // 跳到打卡点详情页填写图文
+    // 先跳转到打卡点详情页（传入名称，不等数据库写入完成）
     try {
       this.getUIContext().getRouter().pushUrl({
         url: 'pages/TombSpotDetail',
@@ -737,38 +713,58 @@ struct TrackRecord {
           tombId: spot.tombId,
           trackId: this.trackId,
           trackTitle: this.trackTitle,
-          fromRecording: true
+          fromRecording: true,
+          spotName: name
         }
       });
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'router.push TombSpotDetail: %{public}s', JSON.stringify(e));
     }
+
+    // 后台异步保存数据（不阻塞导航）
+    const context = this.getUIContext().getHostContext() as common.Context;
+    this.saveSpotDataInBackground(context, spot);
   }
 
-  /** 设置终点并结束轨迹（先获取精确终点位置） */
+  /** 后台保存打卡点数据 */
+  private async saveSpotDataInBackground(context: common.Context, spot: TrackModel.TombSpot): Promise<void> {
+    try {
+      await TrackStore.saveTombSpot(context, spot);
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'saveTombSpot: %{public}s', JSON.stringify(e));
+    }
+    try {
+      if (this.allTrackPoints.length > 0) {
+        const pointsToSave = this.allTrackPoints.slice(0);
+        this.allTrackPoints = [];
+        await TrackStore.saveTrackPoints(context, this.trackId, pointsToSave);
+      }
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'saveTrackPoints: %{public}s', JSON.stringify(e));
+    }
+    try {
+      await TrackStore.updateTrack(context, this.trackId, {
+        totalDistance: this.totalDistance,
+        maxAltitude: this.maxAltitude,
+        totalDuration: this.elapsedTime,
+        spotCount: this.tombSpots.length
+      });
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'updateTrack: %{public}s', JSON.stringify(e));
+    }
+  }
+
+  /** 设置终点并结束轨迹（使用预取定位，不再阻塞等待 GPS） */
   private async confirmSetEnd(): Promise<void> {
     const name = this.dialogInputText.trim() || '终点';
     this.showEndDialog = false;
     this.dialogInputText = '';
 
-    // 先获取精确终点位置
-    let endLat = this.lastLat;
-    let endLng = this.lastLng;
-    try {
-      const request: geoLocationManager.SingleLocationRequest = {
-        locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY,
-        locatingTimeoutMs: 10000
-      };
-      const loc = await geoLocationManager.getCurrentLocation(request);
-      if (loc && loc.latitude !== 0) {
-        endLat = loc.latitude;
-        endLng = loc.longitude;
-        hilog.info(LOG_DOMAIN, LOG_TAG,
-          'End point precise location: %{public}f, %{public}f', endLat, endLng);
-      }
-    } catch (_e) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, 'Failed to get precise end location, using last tracked');
-    }
+    // 使用弹窗打开时预取的精确坐标
+    let endLat = this.pendingDialogLat !== 0 ? this.pendingDialogLat : this.lastLat;
+    let endLng = this.pendingDialogLng !== 0 ? this.pendingDialogLng : this.lastLng;
+    hilog.info(LOG_DOMAIN, LOG_TAG,
+      'End point: %{public}f, %{public}f', endLat, endLng);
 
     this.stopLocationTracking();
     this.stopTimer();
@@ -973,7 +969,7 @@ struct TrackRecord {
           Column() {
             Row({ space: 12 }) {
               this.LayerOption($r('app.string.map_type_standard'), $r('app.color.primary'), mapCommon.MapType.STANDARD);
-              this.LayerOption($r('app.string.map_type_terrain'), $r('app.color.warning'), mapCommon.MapType.TERRAIN);
+              this.LayerOption($r('app.string.map_type_satellite'), $r('app.color.warning'), mapCommon.MapType.TERRAIN);
             }
             .padding(16)
             .backgroundColor($r('app.color.card_background'))
@@ -1093,6 +1089,7 @@ struct TrackRecord {
             .backgroundColor($r('app.color.accent'))
             .borderRadius(25)
             .onClick(() => {
+              this.prefetchDialogLocation();
               this.showStartDialog = true;
             });
         } else {
@@ -1115,6 +1112,7 @@ struct TrackRecord {
             .backgroundColor($r('app.color.app_background'))
             .borderRadius(28)
             .onClick(() => {
+              this.prefetchDialogLocation();
               this.showSpotDialog = true;
             });
 
@@ -1151,6 +1149,7 @@ struct TrackRecord {
             .backgroundColor($r('app.color.destructive'))
             .borderRadius(28)
             .onClick(() => {
+              this.prefetchDialogLocation();
               this.showEndDialog = true;
             });
           }

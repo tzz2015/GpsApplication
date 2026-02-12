@@ -17,7 +17,7 @@ interface FeedbackItem {
 }
 
 /**
- * 意见反馈页：样式与编辑个人信息页一致，卡片 + 表单
+ * 意见反馈页
  */
 @Entry
 @Component
@@ -78,71 +78,101 @@ struct Feedback {
 
       Scroll() {
         Column() {
-          // 反馈内容卡片，顶部无留白
-          Column({ space: 16 }) {
-            Column({ space: 6 }) {
-              Text($r('app.string.feedback_content_label'))
-                .fontSize(13)
+          // 顶部引导区
+          Column({ space: 8 }) {
+            Image($r('app.media.ic_chat'))
+              .width(44)
+              .height(44)
+              .fillColor($r('app.color.primary'));
+            Text('我们想听听你的想法')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+              .fontColor($r('app.color.label_primary'));
+            Text('你的每一条建议都能帮助我们做得更好')
+              .fontSize(13)
+              .fontColor($r('app.color.label_tertiary'));
+          }
+          .width('100%')
+          .padding({ top: 28, bottom: 24 })
+          .alignItems(HorizontalAlign.Center);
+
+          // 表单卡片
+          Column({ space: 20 }) {
+            // 反馈内容
+            Column({ space: 8 }) {
+              Text('问题或建议')
+                .fontSize(14)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.label_secondary'));
-              TextArea({ placeholder: '请详细描述问题或建议…', text: this.content })
+                .fontColor($r('app.color.label_primary'));
+              TextArea({ placeholder: '请描述你遇到的问题，或者你希望增加的功能…', text: this.content })
                 .onChange((value: string) => {
                   this.content = value;
                 })
                 .width('100%')
-                .height(120)
-                .fontSize(16)
+                .height(140)
+                .fontSize(15)
                 .backgroundColor($r('app.color.app_background'))
-                .borderRadius(10)
-                .padding(12);
+                .borderRadius(12)
+                .padding(14);
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start);
 
-            Column({ space: 6 }) {
-              Text($r('app.string.feedback_contact_label'))
-                .fontSize(13)
+            // 联系方式
+            Column({ space: 8 }) {
+              Text('联系方式（选填）')
+                .fontSize(14)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.label_secondary'));
-              TextInput({ placeholder: '邮箱或手机号', text: this.contact })
+                .fontColor($r('app.color.label_primary'));
+              TextInput({ placeholder: '邮箱或手机号，方便我们联系你', text: this.contact })
                 .onChange((value: string) => {
                   this.contact = value;
                 })
                 .width('100%')
-                .height(44)
-                .fontSize(16)
+                .height(46)
+                .fontSize(15)
                 .backgroundColor($r('app.color.app_background'))
-                .borderRadius(10)
-                .padding({ left: 12, right: 12 });
+                .borderRadius(12)
+                .padding({ left: 14, right: 14 });
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start);
+
+            // 提交按钮（内联在表单内）
+            Button(this.isSubmitting ? '提交中…' : '提交反馈')
+              .width('100%')
+              .height(46)
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.primary'))
+              .borderRadius(23)
+              .enabled(!this.isSubmitting && this.content.trim().length > 0)
+              .opacity(!this.isSubmitting && this.content.trim().length > 0 ? 1 : 0.5)
+              .margin({ top: 4 })
+              .onClick(() => {
+                this.submit();
+              });
           }
-          .width('100%')
           .padding(20)
-          .backgroundColor($r('app.color.card_background'));
+          .backgroundColor($r('app.color.card_background'))
+          .borderRadius(16)
+          .margin({ left: 20, right: 20 });
+
+          // 底部提示
+          Text('反馈将保存在本地，后续版本将支持云端同步')
+            .fontSize(12)
+            .fontColor($r('app.color.label_tertiary'))
+            .margin({ top: 16, bottom: 40 });
         }
         .width('100%');
       }
       .layoutWeight(1)
       .width('100%')
+      .align(Alignment.Top)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.None)
       .backgroundColor($r('app.color.app_background'));
-
-      Button(this.isSubmitting ? '提交中…' : '提交')
-        .width('90%')
-        .height(50)
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(Color.White)
-        .backgroundColor($r('app.color.primary'))
-        .borderRadius(25)
-        .enabled(!this.isSubmitting && this.content.trim().length > 0)
-        .margin({ bottom: 32 })
-        .onClick(() => {
-          this.submit();
-        });
     }
     .width('100%')
     .height('100%')

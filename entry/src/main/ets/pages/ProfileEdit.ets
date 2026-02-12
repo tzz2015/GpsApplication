@@ -6,7 +6,7 @@ import { SyncService } from '../common/SyncService';
 import { CloudStorageService } from '../common/CloudStorageService';
 
 /**
- * P3-2 个人信息编辑页：头像、昵称、家族、签名
+ * P3-2 个人信息编辑页：头像、昵称、家族
  */
 @Entry
 @Component
@@ -39,7 +39,6 @@ struct ProfileEdit {
       familyName: this.familyName,
       avatarUrl: this.avatarUrl
     });
-    // 同步到 Cloud DB，重装后登录可恢复昵称
     SyncService.syncUser(context).catch(() => {});
     this.isSaving = false;
     this.getUIContext().getRouter().back();
@@ -83,131 +82,151 @@ struct ProfileEdit {
 
       Scroll() {
         Column() {
-          // 头像区域（可点击更换），顶部无留白
-          Column({ space: 12 }) {
-            Stack() {
-              if (this.avatarUrl.length > 0) {
-                Image(this.avatarUrl)
-                  .width(80)
-                  .height(80)
-                  .borderRadius(40)
-                  .objectFit(ImageFit.Cover);
-              } else {
-                Column() {
-                  Image($r('app.media.ic_user'))
-                    .width(40)
-                    .height(40)
-                    .fillColor(Color.White);
-                }
-                .width(80)
-                .height(80)
-                .borderRadius(40)
-                .backgroundColor($r('app.color.primary_light'))
-                .justifyContent(FlexAlign.Center);
-              }
-              // 相机角标
-              Column() {
-                if (this.isUploadingAvatar) {
-                  LoadingProgress()
-                    .width(14)
-                    .height(14)
-                    .color(Color.White);
+          // ===== 统一卡片：头像 + 表单 + 保存 =====
+          Column({ space: 24 }) {
+
+            // --- 头像区域 ---
+            Column({ space: 10 }) {
+              Stack() {
+                if (this.avatarUrl.length > 0) {
+                  Image(this.avatarUrl)
+                    .width(88)
+                    .height(88)
+                    .borderRadius(44)
+                    .objectFit(ImageFit.Cover);
                 } else {
-                  Image($r('app.media.ic_camera'))
-                    .width(14)
-                    .height(14)
-                    .fillColor(Color.White);
+                  Column() {
+                    Image($r('app.media.ic_user'))
+                      .width(40)
+                      .height(40)
+                      .fillColor(Color.White);
+                  }
+                  .width(88)
+                  .height(88)
+                  .borderRadius(44)
+                  .backgroundColor($r('app.color.primary'))
+                  .justifyContent(FlexAlign.Center);
                 }
+                // 相机角标
+                Column() {
+                  if (this.isUploadingAvatar) {
+                    LoadingProgress()
+                      .width(16)
+                      .height(16)
+                      .color(Color.White);
+                  } else {
+                    Image($r('app.media.ic_camera'))
+                      .width(16)
+                      .height(16)
+                      .fillColor(Color.White);
+                  }
+                }
+                .width(32)
+                .height(32)
+                .borderRadius(16)
+                .backgroundColor($r('app.color.accent'))
+                .justifyContent(FlexAlign.Center)
+                .borderWidth(3)
+                .borderColor(Color.White)
+                .position({ x: 60, y: 60 });
               }
-              .width(28)
-              .height(28)
-              .borderRadius(14)
-              .backgroundColor($r('app.color.camera_icon_bg'))
-              .justifyContent(FlexAlign.Center)
-              .borderWidth(2)
-              .borderColor(Color.White)
-              .position({ x: 56, y: 56 });
+              .width(88)
+              .height(88)
+              .onClick(() => {
+                this.pickAndUploadAvatar();
+              });
+
+              Text(this.isUploadingAvatar ? '上传中…' : '点击更换头像')
+                .fontSize(13)
+                .fontColor($r('app.color.label_tertiary'));
             }
-            .width(80)
-            .height(80)
-            .onClick(() => {
-              this.pickAndUploadAvatar();
-            });
-            Text(this.isUploadingAvatar ? '上传中…' : '点击更换头像')
-              .fontSize(13)
-              .fontColor($r('app.color.label_tertiary'));
+            .width('100%')
+            .alignItems(HorizontalAlign.Center);
+
+            // --- 分隔线 ---
+            Row()
+              .width('100%')
+              .height(1)
+              .backgroundColor($r('app.color.separator'));
+
+            // --- 表单字段 ---
+            Column({ space: 20 }) {
+              // 昵称
+              Column({ space: 8 }) {
+                Text('昵称')
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.label_primary'));
+                TextInput({ placeholder: '请输入昵称', text: this.nickname })
+                  .onChange((value: string) => {
+                    this.nickname = value;
+                  })
+                  .width('100%')
+                  .height(46)
+                  .fontSize(15)
+                  .backgroundColor($r('app.color.app_background'))
+                  .borderRadius(12)
+                  .padding({ left: 14, right: 14 });
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start);
+
+              // 家族
+              Column({ space: 8 }) {
+                Text('家族称谓')
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.label_primary'));
+                TextInput({ placeholder: '例如：刘氏', text: this.familyName })
+                  .onChange((value: string) => {
+                    this.familyName = value;
+                  })
+                  .width('100%')
+                  .height(46)
+                  .fontSize(15)
+                  .backgroundColor($r('app.color.app_background'))
+                  .borderRadius(12)
+                  .padding({ left: 14, right: 14 });
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start);
+            }
+            .width('100%');
+
+            // --- 保存按钮 ---
+            Button(this.isSaving ? '保存中…' : '保存')
+              .width('100%')
+              .height(46)
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.primary'))
+              .borderRadius(23)
+              .enabled(!this.isSaving)
+              .opacity(this.isSaving ? 0.5 : 1)
+              .onClick(() => {
+                this.saveUserInfo();
+              });
           }
-          .width('100%')
-          .padding(24)
+          .padding({ left: 20, right: 20, top: 28, bottom: 24 })
           .backgroundColor($r('app.color.card_background'))
-          .alignItems(HorizontalAlign.Center);
+          .borderRadius(16)
+          .margin({ left: 20, right: 20, top: 16 })
+          .shadow({ radius: 8, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 });
 
-          Column().width('100%').height(8).backgroundColor($r('app.color.app_background'));
-
-          // 表单
-          Column({ space: 16 }) {
-            Column({ space: 6 }) {
-              Text($r('app.string.profile_edit_nickname_label'))
-                .fontSize(13)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.label_secondary'));
-              TextInput({ placeholder: '请输入昵称', text: this.nickname })
-                .onChange((value: string) => {
-                  this.nickname = value;
-                })
-                .width('100%')
-                .height(44)
-                .fontSize(16)
-                .backgroundColor($r('app.color.app_background'))
-                .borderRadius(10)
-                .padding({ left: 12, right: 12 });
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Start);
-
-            Column({ space: 6 }) {
-              Text($r('app.string.profile_edit_family_label'))
-                .fontSize(13)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.label_secondary'));
-              TextInput({ placeholder: '例如：刘氏', text: this.familyName })
-                .onChange((value: string) => {
-                  this.familyName = value;
-                })
-                .width('100%')
-                .height(44)
-                .fontSize(16)
-                .backgroundColor($r('app.color.app_background'))
-                .borderRadius(10)
-                .padding({ left: 12, right: 12 });
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Start);
-          }
-          .width('100%')
-          .padding(20)
-          .backgroundColor($r('app.color.card_background'));
+          // 底部提示
+          Text('修改后将自动同步到云端')
+            .fontSize(12)
+            .fontColor($r('app.color.label_tertiary'))
+            .margin({ top: 16, bottom: 40 });
         }
         .width('100%');
       }
       .layoutWeight(1)
+      .align(Alignment.Top)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.None)
       .backgroundColor($r('app.color.app_background'));
-
-      Button(this.isSaving ? '保存中…' : '保存')
-        .width('90%')
-        .height(50)
-        .fontSize(17)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(Color.White)
-        .backgroundColor($r('app.color.primary'))
-        .borderRadius(25)
-        .enabled(!this.isSaving)
-        .margin({ bottom: 32 })
-        .onClick(() => {
-          this.saveUserInfo();
-        });
     }
     .width('100%')
     .height('100%')

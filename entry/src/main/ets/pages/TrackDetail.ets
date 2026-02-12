@@ -1,10 +1,11 @@
 import { promptAction, componentSnapshot } from '@kit.ArkUI';
 import { MapComponent, mapCommon, map } from '@kit.MapKit';
-import { AsyncCallback } from '@kit.BasicServicesKit';
-import { common } from '@kit.AbilityKit';
+import { AsyncCallback, BusinessError } from '@kit.BasicServicesKit';
+import { common, abilityAccessCtrl } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit';
+import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { AuthStore } from '../common/AuthStore';
@@ -49,6 +50,8 @@ struct TrackDetail {
   private mapController?: map.MapComponentController;
   private mapReady: boolean = false;
   private dataReady: boolean = false;
+  /** 极小透明图标，替代默认 pin 让信息窗口紧贴坐标点 */
+  private tinyMarkerIcon: image.PixelMap | null = null;
 
   aboutToAppear(): void {
     const params = this.getUIContext().getRouter().getParams() as TrackDetailParams | undefined;
@@ -150,6 +153,19 @@ struct TrackDetail {
     if (!this.mapController) {
       return;
     }
+    // 创建 2x2 透明图标替代默认 pin（仅创建一次）
+    if (!this.tinyMarkerIcon) {
+      try {
+        const buf = new ArrayBuffer(16); // 2x2 RGBA，全零 = 全透明
+        const opts: image.InitializationOptions = {
+          size: { width: 2, height: 2 },
+          pixelFormat: image.PixelMapFormat.RGBA_8888
+        };
+        this.tinyMarkerIcon = await image.createPixelMap(buf, opts);
+      } catch (e) {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'createTinyIcon: %{public}s', JSON.stringify(e));
+      }
+    }
     await this.drawTrackOnMap();
     await this.drawSpotMarkers();
   }
@@ -248,15 +264,22 @@ struct TrackDetail {
           strokeWidth: 3,
           visible: true
         });
-        // 添加可点击标记（用于显示名称）
-        await this.mapController.addMarker({
+        // 添加可点击标记（用于显示名称，使用极小图标替代默认 pin）
+        const startMarkerOpts: mapCommon.MarkerOptions = {
           position: startP,
           title: this.track.startName || '起点',
           snippet: '起点',
           visible: true,
           clickable: true,
-          alpha: 0.01
-        });
+          anchorU: 0.5,
+          anchorV: 0.5
+        };
+        if (this.tinyMarkerIcon) {
+          startMarkerOpts.icon = this.tinyMarkerIcon;
+        } else {
+          startMarkerOpts.alpha = 0.01;
+        }
+        await this.mapController.addMarker(startMarkerOpts);
         allLatLngs.push(startP);
       } catch (e) {
         hilog.info(LOG_DOMAIN, LOG_TAG, 'addMarker start: %{public}s', JSON.stringify(e));
@@ -275,14 +298,21 @@ struct TrackDetail {
           strokeWidth: 3,
           visible: true
         });
-        await this.mapController.addMarker({
+        const endMarkerOpts: mapCommon.MarkerOptions = {
           position: endP,
           title: this.track.endName || '终点',
           snippet: '终点',
           visible: true,
           clickable: true,
-          alpha: 0.01
-        });
+          anchorU: 0.5,
+          anchorV: 0.5
+        };
+        if (this.tinyMarkerIcon) {
+          endMarkerOpts.icon = this.tinyMarkerIcon;
+        } else {
+          endMarkerOpts.alpha = 0.01;
+        }
+        await this.mapController.addMarker(endMarkerOpts);
         allLatLngs.push(endP);
       } catch (e) {
         hilog.info(LOG_DOMAIN, LOG_TAG, 'addMarker end: %{public}s', JSON.stringify(e));
@@ -347,14 +377,21 @@ struct TrackDetail {
       // 可点击标记（点击显示名称信息窗口）
       try {
         const spotLabel = (i + 1).toString() + '. ' + spot.name;
-        await this.mapController.addMarker({
+        const spotMarkerOpts: mapCommon.MarkerOptions = {
           position: gcj02,
           title: spotLabel,
           snippet: '海拔 ' + spot.altitude.toString() + 'm',
           visible: true,
           clickable: true,
-          alpha: 0.01
-        });
+          anchorU: 0.5,
+          anchorV: 0.5
+        };
+        if (this.tinyMarkerIcon) {
+          spotMarkerOpts.icon = this.tinyMarkerIcon;
+        } else {
+          spotMarkerOpts.alpha = 0.01;
+        }
+        await this.mapController.addMarker(spotMarkerOpts);
       } catch (e) {
         hilog.info(LOG_DOMAIN, LOG_TAG, 'addSpotMarker[%{public}d]: %{public}s', i, JSON.stringify(e));
       }
@@ -485,50 +522,66 @@ struct TrackDetail {
     this.showShareCover = true;
   }
 
-  /** 保存分享卡：先用 componentSnapshot 截取整张卡片，再存为文件 */
-  private async saveShareCard(): Promise<void> {
+  /** 保存分享卡到系统图库：截取整张卡片后通过 photoAccessHelper 写入图库 */
+  private async saveShareCardToGallery(): Promise<void> {
     const context = this.getUIContext().getHostContext() as common.Context;
-    const saveDir = context.filesDir + '/Download';
-    try {
-      fileIo.mkdirSync(saveDir, false);
-    } catch (_e) {
-    }
-    const name = '轨迹_' + (this.track && this.track.title ? this.track.title : this.trackId) + '_' + Date.now().toString() + '.jpg';
-    const savePath = saveDir + '/' + name;
+    let imageData: ArrayBuffer | null = null;
 
+    // 1. 截取分享卡片
     try {
-      // 用 componentSnapshot 截取分享卡片
       const pixelMap: image.PixelMap = await componentSnapshot.get('shareCard');
       const packer = image.createImagePacker();
-      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 90 };
-      const data: ArrayBuffer = await packer.packToData(pixelMap, packOpts);
-      const f = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
-      fileIo.writeSync(f.fd, data);
-      fileIo.closeSync(f);
+      const packOpts: image.PackingOption = { format: 'image/jpeg', quality: 95 };
+      imageData = await packer.packToData(pixelMap, packOpts);
       packer.release();
       pixelMap.release();
-      try {
-        promptAction.showToast({ message: '已保存至 应用文件/Download' });
-      } catch (_t) {
-      }
     } catch (snapErr) {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, 'componentSnapshot: %{public}s, fallback to map only', JSON.stringify(snapErr));
-      // 降级：仅保存地图截图
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'componentSnapshot: %{public}s, fallback to map screenshot', JSON.stringify(snapErr));
+      // 降级：读取地图截图数据
       try {
-        fileIo.copyFileSync(this.shareImagePath, savePath);
-        try {
-          promptAction.showToast({ message: '已保存地图截图至 应用文件/Download' });
-        } catch (_t) {
-        }
-      } catch (_copyErr) {
+        const srcFile = fileIo.openSync(this.shareImagePath, fileIo.OpenMode.READ_ONLY);
+        const stat = fileIo.statSync(this.shareImagePath);
+        imageData = new ArrayBuffer(stat.size);
+        fileIo.readSync(srcFile.fd, imageData);
+        fileIo.closeSync(srcFile.fd);
+      } catch (_readErr) {
         try {
           promptAction.showToast({ message: '保存失败' });
         } catch (_t) {
         }
+        return;
       }
     }
 
-    // 清理临时文件
+    if (!imageData) {
+      try {
+        promptAction.showToast({ message: '保存失败' });
+      } catch (_t) {
+      }
+      return;
+    }
+
+    // 2. 保存到系统图库
+    try {
+      const helper = photoAccessHelper.getPhotoAccessHelper(context);
+      const assetUri: string = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpg');
+      const file = fileIo.openSync(assetUri, fileIo.OpenMode.READ_WRITE);
+      fileIo.writeSync(file.fd, imageData);
+      fileIo.closeSync(file.fd);
+      try {
+        promptAction.showToast({ message: '已保存到图库' });
+      } catch (_t) {
+      }
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Share card saved to gallery: %{public}s', assetUri);
+    } catch (e) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'saveToGallery: %{public}s', JSON.stringify(e));
+      try {
+        promptAction.showToast({ message: '保存到图库失败，请检查存储权限' });
+      } catch (_t) {
+      }
+    }
+
+    // 3. 清理临时文件并关闭预览
     try {
       fileIo.unlinkSync(this.shareImagePath);
     } catch (_e) {
@@ -537,27 +590,14 @@ struct TrackDetail {
     this.shareImagePath = '';
   }
 
-  /** 分享图预览浮层：展示完整分享卡（标题 + 地图 + 起点/打卡点/终点 + 统计），可保存或删除 */
+  /** 分享图预览浮层：展示完整分享卡（标题 + 地图 + 起点/打卡点/终点 + 统计），可保存或取消 */
   @Builder
   shareImageCover(): void {
     Column() {
-      // 顶部关闭
-      Row() {
-        Blank();
-        Text($r('app.string.share_close'))
-          .fontSize(22)
-          .fontColor(Color.White)
-          .padding(16)
-          .onClick(() => {
-            try {
-              fileIo.unlinkSync(this.shareImagePath);
-            } catch (_e) {
-            }
-            this.showShareCover = false;
-            this.shareImagePath = '';
-          });
-      }
-      .width('100%');
+      // 顶部留空（安全区域间距）
+      Row()
+        .width('100%')
+        .height(48);
 
       Scroll() {
         // 包裹容器，用 padding 留出左右间距
@@ -651,7 +691,7 @@ struct TrackDetail {
               .borderRadius(12)
               .alignItems(VerticalAlign.Center)
               .margin({ right: 6, bottom: 6 });
-            }, (spot: TrackModel.TombSpot) => spot.tombId);
+            }, (spot: TrackModel.TombSpot) => spot.tombId + '_' + spot.name);
             if (this.track && this.track.endName.length > 0) {
               Row({ space: 4 }) {
                 Circle({ width: 8, height: 8 }).fill($r('app.color.destructive'));
@@ -691,12 +731,12 @@ struct TrackDetail {
 
       // 底部按钮
       Row({ space: 16 }) {
-        Button($r('app.string.track_detail_delete_btn'))
+        Button($r('app.string.dialog_cancel'))
           .layoutWeight(1)
           .height(50)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.destructive'))
+          .fontColor($r('app.color.label_primary'))
           .backgroundColor($r('app.color.card_background'))
           .borderRadius(25)
           .onClick(() => {
@@ -707,17 +747,27 @@ struct TrackDetail {
             this.showShareCover = false;
             this.shareImagePath = '';
           });
-        Button($r('app.string.track_detail_save'))
-          .layoutWeight(1)
-          .height(50)
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(Color.White)
-          .backgroundColor($r('app.color.primary'))
-          .borderRadius(25)
-          .onClick(() => {
-            this.saveShareCard();
-          });
+        Column() {
+          SaveButton({ icon: SaveIconStyle.FULL_FILLED, text: SaveDescription.SAVE_IMAGE, buttonType: ButtonType.Capsule })
+            .fontSize(17)
+            .fontColor(Color.White)
+            .iconColor(Color.White)
+            .backgroundColor($r('app.color.primary'))
+            .borderRadius(25)
+            .padding({ left: 20, right: 20, top: 14, bottom: 14 })
+            .onClick((event: ClickEvent, result: SaveButtonOnClickResult) => {
+              if (result === SaveButtonOnClickResult.SUCCESS) {
+                this.saveShareCardToGallery();
+              } else {
+                try {
+                  promptAction.showToast({ message: '保存授权失败' });
+                } catch (_t) {
+                }
+              }
+            });
+        }
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center);
       }
       .width('100%')
       .padding({ left: 20, right: 20, bottom: 32, top: 16 })
@@ -946,7 +996,7 @@ struct TrackDetail {
                   TrackModel.formatDate(this.track.createdAt), true, false, '', false);
               }
 
-              // 打卡点
+              // 打卡点（key 包含 name+updatedAt 确保编辑后 ForEach 能重新渲染）
               ForEach(this.tombSpots, (spot: TrackModel.TombSpot, index: number) => {
                 this.TimelineItem(
                   (index + 1).toString() + ' ' + spot.name,
@@ -954,7 +1004,7 @@ struct TrackDetail {
                   TrackModel.formatDate(spot.createdAt) + ' · 海拔 ' + spot.altitude.toString() + 'm',
                   false, false, spot.tombId, this.isOwner && !this.isPublicView
                 );
-              }, (spot: TrackModel.TombSpot) => spot.tombId);
+              }, (spot: TrackModel.TombSpot) => spot.tombId + '_' + spot.name + '_' + spot.updatedAt.toString());
 
               // 终点或等待
               if (this.isEditing) {

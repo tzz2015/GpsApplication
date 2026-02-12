@@ -50,6 +50,7 @@ struct UserAgreement {
       }
       .layoutWeight(1)
       .width('100%')
+      .align(Alignment.Top)
       .scrollBar(BarState.Off)
       .backgroundColor($r('app.color.app_background'));
     }

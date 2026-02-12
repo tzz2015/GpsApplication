@@ -18,20 +18,20 @@ export struct NavBar {
       // 导航栏主体
       Row() {
         if (this.showBack) {
-          Row({ space: 2 }) {
+          Row({ space: 4 }) {
             Image($r('app.media.icon_back'))
-              .width(14)
-              .height(14)
+              .width(20)
+              .height(20)
               .objectFit(ImageFit.Contain)
               .fillColor($r('app.color.primary'));
             Text($r('app.string.nav_back'))
-              .fontSize(16)
+              .fontSize(17)
               .fontColor($r('app.color.primary'));
           }
           .alignItems(VerticalAlign.Center)
           .height(44)
           .width(88)
-          .padding({ left: 16, right: 16 })
+          .padding({ left: 12, right: 12 })
           .onClick(() => {
             this.getUIContext().getRouter().back();
           });
