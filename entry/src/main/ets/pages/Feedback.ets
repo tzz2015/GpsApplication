@@ -171,7 +171,7 @@ struct Feedback {
       .width('100%')
       .align(Alignment.Top)
       .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.None)
+      .edgeEffect(EdgeEffect.Spring)
       .backgroundColor($r('app.color.app_background'));
     }
     .width('100%')

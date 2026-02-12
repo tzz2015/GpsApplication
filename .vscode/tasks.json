@@ -1,10 +1,28 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "arkts.tasks",
-			"type": "shell",
-			"command": "& ${command:arkts.tasks.get-task-command}"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "arkts.tasks",
+      "type": "shell",
+      "command": "& ${command:arkts.tasks.get-task-command}"
+    },
+    {
+      "label": "在 Cursor 内打开 AGC 控制台",
+      "type": "shell",
+      "command": "echo",
+      "args": ["${input:openAgcInSimpleBrowser}"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent" }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "openAgcInSimpleBrowser",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": [
+        "https://developer.huawei.com/consumer/cn/service/josp/agc/index.html#/myApp/6917590279469130152/172249065903122945"
+      ]
+    }
+  ]
 }

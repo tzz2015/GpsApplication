@@ -46,9 +46,19 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, TAG, 'Ability onWindowStageCreate');
 
-    // 设置沉浸式状态栏
+    // 设置沉浸式状态栏并配置系统栏样式（满足云测状态栏项）
     windowStage.getMainWindow().then((windowClass: window.Window) => {
-      windowClass.setWindowLayoutFullScreen(true).catch((e: Error) => {
+      windowClass.setWindowLayoutFullScreen(true).then(() => {
+        const sysBarProps: window.SystemBarProperties = {
+          statusBarColor: '#FFFFFF',
+          statusBarContentColor: '#FF000000',
+          navigationBarColor: '#FFFFFF',
+          navigationBarContentColor: '#FF000000'
+        };
+        windowClass.setWindowSystemBarProperties(sysBarProps).catch((e: Error) => {
+          hilog.warn(DOMAIN, TAG, 'setWindowSystemBarProperties: %{public}s', JSON.stringify(e));
+        });
+      }).catch((e: Error) => {
         hilog.error(DOMAIN, TAG, 'setWindowLayoutFullScreen fail: %{public}s', JSON.stringify(e));
       });
 
