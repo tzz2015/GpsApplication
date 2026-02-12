@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>遨游轨迹 - HarmonyOS App 原型</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ==================== 全局重置与基础变量（ui-ux-pro-max 蓝色设计系统） ==================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+          /* 主色 — 蓝色信任感 */
+          --primary: #2563EB;
+          --primary-dark: #1D4ED8;
+          --primary-light: #EFF6FF;
+          --accent: #0EA5E9;
+          --accent-light: #F0F9FF;
+          --success: #059669;
+          --success-light: #ECFDF5;
+          --warning: #D97706;
+          --warning-light: #FFFBEB;
+          --danger: #DC2626;
+          --danger-light: #FEF2F2;
+          /* 中性色与背景 */
+          --bg: #F8FAFC;
+          --card: #FFFFFF;
+          --text-primary: #0F172A;
+          --text-secondary: #475569;
+          --text-hint: #64748B;
+          --border: #E2E8F0;
+          /* 阴影 */
+          --shadow: 0 1px 3px rgba(15,23,42,0.06);
+          --shadow-lg: 0 4px 14px rgba(15,23,42,0.08);
+          --shadow-xl: 0 8px 30px rgba(15,23,42,0.12);
+          /* 圆角 */
+          --radius-sm: 8px;
+          --radius: 12px;
+          --radius-lg: 16px;
+          --radius-xl: 20px;
+          --radius-full: 999px;
+          /* 安全区与 Tab */
+          --safe-top: 44px;
+          --safe-bottom: 34px;
+          --tab-height: 56px;
+        }
+
+        html, body {
+          width: 100%; height: 100%;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'HarmonyOS Sans', sans-serif;
+          font-size: 16px;
+          color: var(--text-primary);
+          background: #0F172A;
+          overflow: hidden;
+          -webkit-font-smoothing: antialiased;
+        }
+
+        /* ==================== 手机壳容器 ==================== */
+        .phone-frame {
+          position: absolute;
+          left: 50%; top: 50%;
+          transform: translate(-50%, -50%);
+          width: 375px; height: 812px;
+          background: var(--bg);
+          border-radius: 40px;
+          overflow: hidden;
+          box-shadow: 0 0 0 8px #334155, 0 0 0 10px #64748B, var(--shadow-xl);
+        }
+
+        /* ==================== 状态栏 ==================== */
+        .status-bar {
+          position: absolute; top: 0; left: 0; right: 0;
+          height: var(--safe-top);
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 24px 0;
+          font-size: 12px; font-weight: 600;
+          z-index: 100;
+          color: #fff;
+        }
+        .status-bar.dark { color: var(--text-primary); }
+        .status-bar .time { font-size: 14px; font-weight: 700; }
+        .status-bar .icons { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+
+        /* ==================== 页面容器 ==================== */
+        .page {
+          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          display: none;
+          flex-direction: column;
+          overflow: hidden;
+          background: var(--bg);
+        }
+        .page.active { display: flex; }
+        .page-content {
+          flex: 1;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .page-content::-webkit-scrollbar { display: none; }
+
+        /* ==================== 导航栏 ==================== */
+        .nav-bar {
+          height: 56px;
+          padding: 0 16px;
+          display: flex; align-items: center; justify-content: space-between;
+          background: var(--card);
+          margin-top: var(--safe-top);
+          position: relative;
+          z-index: 10;
+        }
+        .nav-bar .nav-title {
+          font-size: 18px; font-weight: 700;
+          position: absolute; left: 50%; transform: translateX(-50%);
+        }
+        .nav-bar .nav-back {
+          width: 32px; height: 32px;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          font-size: 20px;
+          color: var(--text-primary);
+          border-radius: 50%;
+          transition: background 0.2s;
+        }
+        .nav-bar .nav-back:hover { background: var(--bg); }
+        .nav-bar .nav-action {
+          font-size: 14px; color: var(--primary);
+          cursor: pointer; font-weight: 500;
+        }
+
+        /* ==================== 底部 TabBar ==================== */
+        .tab-bar {
+          position: absolute; bottom: 0; left: 0; right: 0;
+          height: calc(var(--tab-height) + var(--safe-bottom));
+          padding-bottom: var(--safe-bottom);
+          background: var(--card);
+          display: flex;
+          border-top: 0.5px solid var(--border);
+          z-index: 50;
+        }
+        .tab-item {
+          flex: 1;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          gap: 2px;
+          cursor: pointer;
+          color: var(--text-hint);
+          transition: color 0.2s;
+          font-size: 10px;
+        }
+        .tab-item.active { color: var(--primary); font-weight: 600; }
+        .tab-item .tab-icon {
+          width: 24px; height: 24px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .tab-item .tab-icon svg { width: 24px; height: 24px; }
+        .tab-item .tab-label { font-weight: 500; }
+
+        /* ==================== 通用组件样式 ==================== */
+        .btn {
+          display: inline-flex; align-items: center; justify-content: center;
+          padding: 12px 24px;
+          border: none; border-radius: var(--radius);
+          font-size: 16px; font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-decoration: none;
+        }
+        .btn-primary {
+          background: var(--primary);
+          color: #FFFEFB;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-accent {
+          background: var(--accent);
+          color: #FFFEFB;
+        }
+        .btn-outline {
+          background: transparent;
+          border: 1.5px solid var(--primary);
+          color: var(--primary);
+        }
+        .btn-block { width: 100%; }
+        .btn-lg { padding: 16px 32px; font-size: 17px; border-radius: var(--radius-lg); }
+        .btn-round { border-radius: var(--radius-full); }
+
+        .card {
+          background: var(--card);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          overflow: hidden;
+        }
+
+        .input-group {
+          margin-bottom: 16px;
+        }
+        .input-group label {
+          display: block;
+          font-size: 13px; font-weight: 600;
+          color: var(--text-secondary);
+          margin-bottom: 6px;
+        }
+        .input-group input,
+        .input-group textarea {
+          width: 100%;
+          padding: 12px 14px;
+          border: 1.5px solid var(--border);
+          border-radius: 10px;
+          font-size: 15px;
+          color: var(--text-primary);
+          background: var(--card);
+          outline: none;
+          transition: border-color 0.2s;
+          font-family: inherit;
+        }
+        .input-group input:focus,
+        .input-group textarea:focus {
+          border-color: var(--primary);
+        }
+        .input-group textarea {
+          resize: none; min-height: 80px;
+        }
+
+        .badge {
+          display: inline-flex; align-items: center;
+          padding: 2px 8px;
+          border-radius: var(--radius-full);
+          font-size: 11px; font-weight: 600;
+        }
+        .badge-success { background: var(--success-light); color: var(--success); }
+        .badge-warning { background: var(--warning-light); color: var(--warning); }
+        .badge-primary { background: var(--primary-light); color: var(--primary); }
+
+        .tag {
+          display: inline-flex; align-items: center; gap: 4px;
+          padding: 4px 10px;
+          background: var(--primary-light);
+          border-radius: var(--radius-full);
+          font-size: 12px; font-weight: 500;
+          color: var(--primary);
+        }
+
+        .divider {
+          height: 0.5px;
+          background: var(--border);
+          margin: 12px 0;
+        }
+
+        /* ==================== 弹窗 / 对话框 ==================== */
+        .modal-overlay {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.45);
+          z-index: 200;
+          display: none;
+          align-items: flex-end;
+          justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+          background: var(--card);
+          border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+          width: 375px;
+          max-height: 70vh;
+          padding: 20px 20px calc(20px + var(--safe-bottom));
+          animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .modal-content .modal-header {
+          display: flex; align-items: center; justify-content: space-between;
+          margin-bottom: 20px;
+        }
+        .modal-content .modal-title {
+          font-size: 18px; font-weight: 700;
+        }
+        .modal-close {
+          width: 28px; height: 28px;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--bg); border-radius: 50%;
+          cursor: pointer; font-size: 16px;
+          color: var(--text-secondary);
+        }
+
+        /* ==================== P0-1 启动页 ==================== */
+        #page-splash {
+          background: linear-gradient(165deg, #1E40AF 0%, #2563EB 40%, #0EA5E9 100%);
+          align-items: center; justify-content: center;
+          color: #FFFFFF;
+        }
+        #page-splash .splash-logo {
+          width: 88px; height: 88px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 22px;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 20px;
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,0.3);
+        }
+        #page-splash .splash-logo svg { width: 44px; height: 44px; }
+        #page-splash .splash-name {
+          font-size: 28px; font-weight: 800;
+          margin-bottom: 8px;
+          letter-spacing: 1px;
+        }
+        #page-splash .splash-slogan {
+          font-size: 15px; opacity: 0.95;
+          margin-bottom: 48px;
+          font-weight: 500;
+        }
+        #page-splash .splash-hint {
+          position: absolute; bottom: calc(var(--safe-bottom) + 24px);
+          font-size: 14px; opacity: 0.9;
+          cursor: pointer;
+          padding: 10px 20px;
+          background: rgba(255,255,255,0.15);
+          border-radius: var(--radius-full);
+          transition: background 0.2s;
+        }
+        #page-splash .splash-hint:hover { background: rgba(255,255,255,0.25); }
+
+        /* ==================== P0-2 登录页 ==================== */
+        #page-login {
+          background: linear-gradient(170deg, #1E3A8A 0%, #2563EB 50%, #0EA5E9 100%);
+          color: #FFFFFF;
+        }
+        .login-container {
+          flex: 1;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          padding: 40px 32px;
+          margin-top: var(--safe-top);
+        }
+        .login-logo {
+          width: 88px; height: 88px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 22px;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 20px;
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,0.3);
+        }
+        .login-logo svg { width: 44px; height: 44px; }
+        .login-title {
+          font-size: 26px; font-weight: 800;
+          margin-bottom: 8px;
+          letter-spacing: 1px;
+        }
+        .login-desc {
+          font-size: 15px; opacity: 0.9;
+          margin-bottom: 60px;
+          text-align: center;
+          line-height: 1.6;
+        }
+        .login-btn-area { width: 100%; }
+        .btn-hw-login {
+          width: 100%;
+          height: 52px;
+          background: #CF0A2C;
+          color: #fff;
+          border: none;
+          border-radius: 26px;
+          font-size: 16px; font-weight: 600;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          transition: transform 0.2s, box-shadow 0.2s;
+          box-shadow: 0 4px 16px rgba(207,10,44,0.35);
+        }
+        .btn-hw-login:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(207,10,44,0.45); }
+        .btn-hw-login:active { transform: scale(0.98); }
+        .hw-logo { width: 22px; height: 22px; flex-shrink: 0; }
+        .login-agreement {
+          position: absolute;
+          bottom: calc(var(--safe-bottom) + 20px);
+          left: 32px; right: 32px;
+          text-align: center;
+          font-size: 12px; opacity: 0.8;
+          line-height: 1.5;
+        }
+        .login-agreement a { color: rgba(255,255,255,0.95); text-decoration: underline; }
+
+        /* ==================== P1-0 首页 ==================== */
+        #page-home { background: var(--bg); }
+        .home-header {
+          background: var(--card);
+          padding: var(--safe-top) 0 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .home-header-top {
+          padding: 16px 20px 0;
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .home-header-title {
+          font-size: 22px; font-weight: 800;
+          color: var(--text-primary);
+          letter-spacing: -0.02em;
+        }
+        .home-header-search {
+          width: 40px; height: 40px;
+          min-width: 40px;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--bg);
+          border-radius: 50%;
+          cursor: pointer;
+          color: var(--text-secondary);
+          transition: background 0.2s;
+        }
+        .home-header-search:hover { background: var(--primary-light); color: var(--primary); }
+
+        /* 顶部 Tab 切换 */
+        .home-tabs {
+          display: flex;
+          padding: 18px 20px 0;
+          gap: 28px;
+        }
+        .home-tab {
+          position: relative;
+          padding-bottom: 14px;
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--text-hint);
+          cursor: pointer;
+          transition: color 0.2s;
+        }
+        .home-tab.active { color: var(--primary); }
+        .home-tab.active::after {
+          content: '';
+          position: absolute;
+          bottom: 0; left: 50%; transform: translateX(-50%);
+          width: 28px; height: 3px;
+          background: var(--primary);
+          border-radius: 2px;
+        }
+
+        /* 统计卡片 */
+        .stats-card {
+          margin: 20px 20px 16px;
+          padding: 20px 24px;
+          background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%);
+          border-radius: var(--radius-lg);
+          color: #fff;
+          display: flex; align-items: center; gap: 24px;
+          box-shadow: 0 4px 14px rgba(37,99,235,0.25);
+        }
+        .stats-value { font-size: 32px; font-weight: 800; }
+        .stats-unit { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+        .stats-divider {
+          width: 1px; height: 44px;
+          background: rgba(255,255,255,0.35);
+        }
+
+        /* 创建按钮 */
+        .create-btn-area {
+          padding: 0 16px 12px;
+        }
+        .btn-create {
+          width: 100%;
+          padding: 16px;
+          background: var(--card);
+          border: 2px dashed var(--primary);
+          border-radius: var(--radius);
+          color: var(--primary);
+          font-size: 15px; font-weight: 600;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          transition: background 0.2s, border-color 0.2s;
+        }
+        .btn-create:hover { background: var(--primary-light); border-color: var(--primary-dark); }
+
+        /* 轨迹列表 */
+        .track-list {
+          padding: 0 16px 120px;
+        }
+        .track-card {
+          background: var(--card);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          margin-bottom: 12px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .track-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .track-card-map {
+          height: 120px;
+          background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 50%, #BFDBFE 100%);
+          position: relative;
+          overflow: hidden;
+        }
+        .track-card-map svg { width: 100%; height: 100%; }
+        .track-card-info {
+          padding: 12px 14px;
+        }
+        .track-card-title {
+          font-size: 16px; font-weight: 700;
+          margin-bottom: 4px;
+          display: flex; align-items: center; gap: 8px;
+        }
+        .track-card-meta {
+          font-size: 12px; color: var(--text-hint);
+          display: flex; align-items: center; gap: 12px;
+        }
+        .track-card-stats {
+          display: flex; gap: 16px;
+          margin-top: 8px;
+          font-size: 12px; color: var(--text-secondary);
+        }
+        .track-card-stats span {
+          display: flex; align-items: center; gap: 4px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          padding: 60px 40px;
+          text-align: center;
+        }
+        .empty-state .empty-icon {
+          width: 80px; height: 80px;
+          background: var(--primary-light);
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 16px;
+        }
+        .empty-state .empty-icon svg { width: 40px; height: 40px; color: var(--primary); }
+        .empty-state .empty-title {
+          font-size: 16px; font-weight: 600;
+          color: var(--text-primary);
+          margin-bottom: 8px;
+        }
+        .empty-state .empty-desc {
+          font-size: 13px; color: var(--text-hint);
+          margin-bottom: 20px;
+          line-height: 1.5;
+        }
+
+        /* ==================== P1-2 新建轨迹 ==================== */
+        .form-container {
+          padding: 20px 20px 120px;
+        }
+        .form-tip {
+          padding: 14px 16px;
+          background: var(--primary-light);
+          border-radius: var(--radius);
+          font-size: 14px;
+          color: #1D4ED8;
+          margin-bottom: 20px;
+          line-height: 1.5;
+          display: flex; gap: 10px;
+          border: 1px solid rgba(37,99,235,0.2);
+        }
+        .form-tip .tip-icon { font-size: 16px; flex-shrink: 0; }
+        .form-actions {
+          position: absolute;
+          bottom: 0; left: 0; right: 0;
+          padding: 16px 20px calc(16px + var(--safe-bottom));
+          background: var(--card);
+          border-top: 0.5px solid var(--border);
+        }
+
+        /* ==================== P1-3 轨迹记录页 ==================== */
+        #page-recording { background: var(--bg); }
+        .recording-map {
+          flex: 1;
+          position: relative;
+          background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 30%, #BFDBFE 60%, #EFF6FF 100%);
+          overflow: hidden;
+        }
+        .recording-map .map-bg {
+          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        }
+        .recording-map svg {
+          width: 100%; height: 100%;
+        }
+        /* 地图控件 */
+        .map-controls {
+          position: absolute;
+          right: 12px; top: 12px;
+          display: flex; flex-direction: column; gap: 8px;
+          z-index: 10;
+        }
+        .map-ctrl-btn {
+          width: 40px; height: 40px;
+          background: var(--card);
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: var(--shadow);
+          cursor: pointer;
+          font-size: 14px;
+          color: var(--text-secondary);
+          font-weight: 600;
+          border: none;
+          transition: background 0.2s;
+        }
+        .map-ctrl-btn:hover { background: var(--bg); }
+        .map-ctrl-btn.active { background: var(--primary); color: #fff; }
+
+        /* GPS 定位点 */
+        .gps-dot {
+          position: absolute;
+          width: 16px; height: 16px;
+          background: var(--primary);
+          border: 3px solid #fff;
+          border-radius: 50%;
+          box-shadow: 0 0 0 4px rgba(52,120,246,0.25), var(--shadow);
+          z-index: 5;
+          animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 4px rgba(52,120,246,0.25), var(--shadow); }
+          50% { box-shadow: 0 0 0 10px rgba(52,120,246,0.1), var(--shadow); }
+          100% { box-shadow: 0 0 0 4px rgba(52,120,246,0.25), var(--shadow); }
+        }
+
+        /* 地图标记点 */
+        .map-marker {
+          position: absolute;
+          display: flex; flex-direction: column; align-items: center;
+          z-index: 5;
+          transform: translate(-50%, -100%);
+        }
+        .map-marker .marker-pin {
+          width: 28px; height: 36px;
+          background: var(--primary);
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .map-marker .marker-pin .marker-icon {
+          transform: rotate(45deg);
+          font-size: 14px;
+          color: #fff;
+        }
+        .map-marker .marker-label {
+          font-size: 11px; font-weight: 600;
+          background: var(--card);
+          padding: 2px 6px;
+          border-radius: 4px;
+          box-shadow: var(--shadow);
+          margin-top: 4px;
+          white-space: nowrap;
+        }
+        .map-marker.start .marker-pin { background: var(--success); }
+        .map-marker.end .marker-pin { background: var(--danger); }
+
+        /* 录制状态面板 */
+        .recording-panel {
+          position: absolute;
+          bottom: 0; left: 0; right: 0;
+          background: var(--card);
+          border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+          box-shadow: 0 -4px 24px rgba(0,0,0,0.1);
+          padding: 16px 20px calc(20px + var(--safe-bottom));
+          z-index: 20;
+        }
+        .recording-status {
+          display: flex; align-items: center; justify-content: center;
+          gap: 6px;
+          margin-bottom: 12px;
+          font-size: 13px; font-weight: 600;
+        }
+        .recording-status .status-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: var(--danger);
+          animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.3; } }
+        .recording-status.paused .status-dot {
+          background: var(--warning);
+          animation: none;
+        }
+
+        .recording-stats {
+          display: flex; align-items: center; justify-content: center;
+          gap: 32px;
+          margin-bottom: 20px;
+        }
+        .recording-stat {
+          text-align: center;
+        }
+        .recording-stat .stat-value {
+          font-size: 28px; font-weight: 800;
+          color: var(--text-primary);
+        }
+        .recording-stat .stat-label {
+          font-size: 11px; color: var(--text-hint);
+          margin-top: 2px;
+        }
+
+        .recording-actions {
+          display: flex; align-items: center; justify-content: center;
+          gap: 20px;
+        }
+        .rec-btn {
+          border: none;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: var(--shadow);
+        }
+        .rec-btn-sm {
+          width: 52px; height: 52px;
+          background: var(--bg);
+          font-size: 20px;
+          color: var(--text-secondary);
+        }
+        .rec-btn-lg {
+          width: 64px; height: 64px;
+          background: var(--primary);
+          font-size: 24px;
+          color: #fff;
+          border: none;
+        }
+        .rec-btn-stop {
+          width: 52px; height: 52px;
+          background: var(--danger);
+          font-size: 20px;
+          color: #fff;
+        }
+        .rec-btn:hover { transform: scale(1.05); }
+
+        /* ==================== P1-4 轨迹详情页 ==================== */
+        .detail-map {
+          height: 220px;
+          background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 50%, #BFDBFE 100%);
+          position: relative;
+          overflow: hidden;
+        }
+        .detail-info {
+          padding: 16px 20px;
+          background: var(--card);
+        }
+        .detail-title {
+          font-size: 20px; font-weight: 800;
+          margin-bottom: 6px;
+          display: flex; align-items: center; gap: 8px;
+        }
+        .detail-title .edit-icon {
+          width: 24px; height: 24px;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--primary-light);
+          border-radius: 50%;
+          font-size: 12px;
+          color: var(--primary);
+          cursor: pointer;
+        }
+        .detail-desc {
+          font-size: 13px; color: var(--text-secondary);
+          margin-bottom: 12px;
+          line-height: 1.5;
+        }
+        .detail-stats {
+          display: flex; gap: 0;
+          background: var(--bg);
+          border-radius: var(--radius);
+          overflow: hidden;
+        }
+        .detail-stat-item {
+          flex: 1;
+          text-align: center;
+          padding: 12px 8px;
+        }
+        .detail-stat-item + .detail-stat-item {
+          border-left: 0.5px solid var(--border);
+        }
+        .detail-stat-item .stat-value {
+          font-size: 20px; font-weight: 800;
+          color: var(--text-primary);
+        }
+        .detail-stat-item .stat-label {
+          font-size: 11px; color: var(--text-hint);
+          margin-top: 2px;
+        }
+
+        /* 打卡点列表 */
+        .checkpoint-section {
+          padding: 16px 20px;
+        }
+        .checkpoint-section .section-title {
+          font-size: 16px; font-weight: 700;
+          margin-bottom: 12px;
+          display: flex; align-items: center; gap: 6px;
+        }
+        .checkpoint-timeline {
+          position: relative;
+          padding-left: 28px;
+        }
+        .checkpoint-timeline::before {
+          content: '';
+          position: absolute;
+          left: 10px; top: 8px; bottom: 8px;
+          width: 2px;
+          background: var(--border);
+          border-radius: 1px;
+        }
+        .checkpoint-item {
+          position: relative;
+          padding: 10px 14px;
+          margin-bottom: 8px;
+          background: var(--card);
+          border-radius: var(--radius);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .checkpoint-item:hover { box-shadow: var(--shadow); }
+        .checkpoint-item::before {
+          content: '';
+          position: absolute;
+          left: -22px; top: 14px;
+          width: 10px; height: 10px;
+          border-radius: 50%;
+          background: var(--primary);
+          border: 2px solid var(--primary-light);
+        }
+        .checkpoint-item.start::before { background: var(--success); border-color: #E8F9EE; }
+        .checkpoint-item.end::before { background: var(--danger); border-color: #FFE8E6; }
+        .checkpoint-item .cp-name {
+          font-size: 14px; font-weight: 600;
+          display: flex; align-items: center; gap: 6px;
+        }
+        .checkpoint-item .cp-meta {
+          font-size: 12px; color: var(--text-hint);
+          margin-top: 4px;
+        }
+        .checkpoint-item .cp-has-content {
+          display: inline-flex; align-items: center; gap: 3px;
+          font-size: 11px; color: var(--primary);
+          background: var(--primary-light);
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .detail-actions {
+          padding: 0 20px 120px;
+          display: flex; gap: 12px;
+        }
+        .detail-actions .btn { flex: 1; }
+
+        /* ==================== P1-5 打卡点详情页 ==================== */
+        .spot-header {
+          padding: 16px 20px;
+          background: var(--card);
+        }
+        .spot-title {
+          font-size: 22px; font-weight: 800;
+          display: flex; align-items: center; gap: 8px;
+          margin-bottom: 4px;
+        }
+        .spot-breadcrumb {
+          font-size: 12px; color: var(--text-hint);
+          margin-bottom: 12px;
+        }
+        .spot-location {
+          display: flex; gap: 12px;
+          flex-wrap: wrap;
+        }
+        .spot-location .loc-item {
+          display: flex; align-items: center; gap: 4px;
+          font-size: 12px; color: var(--text-secondary);
+          background: var(--bg);
+          padding: 4px 10px;
+          border-radius: var(--radius-full);
+        }
+
+        .spot-content {
+          padding: 16px 20px;
+        }
+        .spot-content .content-title {
+          font-size: 16px; font-weight: 700;
+          margin-bottom: 12px;
+        }
+        .spot-text {
+          font-size: 14px; color: var(--text-primary);
+          line-height: 1.8;
+          margin-bottom: 16px;
+        }
+        .spot-photos {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .spot-photo {
+          aspect-ratio: 1;
+          background: var(--bg);
+          border-radius: 8px;
+          overflow: hidden;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 24px; color: var(--text-hint);
+          cursor: pointer;
+          transition: transform 0.2s;
+        }
+        .spot-photo:hover { transform: scale(1.03); }
+        .spot-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+        .spot-actions {
+          padding: 0 20px 120px;
+          display: flex; gap: 12px;
+        }
+        .spot-actions .btn { flex: 1; }
+
+        /* ==================== P2-1 分享弹窗 ==================== */
+        .share-preview {
+          background: var(--bg);
+          border-radius: var(--radius);
+          padding: 16px;
+          margin-bottom: 20px;
+          text-align: center;
+        }
+        .share-preview .preview-map {
+          height: 120px;
+          background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+          border-radius: var(--radius-sm);
+          margin-bottom: 12px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .share-preview .preview-map svg { width: 40px; height: 40px; color: var(--primary); }
+        .share-preview .preview-title {
+          font-size: 16px; font-weight: 700;
+        }
+        .share-preview .preview-info {
+          font-size: 12px; color: var(--text-hint);
+          margin-top: 4px;
+        }
+        .share-methods {
+          display: flex; gap: 16px;
+          justify-content: center;
+          margin-bottom: 20px;
+        }
+        .share-method {
+          display: flex; flex-direction: column;
+          align-items: center; gap: 6px;
+          cursor: pointer;
+        }
+        .share-method .method-icon {
+          width: 48px; height: 48px;
+          border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 22px;
+        }
+        .share-method .method-label {
+          font-size: 11px; color: var(--text-secondary);
+        }
+        .share-method.wechat .method-icon { background: #07C160; color: #fff; }
+        .share-method.moments .method-icon { background: #576B95; color: #fff; }
+        .share-method.copy .method-icon { background: var(--bg); color: var(--text-secondary); }
+        .share-method.qrcode .method-icon { background: var(--text-primary); color: #fff; }
+
+        /* ==================== P3-1 个人中心 ==================== */
+        .profile-header {
+          background: linear-gradient(135deg, #1E40AF 0%, #2563EB 50%, #0EA5E9 100%);
+          padding: calc(var(--safe-top) + 24px) 20px 32px;
+          color: #fff;
+          text-align: center;
+        }
+        .profile-avatar {
+          width: 72px; height: 72px;
+          background: rgba(255,255,255,0.2);
+          border: 3px solid rgba(255,255,255,0.5);
+          border-radius: 50%;
+          margin: 0 auto 12px;
+          display: flex; align-items: center; justify-content: center;
+          overflow: hidden;
+          color: #fff;
+        }
+        .profile-avatar svg { flex-shrink: 0; }
+        .profile-name {
+          font-size: 20px; font-weight: 700;
+          margin-bottom: 4px;
+        }
+        .profile-subtitle {
+          font-size: 13px; opacity: 0.7;
+        }
+        .profile-stats-bar {
+          display: flex;
+          background: rgba(255,255,255,0.15);
+          border-radius: var(--radius);
+          margin-top: 16px;
+          padding: 12px 0;
+          backdrop-filter: blur(10px);
+        }
+        .profile-stat {
+          flex: 1;
+          text-align: center;
+        }
+        .profile-stat .p-val {
+          font-size: 22px; font-weight: 800;
+        }
+        .profile-stat .p-label {
+          font-size: 11px; opacity: 0.7;
+          margin-top: 2px;
+        }
+        .profile-stat + .profile-stat {
+          border-left: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .profile-menu {
+          padding: 16px 16px 120px;
+        }
+        .menu-group {
+          background: var(--card);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          margin-bottom: 12px;
+          overflow: hidden;
+        }
+        .menu-item {
+          display: flex; align-items: center;
+          padding: 16px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .menu-item:hover { background: var(--bg); }
+        .menu-item + .menu-item { border-top: 0.5px solid var(--border); }
+        .menu-item .menu-icon {
+          width: 36px; height: 36px;
+          background: var(--primary-light);
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 18px;
+          margin-right: 12px;
+          flex-shrink: 0;
+        }
+        .menu-item .menu-icon.orange { background: var(--accent-light); }
+        .menu-item .menu-icon.green { background: #E8F9EE; }
+        .menu-item .menu-icon.red { background: #FFE8E6; }
+        .menu-item .menu-text {
+          flex: 1;
+          font-size: 15px; font-weight: 500;
+        }
+        .menu-item .menu-arrow {
+          color: var(--text-hint);
+          font-size: 14px;
+        }
+        .menu-item .menu-value {
+          font-size: 13px; color: var(--text-hint);
+          margin-right: 8px;
+        }
+
+        .logout-btn {
+          width: 100%;
+          padding: 14px;
+          background: var(--card);
+          border: none;
+          border-radius: var(--radius);
+          color: var(--danger);
+          font-size: 15px; font-weight: 600;
+          cursor: pointer;
+          box-shadow: var(--shadow);
+          transition: background 0.2s;
+        }
+        .logout-btn:hover { background: var(--danger-light); }
+
+        /* ==================== P3-2 个人信息编辑页 ==================== */
+        .edit-avatar-section {
+          text-align: center;
+          padding: 24px 20px;
+          background: var(--card);
+        }
+        .edit-avatar {
+          width: 80px; height: 80px;
+          background: var(--primary-light);
+          border-radius: 50%;
+          margin: 0 auto 12px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 36px;
+          position: relative;
+          cursor: pointer;
+        }
+        .edit-avatar .camera-badge {
+          position: absolute;
+          bottom: 0; right: 0;
+          width: 28px; height: 28px;
+          background: var(--primary);
+          border-radius: 50%;
+          border: 2px solid var(--card);
+          display: flex; align-items: center; justify-content: center;
+          color: #fff;
+        }
+        .edit-avatar .camera-badge svg { width: 14px; height: 14px; }
+        .edit-avatar-hint {
+          font-size: 13px; color: var(--text-hint);
+        }
+        .edit-form {
+          padding: 20px;
+          background: var(--card);
+          margin-top: 8px;
+        }
+
+        /* ==================== 页面导航指引 ==================== */
+        .page-nav-hint {
+          position: absolute;
+          bottom: calc(var(--tab-height) + var(--safe-bottom) + 12px);
+          left: 16px; right: 16px;
+          background: var(--text-primary);
+          color: #fff;
+          padding: 12px 16px;
+          border-radius: var(--radius);
+          font-size: 12px;
+          text-align: center;
+          z-index: 40;
+          opacity: 0.9;
+          display: none;
+        }
+
+        /* 弹窗对话框（居中） */
+        .dialog-overlay {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.45);
+          z-index: 300;
+          display: none;
+          align-items: center; justify-content: center;
+        }
+        .dialog-overlay.active { display: flex; }
+        .dialog-box {
+          background: var(--card);
+          border-radius: var(--radius-lg);
+          width: 300px;
+          padding: 24px;
+          text-align: center;
+          animation: zoomIn 0.2s ease;
+        }
+        @keyframes zoomIn {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .dialog-box .dialog-title {
+          font-size: 18px; font-weight: 700;
+          margin-bottom: 8px;
+        }
+        .dialog-box .dialog-desc {
+          font-size: 14px; color: var(--text-secondary);
+          margin-bottom: 20px;
+          line-height: 1.5;
+        }
+        .dialog-box .dialog-input {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1.5px solid var(--border);
+          border-radius: 10px;
+          font-size: 15px;
+          margin-bottom: 16px;
+          outline: none;
+          text-align: center;
+        }
+        .dialog-box .dialog-input:focus { border-color: var(--primary); }
+        .dialog-box .dialog-actions {
+          display: flex; gap: 12px;
+        }
+        .dialog-box .dialog-actions .btn { flex: 1; padding: 10px; font-size: 15px; }
+
+        /* ==================== 原型导航面板 ==================== */
+        .prototype-nav {
+          position: fixed;
+          top: 12px; right: 12px;
+          z-index: 9999;
+          background: var(--card);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow-lg);
+          padding: 8px;
+          max-width: 200px;
+        }
+        .prototype-nav .pn-title {
+          font-size: 11px; font-weight: 700;
+          color: var(--text-hint);
+          padding: 4px 8px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .prototype-nav .pn-item {
+          display: block;
+          padding: 6px 8px;
+          font-size: 12px;
+          color: var(--text-secondary);
+          cursor: pointer;
+          border-radius: 6px;
+          transition: all 0.2s;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        .prototype-nav .pn-item:hover { background: var(--primary-light); color: var(--primary); }
+        .prototype-nav .pn-item.active { background: var(--primary); color: #fff; }
+        .pn-toggle {
+          position: fixed;
+          top: 12px; right: 12px;
+          z-index: 10000;
+          width: 36px; height: 36px;
+          background: var(--primary);
+          color: #fff;
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 16px;
+          display: none;
+          align-items: center; justify-content: center;
+          box-shadow: var(--shadow-lg);
+        }
+
+        /* ==================== 设置起点弹窗 ==================== */
+        #dialog-setpoint .dialog-input {
+          text-align: left;
+        }
+
+        /* ==================== 图层选择面板 ==================== */
+        .layer-panel {
+          position: absolute;
+          right: 60px; top: 12px;
+          background: var(--card);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow-lg);
+          padding: 8px;
+          z-index: 15;
+          display: none;
+        }
+        .layer-panel.active { display: block; }
+        .layer-option {
+          display: flex; align-items: center; gap: 8px;
+          padding: 8px 12px;
+          font-size: 13px;
+          cursor: pointer;
+          border-radius: 8px;
+          transition: background 0.2s;
+          white-space: nowrap;
+        }
+        .layer-option:hover { background: var(--bg); }
+        .layer-option.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .layer-option .layer-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+        }
+
+        /* ==================== 响应式 ==================== */
+        @media (max-width: 420px) {
+          .phone-frame {
+            width: 100%; height: 100%;
+            border-radius: 0;
+            box-shadow: none;
+          }
+          .prototype-nav { display: none; }
+          .pn-toggle { display: flex; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============ 原型页面快捷导航 ============ -->
+<div class="prototype-nav" id="protoNav">
+    <div class="pn-title">页面导航</div>
+    <a class="pn-item active" onclick="goPage('splash')">P0-1 启动页</a>
+    <a class="pn-item" onclick="goPage('login')">P0-2 登录页</a>
+    <a class="pn-item" onclick="goPage('home')">P1-0 首页</a>
+    <a class="pn-item" onclick="goPage('create')">P1-2 新建轨迹</a>
+    <a class="pn-item" onclick="goPage('recording')">P1-3 轨迹记录</a>
+    <a class="pn-item" onclick="goPage('detail')">P1-4 详情(已完成)</a>
+    <a class="pn-item" onclick="goPage('detailEditing')">P1-4 详情(编辑中)</a>
+    <a class="pn-item" onclick="goPage('spot')">P1-5 打卡点详情</a>
+    <a class="pn-item" onclick="goPage('profile')">P3-1 个人中心</a>
+    <a class="pn-item" onclick="goPage('editProfile')">P3-2 编辑信息</a>
+</div>
+
+<!-- ============ 手机壳 ============ -->
+<div class="phone-frame">
+
+    <!-- ============ P0-1 启动页 ============ -->
+    <div class="page active" id="page-splash">
+        <div class="status-bar">
+            <span class="time">10:30</span>
+            <span class="icons">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="splash-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div class="splash-name">遨游轨迹</div>
+        <div class="splash-slogan">记录每一段值得传承的路程</div>
+        <div class="splash-hint" onclick="goPage('login')">点击进入</div>
+    </div>
+
+    <!-- ============ P0-2 登录页 ============ -->
+    <div class="page" id="page-login">
+        <div class="status-bar">
+            <span class="time">10:30</span>
+            <span class="icons">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="login-container">
+            <div class="login-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="login-title">遨游轨迹</div>
+            <div class="login-desc">记录扫墓轨迹，守护家族记忆<br>让祭祖文化更容易延续</div>
+            <div class="login-btn-area">
+                <button class="btn-hw-login" onclick="goPage('home')">
+                    <svg class="hw-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 1.5c4.69 0 8.5 3.81 8.5 8.5s-3.81 8.5-8.5 8.5S3.5 16.69 3.5 12 7.31 3.5 12 3.5z" fill="#fff"/>
+                        <path d="M7.5 8.5C7.5 8.5 9 11 12 11s4.5-2.5 4.5-2.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M12 11v5.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M9 14.5l3 2 3-2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    华为账号一键登录
+                </button>
+                <div style="text-align:center;margin-top:12px;font-size:12px;color:rgba(255,255,255,0.5);">首次登录将自动创建账户</div>
+            </div>
+        </div>
+        <div class="login-agreement">
+            <label style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                <input type="checkbox" checked style="accent-color:var(--primary)">
+                已阅读并同意
+            </label>
+            <a href="#">《用户协议》</a> 与 <a href="#">《隐私政策》</a>
+        </div>
+    </div>
+
+    <!-- ============ P1-0 首页 ============ -->
+    <div class="page" id="page-home">
+        <div class="status-bar dark">
+            <span class="time">10:30</span>
+            <span class="icons" style="color:var(--text-secondary)">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+
+        <div class="home-header">
+            <div class="home-header-top">
+                <div class="home-header-title">遨游轨迹</div>
+                <div class="home-header-search" title="搜索"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+            </div>
+            <div class="home-tabs">
+                <div class="home-tab active" id="tab-my" onclick="switchHomeTab('my')">我的轨迹</div>
+                <div class="home-tab" id="tab-public" onclick="switchHomeTab('public')">公开轨迹</div>
+            </div>
+        </div>
+
+        <div class="page-content" id="home-content">
+            <!-- 我的轨迹 Tab 内容 -->
+            <div id="tab-content-my">
+                <!-- 统计卡片 -->
+                <div class="stats-card">
+                    <div>
+                        <div class="stats-value">3</div>
+                        <div class="stats-unit">轨迹总数</div>
+                    </div>
+                    <div class="stats-divider"></div>
+                    <div>
+                        <div class="stats-value">12</div>
+                        <div class="stats-unit">打卡点数</div>
+                    </div>
+                    <div class="stats-divider"></div>
+                    <div>
+                        <div class="stats-value">8.5</div>
+                        <div class="stats-unit">总里程(km)</div>
+                    </div>
+                </div>
+
+                <div class="create-btn-area">
+                    <button class="btn-create" onclick="goPage('create')">
+                        <span style="font-size:18px">&#43;</span> 新建扫墓轨迹
+                    </button>
+                </div>
+
+                <!-- 轨迹卡片 1 -->
+                <div class="track-list">
+                    <div class="track-card" onclick="goPage('detail')">
+                        <div class="track-card-map">
+                            <svg viewBox="0 0 375 120" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="mapBg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#EFF6FF"/>
+                                        <stop offset="100%" style="stop-color:#DBEAFE"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect fill="url(#mapBg1)" width="375" height="120"/>
+                                <path d="M30,80 Q80,30 140,60 T250,40 Q300,50 350,70" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                <circle cx="30" cy="80" r="5" fill="#2563EB"/>
+                                <circle cx="140" cy="60" r="4" fill="#A0522D"/>
+                                <circle cx="200" cy="45" r="4" fill="#A0522D"/>
+                                <circle cx="350" cy="70" r="5" fill="#A63D3D"/>
+                            </svg>
+                        </div>
+                        <div class="track-card-info">
+                            <div class="track-card-title">
+                                刘氏家族清明扫墓
+                                <span class="badge badge-success">已完成</span>
+                            </div>
+                            <div class="track-card-meta">
+                                <span>2026年02月05日 08:30</span>
+                            </div>
+                            <div class="track-card-stats">
+                                <span>&#128205; 4个打卡点</span>
+                                <span>&#128207; 3.2km</span>
+                                <span>&#9968; 海拔180m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track-card" onclick="goPage('detailEditing')">
+                        <div class="track-card-map">
+                            <svg viewBox="0 0 375 120" preserveAspectRatio="none">
+                                <rect fill="#E0EDE0" width="375" height="120"/>
+                                <path d="M20,90 Q100,20 180,50 T340,30" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                <circle cx="20" cy="90" r="5" fill="#2563EB"/>
+                                <circle cx="180" cy="50" r="4" fill="#A0522D"/>
+                            </svg>
+                        </div>
+                        <div class="track-card-info">
+                            <div class="track-card-title">
+                                横县祭祖路线
+                                <span class="badge badge-warning">编辑中</span>
+                            </div>
+                            <div class="track-card-meta">
+                                <span>2026年01月29日 14:00</span>
+                            </div>
+                            <div class="track-card-stats">
+                                <span>&#128205; 1个打卡点</span>
+                                <span>&#128207; 2.1km</span>
+                                <span>&#9968; 海拔120m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track-card" onclick="goPage('detail')">
+                        <div class="track-card-map">
+                            <svg viewBox="0 0 375 120" preserveAspectRatio="none">
+                                <rect fill="#e0e8d8" width="375" height="120"/>
+                                <path d="M40,70 Q90,40 150,55 T280,35 Q320,50 360,60" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                <circle cx="40" cy="70" r="5" fill="#2563EB"/>
+                                <circle cx="150" cy="55" r="4" fill="#A0522D"/>
+                                <circle cx="230" cy="38" r="4" fill="#A0522D"/>
+                                <circle cx="290" cy="35" r="4" fill="#A0522D"/>
+                                <circle cx="360" cy="60" r="5" fill="#A63D3D"/>
+                            </svg>
+                        </div>
+                        <div class="track-card-info">
+                            <div class="track-card-title">
+                                马山扫墓之路
+                                <span class="badge badge-success">已完成</span>
+                            </div>
+                            <div class="track-card-meta">
+                                <span>2026年01月15日 07:45</span>
+                            </div>
+                            <div class="track-card-stats">
+                                <span>&#128205; 6个打卡点</span>
+                                <span>&#128207; 3.2km</span>
+                                <span>&#9968; 海拔280m</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 公开轨迹 Tab 内容 -->
+            <div id="tab-content-public" style="display:none">
+                <div class="track-list" style="padding-top:16px">
+                    <div class="track-card" onclick="goPage('detail')">
+                        <div class="track-card-map">
+                            <svg viewBox="0 0 375 120" preserveAspectRatio="none">
+                                <rect fill="#dce8dc" width="375" height="120"/>
+                                <path d="M30,80 Q100,25 200,55 T360,40" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                <circle cx="30" cy="80" r="5" fill="#2563EB"/>
+                                <circle cx="200" cy="55" r="4" fill="#A0522D"/>
+                                <circle cx="360" cy="40" r="5" fill="#A63D3D"/>
+                            </svg>
+                        </div>
+                        <div class="track-card-info">
+                            <div class="track-card-title">
+                                陈氏宗族扫墓路线
+                                <span class="badge badge-primary">公开</span>
+                            </div>
+                            <div class="track-card-meta">
+                                <span>&#128100; 阿强</span>
+                                <span>2026年02月03日</span>
+                            </div>
+                            <div class="track-card-stats">
+                                <span>&#128205; 5个打卡点</span>
+                                <span>&#128207; 4.8km</span>
+                                <span>&#9968; 海拔320m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track-card" onclick="goPage('detail')">
+                        <div class="track-card-map">
+                            <svg viewBox="0 0 375 120" preserveAspectRatio="none">
+                                <rect fill="#d8e4d0" width="375" height="120"/>
+                                <path d="M20,60 Q80,90 150,40 T300,50 Q340,30 370,60" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                <circle cx="20" cy="60" r="5" fill="#2563EB"/>
+                                <circle cx="150" cy="40" r="4" fill="#A0522D"/>
+                                <circle cx="250" cy="48" r="4" fill="#A0522D"/>
+                                <circle cx="370" cy="60" r="5" fill="#A63D3D"/>
+                            </svg>
+                        </div>
+                        <div class="track-card-info">
+                            <div class="track-card-title">
+                                黄氏祭祖之旅
+                                <span class="badge badge-primary">公开</span>
+                            </div>
+                            <div class="track-card-meta">
+                                <span>&#128100; 小黄</span>
+                                <span>2026年01月28日</span>
+                            </div>
+                            <div class="track-card-stats">
+                                <span>&#128205; 3个打卡点</span>
+                                <span>&#128207; 2.5km</span>
+                                <span>&#9968; 海拔150m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track-card" onclick="goPage('detail')">
+                        <div class="track-card-map">
+                            <svg viewBox="0 0 375 120" preserveAspectRatio="none">
+                                <rect fill="#e0ecd8" width="375" height="120"/>
+                                <path d="M25,85 Q70,30 130,60 T260,25 Q310,45 365,55" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                <circle cx="25" cy="85" r="5" fill="#2563EB"/>
+                                <circle cx="130" cy="60" r="4" fill="#A0522D"/>
+                                <circle cx="195" cy="38" r="4" fill="#A0522D"/>
+                                <circle cx="260" cy="25" r="4" fill="#A0522D"/>
+                                <circle cx="365" cy="55" r="5" fill="#A63D3D"/>
+                            </svg>
+                        </div>
+                        <div class="track-card-info">
+                            <div class="track-card-title">
+                                李氏春节祭祖
+                                <span class="badge badge-primary">公开</span>
+                            </div>
+                            <div class="track-card-meta">
+                                <span>&#128100; 大李</span>
+                                <span>2026年01月20日</span>
+                            </div>
+                            <div class="track-card-stats">
+                                <span>&#128205; 8个打卡点</span>
+                                <span>&#128207; 5.6km</span>
+                                <span>&#9968; 海拔420m</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部 TabBar -->
+        <div class="tab-bar">
+            <div class="tab-item active" onclick="goPage('home')">
+                <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                <div class="tab-label">首页</div>
+            </div>
+            <div class="tab-item" onclick="goPage('profile')">
+                <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+                <div class="tab-label">个人中心</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ P1-2 新建轨迹 ============ -->
+    <div class="page" id="page-create">
+        <div class="status-bar dark">
+            <span class="time">10:30</span>
+            <span class="icons" style="color:var(--text-secondary)">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="nav-bar">
+            <div class="nav-back" onclick="goPage('home')">&#8249;</div>
+            <div class="nav-title">新建轨迹</div>
+            <div style="width:32px"></div>
+        </div>
+        <div class="page-content">
+            <div class="form-container">
+                <div class="form-tip">
+                    <span class="tip-icon">&#128161;</span>
+                    <span>建议填写本次扫墓的地区、主要祖先姓氏、日期等信息，方便日后查找。</span>
+                </div>
+                <div class="input-group">
+                    <label>轨迹名称 <span style="color:var(--danger)">*</span></label>
+                    <input type="text" placeholder="例如：刘氏家族清明扫墓" value="刘氏家族清明扫墓">
+                </div>
+                <div class="input-group">
+                    <label>轨迹简介</label>
+                    <textarea placeholder="简要描述本次扫墓的目的、参与人员等">2026年清明节，带领全家前往横县大山祭扫祖先墓地，共计走访4处祖墓。</textarea>
+                </div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary btn-block btn-lg" onclick="goPage('recording')">
+                保存并开始记录
+            </button>
+        </div>
+    </div>
+
+    <!-- ============ P1-3 轨迹记录页 ============ -->
+    <div class="page" id="page-recording">
+        <div class="status-bar">
+      <span class="time" style="display:flex;align-items:center;gap:4px">
+        <span style="width:6px;height:6px;background:#A63D3D;border-radius:50%;display:inline-block"></span>
+        00:15:32
+      </span>
+            <span class="icons">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+
+        <!-- 返回按钮（悬浮在地图上） -->
+        <div style="position:absolute;left:12px;top:calc(var(--safe-top) + 8px);z-index:30">
+            <button class="map-ctrl-btn" onclick="showDialog('interrupt')" style="width:40px;height:40px;font-size:18px" title="返回">&#8249;</button>
+        </div>
+
+        <div class="recording-map">
+            <div class="map-bg">
+                <svg viewBox="0 0 375 500" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                        <linearGradient id="mapBg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#EEF5EE"/>
+                            <stop offset="40%" style="stop-color:#E0EDE0"/>
+                            <stop offset="100%" style="stop-color:#A7F3D0"/>
+                        </linearGradient>
+                        <pattern id="topo" width="60" height="60" patternUnits="userSpaceOnUse">
+                            <path d="M0,30 Q15,20 30,30 T60,30" stroke="rgba(0,0,0,0.06)" stroke-width="0.5" fill="none"/>
+                            <path d="M0,45 Q15,35 30,45 T60,45" stroke="rgba(0,0,0,0.04)" stroke-width="0.5" fill="none"/>
+                            <path d="M0,15 Q15,5 30,15 T60,15" stroke="rgba(0,0,0,0.04)" stroke-width="0.5" fill="none"/>
+                        </pattern>
+                    </defs>
+                    <rect fill="url(#mapBg2)" width="375" height="500"/>
+                    <rect fill="url(#topo)" width="375" height="500"/>
+                    <!-- 轨迹路径 -->
+                    <path d="M80,400 Q100,370 120,350 L140,320 Q160,290 170,260 L190,230 Q200,210 220,200 L240,185 Q260,170 270,150 L280,130"
+                          stroke="#2563EB" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-dasharray="none" opacity="0.9"/>
+                    <!-- 路径阴影 -->
+                    <path d="M80,400 Q100,370 120,350 L140,320 Q160,290 170,260 L190,230 Q200,210 220,200 L240,185 Q260,170 270,150 L280,130"
+                          stroke="#2563EB" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.15"/>
+                </svg>
+            </div>
+
+            <!-- 起点标记 -->
+            <div class="map-marker start" style="left:80px;top:370px">
+                <div class="marker-pin"><span class="marker-icon">S</span></div>
+                <div class="marker-label">山脚入口</div>
+            </div>
+
+            <!-- 打卡点标记 -->
+            <div class="map-marker" style="left:170px;top:230px" onclick="toggleRecSpotPanel()">
+                <div class="marker-pin"><span class="marker-icon">1</span></div>
+                <div class="marker-label">刘公祖墓</div>
+            </div>
+
+            <!-- GPS 当前位置 -->
+            <div class="gps-dot" style="left:272px;top:122px"></div>
+
+            <!-- 地图控件 -->
+            <div class="map-controls">
+                <button class="map-ctrl-btn" onclick="toggleLayerPanel()" title="图层切换">&#127758;</button>
+                <button class="map-ctrl-btn" title="2D/3D">3D</button>
+                <button class="map-ctrl-btn" title="定位">&#128205;</button>
+            </div>
+
+            <!-- 图层面板 -->
+            <div class="layer-panel" id="layerPanel">
+                <div class="layer-option active">
+                    <span class="layer-dot" style="background:#7CB342"></span> 标准地图
+                </div>
+                <div class="layer-option">
+                    <span class="layer-dot" style="background:#5D8AA8"></span> 卫星地图
+                </div>
+                <div class="layer-option">
+                    <span class="layer-dot" style="background:#8D6E63"></span> 地形地图
+                </div>
+            </div>
+        </div>
+
+        <!-- 已打卡点列表面板（可展开/收起） -->
+        <div class="recording-spots-panel" id="recSpotsPanel" style="
+      position:absolute; bottom:0; left:0; right:0;
+      background:var(--card);
+      border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+      box-shadow:0 -4px 20px rgba(0,0,0,0.1);
+      z-index:25;
+      transform:translateY(100%);
+      transition:transform 0.3s ease;
+      padding:16px 20px calc(20px + var(--safe-bottom));
+      max-height:60vh; overflow-y:auto;
+    ">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <div style="font-size:16px;font-weight:700">&#128205; 已添加打卡点</div>
+                <div class="modal-close" onclick="toggleRecSpotPanel()">&#10005;</div>
+            </div>
+
+            <div class="checkpoint-timeline" style="padding-left:28px">
+                <div class="checkpoint-item start" style="margin-bottom:8px">
+                    <div class="cp-name">
+                        &#127793; 山脚入口
+                        <span class="tag" style="font-size:10px;padding:2px 6px">起点</span>
+                    </div>
+                    <div class="cp-meta">14:00 · 海拔 30m</div>
+                </div>
+                <div class="checkpoint-item" onclick="goPage('spot')" style="margin-bottom:8px">
+                    <div class="cp-name" style="display:flex;align-items:center;justify-content:space-between">
+            <span>
+              ① 刘公祖墓
+              <span class="cp-has-content">&#128247; 图文</span>
+            </span>
+                        <span style="font-size:12px;color:var(--primary);cursor:pointer">编辑 &#8250;</span>
+                    </div>
+                    <div class="cp-meta">14:25 · 海拔 95m</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 录制面板 -->
+        <div class="recording-panel" id="recPanel">
+            <div class="recording-status" id="recStatus">
+                <span class="status-dot"></span>
+                <span>录制中</span>
+            </div>
+            <div class="recording-stats">
+                <div class="recording-stat">
+                    <div class="stat-value">2.45</div>
+                    <div class="stat-label">里程(km)</div>
+                </div>
+                <div class="recording-stat">
+                    <div class="stat-value">15:32</div>
+                    <div class="stat-label">用时</div>
+                </div>
+                <div class="recording-stat">
+                    <div class="stat-value">168</div>
+                    <div class="stat-label">当前海拔(m)</div>
+                </div>
+            </div>
+
+            <!-- 已打卡点快捷入口 -->
+            <div onclick="toggleRecSpotPanel()" style="
+        display:flex;align-items:center;justify-content:space-between;
+        background:var(--bg);border-radius:10px;padding:10px 14px;
+        margin-bottom:14px;cursor:pointer;transition:background 0.2s;
+      ">
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+                    <span style="font-size:16px">&#128205;</span>
+                    <span style="font-weight:600">已添加 1 个打卡点</span>
+                    <span style="color:var(--text-hint)">· 刘公祖墓</span>
+                </div>
+                <span style="font-size:14px;color:var(--text-hint)">&#8250;</span>
+            </div>
+
+            <div class="recording-actions">
+                <button class="rec-btn rec-btn-sm" title="设置打卡点" onclick="showDialog('setpoint')">&#128205;</button>
+                <button class="rec-btn rec-btn-lg" title="暂停" id="btnPause" onclick="togglePause()">&#9208;</button>
+                <button class="rec-btn rec-btn-stop" title="设置终点" onclick="showDialog('endpoint')">&#9724;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ P1-4 轨迹详情页（已完成状态） ============ -->
+    <div class="page" id="page-detail">
+        <div class="status-bar dark">
+            <span class="time">10:30</span>
+            <span class="icons" style="color:var(--text-secondary)">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="nav-bar">
+            <div class="nav-back" onclick="goPage('home')">&#8249;</div>
+            <div class="nav-title">轨迹详情</div>
+            <div class="nav-action" onclick="showShareModal()">&#8943;</div>
+        </div>
+        <div class="page-content">
+            <div class="detail-map">
+                <svg viewBox="0 0 375 220" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                        <linearGradient id="mapBg3" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#EEF5EE"/>
+                            <stop offset="100%" style="stop-color:#E0EDE0"/>
+                        </linearGradient>
+                    </defs>
+                    <rect fill="url(#mapBg3)" width="375" height="220"/>
+                    <path d="M30,180 Q80,140 120,130 L160,100 Q200,70 230,80 L280,60 Q320,40 360,50"
+                          stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <circle cx="30" cy="180" r="6" fill="#2563EB" stroke="#fff" stroke-width="2"/>
+                    <circle cx="160" cy="100" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+                    <circle cx="230" cy="80" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+                    <circle cx="280" cy="60" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+                    <circle cx="360" cy="50" r="6" fill="#A63D3D" stroke="#fff" stroke-width="2"/>
+                    <text x="30" y="170" font-size="9" fill="#2563EB" text-anchor="middle" font-weight="700">起点</text>
+                    <text x="160" y="92" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9312;</text>
+                    <text x="230" y="72" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9313;</text>
+                    <text x="280" y="52" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9314;</text>
+                    <text x="360" y="42" font-size="9" fill="#A63D3D" text-anchor="middle" font-weight="700">终点</text>
+                </svg>
+                <div style="position:absolute;right:12px;top:12px;display:flex;gap:8px">
+                    <button class="map-ctrl-btn" style="width:32px;height:32px;font-size:12px">&#127758;</button>
+                    <button class="map-ctrl-btn" style="width:32px;height:32px;font-size:11px">3D</button>
+                </div>
+            </div>
+
+            <div class="detail-info">
+                <div class="detail-title">
+                    刘氏家族清明扫墓
+                    <span class="edit-icon">&#9998;</span>
+                    <span class="badge badge-success">已完成</span>
+                </div>
+                <div class="detail-desc">2026年清明节，带领全家前往横县大山祭扫祖先墓地，共计走访4处祖墓。</div>
+                <div class="detail-stats">
+                    <div class="detail-stat-item">
+                        <div class="stat-value">3.2</div>
+                        <div class="stat-label">总里程(km)</div>
+                    </div>
+                    <div class="detail-stat-item">
+                        <div class="stat-value">56:12</div>
+                        <div class="stat-label">用时</div>
+                    </div>
+                    <div class="detail-stat-item">
+                        <div class="stat-value">180</div>
+                        <div class="stat-label">海拔(m)</div>
+                    </div>
+                    <div class="detail-stat-item">
+                        <div class="stat-value">4</div>
+                        <div class="stat-label">打卡点</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding:12px 20px 0">
+                <div style="display:flex;align-items:center;justify-content:space-between;background:var(--card);padding:14px 16px;border-radius:var(--radius);box-shadow:var(--shadow)">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span style="font-size:18px">&#128274;</span>
+                        <div>
+                            <div style="font-size:14px;font-weight:600">可见范围</div>
+                            <div style="font-size:12px;color:var(--text-hint)">设置轨迹对其他人是否可见</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;background:var(--bg);border-radius:var(--radius-full);padding:3px;gap:2px" id="visibilityToggle">
+                        <button onclick="setVisibility('private')" id="vis-private" style="padding:6px 14px;border:none;border-radius:var(--radius-full);font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:#fff;transition:all 0.2s">私有</button>
+                        <button onclick="setVisibility('public')" id="vis-public" style="padding:6px 14px;border:none;border-radius:var(--radius-full);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-hint);transition:all 0.2s">公开</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="checkpoint-section">
+                <div class="section-title">&#128205; 路线详情</div>
+                <div class="checkpoint-timeline">
+                    <div class="checkpoint-item start">
+                        <div class="cp-name">
+                            &#127793; 山脚入口
+                            <span class="tag" style="font-size:10px;padding:2px 6px">起点</span>
+                        </div>
+                        <div class="cp-meta">2026-02-05 08:30 · 海拔 35m</div>
+                    </div>
+                    <div class="checkpoint-item" onclick="goPage('spot')">
+                        <div class="cp-name">
+                            ① 刘公祖墓
+                            <span class="cp-has-content">&#128247; 图文</span>
+                        </div>
+                        <div class="cp-meta">2026-02-05 09:05 · 海拔 120m</div>
+                    </div>
+                    <div class="checkpoint-item" onclick="goPage('spot')">
+                        <div class="cp-name">
+                            ② 二世祖刘德芳墓
+                            <span class="cp-has-content">&#128247; 图文</span>
+                        </div>
+                        <div class="cp-meta">2026-02-05 09:32 · 海拔 155m</div>
+                    </div>
+                    <div class="checkpoint-item" onclick="goPage('spot')">
+                        <div class="cp-name">
+                            ③ 三世祖刘振华墓
+                        </div>
+                        <div class="cp-meta">2026-02-05 10:08 · 海拔 168m</div>
+                    </div>
+                    <div class="checkpoint-item" onclick="goPage('spot')">
+                        <div class="cp-name">
+                            ④ 祖母李氏墓
+                            <span class="cp-has-content">&#128247; 图文</span>
+                        </div>
+                        <div class="cp-meta">2026-02-05 10:35 · 海拔 180m</div>
+                    </div>
+                    <div class="checkpoint-item end">
+                        <div class="cp-name">
+                            &#127937; 山脚出口
+                            <span class="tag" style="font-size:10px;padding:2px 6px;background:#FFE8E6;color:var(--danger)">终点</span>
+                        </div>
+                        <div class="cp-meta">2026-02-05 11:26 · 海拔 40m</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-actions">
+                <button class="btn btn-primary btn-round" onclick="showShareModal()">&#128228; 分享轨迹</button>
+                <button class="btn btn-outline btn-round" style="color:var(--danger);border-color:var(--danger)">&#128465; 删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ P1-4b 轨迹详情页（编辑中状态） ============ -->
+    <div class="page" id="page-detailEditing">
+        <div class="status-bar dark">
+            <span class="time">10:30</span>
+            <span class="icons" style="color:var(--text-secondary)">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="nav-bar">
+            <div class="nav-back" onclick="goPage('home')">&#8249;</div>
+            <div class="nav-title">轨迹详情</div>
+            <div style="width:32px"></div>
+        </div>
+        <div class="page-content">
+            <div class="detail-map">
+                <svg viewBox="0 0 375 220" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                        <linearGradient id="mapBg3b" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#EEF5EE"/>
+                            <stop offset="100%" style="stop-color:#E0EDE0"/>
+                        </linearGradient>
+                    </defs>
+                    <rect fill="url(#mapBg3b)" width="375" height="220"/>
+                    <path d="M30,180 Q80,140 120,130 L160,100 Q200,70 230,80 L280,60"
+                          stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <circle cx="30" cy="180" r="6" fill="#2563EB" stroke="#fff" stroke-width="2"/>
+                    <circle cx="160" cy="100" r="5" fill="#A0522D" stroke="#fff" stroke-width="2"/>
+                    <text x="30" y="170" font-size="9" fill="#2563EB" text-anchor="middle" font-weight="700">起点</text>
+                    <text x="160" y="92" font-size="8" fill="#A0522D" text-anchor="middle" font-weight="600">&#9312;</text>
+                    <!-- 当前位置 GPS 点 -->
+                    <circle cx="280" cy="60" r="7" fill="rgba(52,120,246,0.2)" stroke="none"/>
+                    <circle cx="280" cy="60" r="4" fill="#2563EB" stroke="#fff" stroke-width="2"/>
+                </svg>
+                <div style="position:absolute;right:12px;top:12px;display:flex;gap:8px">
+                    <button class="map-ctrl-btn" style="width:32px;height:32px;font-size:12px">&#127758;</button>
+                    <button class="map-ctrl-btn" style="width:32px;height:32px;font-size:11px">3D</button>
+                </div>
+            </div>
+
+            <div class="detail-info">
+                <div class="detail-title">
+                    横县祭祖路线
+                    <span class="edit-icon">&#9998;</span>
+                    <span class="badge badge-warning">编辑中</span>
+                </div>
+                <div class="detail-desc">2026年春节回乡祭祖，横县北部山区。</div>
+                <div class="detail-stats">
+                    <div class="detail-stat-item">
+                        <div class="stat-value">2.1</div>
+                        <div class="stat-label">总里程(km)</div>
+                    </div>
+                    <div class="detail-stat-item">
+                        <div class="stat-value">28:45</div>
+                        <div class="stat-label">用时</div>
+                    </div>
+                    <div class="detail-stat-item">
+                        <div class="stat-value">120</div>
+                        <div class="stat-label">海拔(m)</div>
+                    </div>
+                    <div class="detail-stat-item">
+                        <div class="stat-value">1</div>
+                        <div class="stat-label">打卡点</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 编辑中状态提示 -->
+            <div style="padding:12px 20px 0">
+                <div style="display:flex;align-items:center;gap:10px;background:#FFF5E6;padding:12px 16px;border-radius:var(--radius)">
+                    <span style="font-size:18px">&#9888;</span>
+                    <div style="font-size:13px;color:#B45309;line-height:1.4">
+                        <strong>轨迹尚未完成</strong><br>请继续记录并设置终点来完成此轨迹
+                    </div>
+                </div>
+            </div>
+
+            <div class="checkpoint-section">
+                <div class="section-title">&#128205; 已记录路线</div>
+                <div class="checkpoint-timeline">
+                    <div class="checkpoint-item start">
+                        <div class="cp-name">
+                            &#127793; 山脚入口
+                            <span class="tag" style="font-size:10px;padding:2px 6px">起点</span>
+                        </div>
+                        <div class="cp-meta">2026-01-29 14:00 · 海拔 30m</div>
+                    </div>
+                    <div class="checkpoint-item" onclick="goPage('spot')">
+                        <div class="cp-name">
+                            ① 刘公祖墓
+                            <span class="cp-has-content">&#128247; 图文</span>
+                        </div>
+                        <div class="cp-meta">2026-01-29 14:25 · 海拔 95m</div>
+                    </div>
+                    <div class="checkpoint-item" style="opacity:0.5;border:1.5px dashed var(--border)">
+                        <div class="cp-name" style="color:var(--text-hint)">
+                            &#128336; 等待继续记录...
+                        </div>
+                        <div class="cp-meta">尚未设置终点</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-actions">
+                <button class="btn btn-accent btn-round btn-block" style="font-size:16px;padding:14px" onclick="goPage('recording')">&#9654; 继续记录</button>
+            </div>
+            <div style="padding:0 20px 120px">
+                <button class="btn btn-outline btn-round btn-block" style="color:var(--danger);border-color:var(--danger);margin-top:8px">&#128465; 删除轨迹</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ P1-5 打卡点详情页 ============ -->
+    <div class="page" id="page-spot">
+        <div class="status-bar dark">
+            <span class="time">10:30</span>
+            <span class="icons" style="color:var(--text-secondary)">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="nav-bar">
+            <div class="nav-back" onclick="goPage('detail')">&#8249;</div>
+            <div class="nav-title">打卡点详情</div>
+            <div style="width:32px"></div>
+        </div>
+        <div class="page-content">
+            <div class="spot-header">
+                <div class="spot-title">
+                    刘公祖墓
+                    <span class="edit-icon" style="width:28px;height:28px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--primary);cursor:pointer">&#9998;</span>
+                </div>
+                <div class="spot-breadcrumb">
+                    刘氏家族清明扫墓 · 打卡点 #1
+                </div>
+                <div class="spot-location">
+                    <div class="loc-item">&#128205; 23.7275°N 108.3426°E</div>
+                    <div class="loc-item">&#9968; 海拔 120m</div>
+                    <div class="loc-item">&#128197; 2026-02-05 09:05</div>
+                </div>
+            </div>
+
+            <div style="height:8px;background:var(--bg)"></div>
+
+            <div class="spot-content">
+                <div class="content-title">&#128221; 图文记录</div>
+                <div class="spot-text">
+                    此处为刘氏始祖刘公之墓，始建于清康熙年间（约1680年），坐北朝南，依山而建。刘公名讳已不可考，族谱中记为"一世祖刘公"。<br><br>
+                    墓前原有石碑一方，经数百年风化已字迹模糊，2020年族人集资重立石碑，碑文记述刘公生平及后裔分支。每年清明、重阳，刘氏后人均会前来祭扫。<br><br>
+                    &#128161; <strong>提示</strong>：从山脚入口上山约35分钟步行可达，路上有两处分叉路口，均取右侧道路。
+                </div>
+                <div class="spot-photos">
+                    <div class="spot-photo" style="background:linear-gradient(135deg,#8BC34A33,#4CAF5033)">&#127966;</div>
+                    <div class="spot-photo" style="background:linear-gradient(135deg,#FF980033,#FF570233)">&#129705;</div>
+                    <div class="spot-photo" style="background:linear-gradient(135deg,#2196F333,#1565C033)">&#128248;</div>
+                    <div class="spot-photo" style="background:linear-gradient(135deg,#9C27B033,#7B1FA233)">&#127807;</div>
+                </div>
+            </div>
+
+            <div style="height:8px;background:var(--bg)"></div>
+
+            <div style="padding:16px 20px">
+                <div class="content-title">&#128100; 人物信息</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:13px;color:var(--text-hint);width:60px">姓氏：</span>
+                        <span style="font-size:14px">刘氏</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:13px;color:var(--text-hint);width:60px">辈分：</span>
+                        <span style="font-size:14px">一世祖</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:13px;color:var(--text-hint);width:60px">年代：</span>
+                        <span style="font-size:14px">清康熙年间（约1680年）</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:13px;color:var(--text-hint);width:60px">备注：</span>
+                        <span style="font-size:14px">族谱中记为"一世祖刘公"</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spot-actions">
+                <button class="btn btn-primary btn-round">&#9998; 编辑图文</button>
+                <button class="btn btn-outline btn-round" style="color:var(--danger);border-color:var(--danger)">&#128465; 删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ P3-1 个人中心 ============ -->
+    <div class="page" id="page-profile">
+        <div class="status-bar">
+            <span class="time">10:30</span>
+            <span class="icons">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="page-content" style="padding-bottom:0">
+            <div class="profile-header">
+                <div class="profile-avatar"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+                <div class="profile-name">刘阿强</div>
+                <div class="profile-subtitle">刘氏 · 广西横县</div>
+                <div class="profile-stats-bar">
+                    <div class="profile-stat">
+                        <div class="p-val">3</div>
+                        <div class="p-label">轨迹</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="p-val">12</div>
+                        <div class="p-label">打卡点</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="p-val">8.5</div>
+                        <div class="p-label">总里程km</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-menu">
+                <div class="menu-group">
+                    <div class="menu-item" onclick="goPage('editProfile')">
+                        <div class="menu-icon">&#128100;</div>
+                        <span class="menu-text">编辑个人信息</span>
+                        <span class="menu-arrow">&#8250;</span>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-icon orange">&#11088;</div>
+                        <span class="menu-text">我的收藏</span>
+                        <span class="menu-value">2</span>
+                        <span class="menu-arrow">&#8250;</span>
+                    </div>
+                </div>
+
+                <div class="menu-group">
+                    <div class="menu-item">
+                        <div class="menu-icon green">&#128274;</div>
+                        <span class="menu-text">隐私设置</span>
+                        <span class="menu-arrow">&#8250;</span>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-icon">&#128196;</div>
+                        <span class="menu-text">隐私政策与用户协议</span>
+                        <span class="menu-arrow">&#8250;</span>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-icon">&#8505;</div>
+                        <span class="menu-text">关于遨游轨迹</span>
+                        <span class="menu-value">V1.0</span>
+                        <span class="menu-arrow">&#8250;</span>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-icon orange">&#128172;</div>
+                        <span class="menu-text">意见反馈</span>
+                        <span class="menu-arrow">&#8250;</span>
+                    </div>
+                </div>
+
+                <button class="logout-btn" onclick="goPage('login')">退出登录</button>
+            </div>
+        </div>
+
+        <!-- 底部 TabBar -->
+        <div class="tab-bar">
+            <div class="tab-item" onclick="goPage('home')">
+                <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                <div class="tab-label">首页</div>
+            </div>
+            <div class="tab-item active" onclick="goPage('profile')">
+                <div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+                <div class="tab-label">个人中心</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ P3-2 个人信息编辑页 ============ -->
+    <div class="page" id="page-editProfile">
+        <div class="status-bar dark">
+            <span class="time">10:30</span>
+            <span class="icons" style="color:var(--text-secondary)">
+        <span>&#9679;</span>
+        <span>&#9679;</span>
+        <span>&#128267;</span>
+      </span>
+        </div>
+        <div class="nav-bar">
+            <div class="nav-back" onclick="goPage('profile')">&#8249;</div>
+            <div class="nav-title">编辑个人信息</div>
+            <div class="nav-action">保存</div>
+        </div>
+        <div class="page-content">
+            <div class="edit-avatar-section">
+                <div class="edit-avatar">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+                    <span class="camera-badge" aria-label="更换头像"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+                </div>
+                <div class="edit-avatar-hint">点击更换头像</div>
+            </div>
+
+            <div style="height:8px;background:var(--bg)"></div>
+
+            <div class="edit-form">
+                <div class="input-group">
+                    <label>昵称</label>
+                    <input type="text" placeholder="请输入昵称" value="刘阿强">
+                </div>
+                <div class="input-group">
+                    <label>所属家族</label>
+                    <input type="text" placeholder="例如：刘氏" value="刘氏">
+                </div>
+                <div class="input-group">
+                    <label>个性签名</label>
+                    <textarea placeholder="一句话介绍自己">守护家族记忆，传承祭祖文化</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 分享弹窗 P2-1 ============ -->
+    <div class="modal-overlay" id="modal-share">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">分享轨迹</div>
+                <div class="modal-close" onclick="hideShareModal()" aria-label="关闭">×</div>
+            </div>
+            <div class="share-preview">
+                <div class="preview-map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                <div class="preview-title">刘氏家族清明扫墓</div>
+                <div class="preview-info">3.2km · 4个打卡点 · 海拔180m</div>
+            </div>
+            <div class="share-methods">
+                <div class="share-method wechat">
+                    <div class="method-icon">&#128172;</div>
+                    <div class="method-label">微信好友</div>
+                </div>
+                <div class="share-method moments">
+                    <div class="method-icon">&#127760;</div>
+                    <div class="method-label">朋友圈</div>
+                </div>
+                <div class="share-method qrcode">
+                    <div class="method-icon">&#9641;</div>
+                    <div class="method-label">二维码</div>
+                </div>
+                <div class="share-method copy">
+                    <div class="method-icon">&#128203;</div>
+                    <div class="method-label">复制链接</div>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-block btn-round" onclick="hideShareModal()">生成分享海报</button>
+        </div>
+    </div>
+
+    <!-- ============ 设置打卡点弹窗 ============ -->
+    <div class="dialog-overlay" id="dialog-setpoint">
+        <div class="dialog-box">
+            <div class="dialog-title">设置打卡点</div>
+            <div class="dialog-desc">已记录当前位置坐标，请为此墓地点命名</div>
+            <input class="dialog-input" type="text" placeholder="例如：祖父某某之墓" value="二世祖刘德芳墓">
+            <div class="dialog-actions">
+                <button class="btn btn-outline" onclick="hideDialog('setpoint')">取消</button>
+                <button class="btn btn-primary" onclick="hideDialog('setpoint');goPage('spot')">确认并记录</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 中断记录确认弹窗 ============ -->
+    <div class="dialog-overlay" id="dialog-interrupt">
+        <div class="dialog-box">
+            <div class="dialog-title">中断记录</div>
+            <div class="dialog-desc">当前轨迹正在记录中，是否暂时退出？<br><span style="font-size:12px;color:var(--text-hint)">退出后可在轨迹详情页继续记录</span></div>
+            <div class="dialog-actions">
+                <button class="btn btn-outline" onclick="hideDialog('interrupt')">继续录制</button>
+                <button class="btn btn-primary" onclick="hideDialog('interrupt');goPage('detailEditing')">暂时退出</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ 设置终点弹窗 ============ -->
+    <div class="dialog-overlay" id="dialog-endpoint">
+        <div class="dialog-box">
+            <div class="dialog-title">设置终点</div>
+            <div class="dialog-desc">确认当前位置为轨迹终点并结束记录？</div>
+            <input class="dialog-input" type="text" placeholder="请输入终点名称" value="山脚出口">
+            <div class="dialog-actions">
+                <button class="btn btn-outline" onclick="hideDialog('endpoint')">取消</button>
+                <button class="btn btn-primary" onclick="hideDialog('endpoint');goPage('detail')">确认结束</button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /phone-frame -->
+
+<script>
+    // ==================== 页面导航 ====================
+    function goPage(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const page = document.getElementById('page-' + pageId);
+      if (page) page.classList.add('active');
+
+      // 更新导航面板
+      document.querySelectorAll('.pn-item').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.pn-item').forEach(item => {
+        if (item.getAttribute('onclick') && item.getAttribute('onclick').includes("'" + pageId + "'")) {
+          item.classList.add('active');
+        }
+      });
+    }
+
+    // ==================== 首页 Tab 切换 ====================
+    function switchHomeTab(tab) {
+      document.getElementById('tab-my').classList.toggle('active', tab === 'my');
+      document.getElementById('tab-public').classList.toggle('active', tab === 'public');
+      document.getElementById('tab-content-my').style.display = tab === 'my' ? 'block' : 'none';
+      document.getElementById('tab-content-public').style.display = tab === 'public' ? 'block' : 'none';
+    }
+
+    // ==================== 录制暂停/继续 ====================
+    let isPaused = false;
+    function togglePause() {
+      isPaused = !isPaused;
+      const btn = document.getElementById('btnPause');
+      const status = document.getElementById('recStatus');
+      if (isPaused) {
+        btn.innerHTML = '&#9654;';
+        status.classList.add('paused');
+        status.querySelector('span:last-child').textContent = '已暂停';
+      } else {
+        btn.innerHTML = '&#9208;';
+        status.classList.remove('paused');
+        status.querySelector('span:last-child').textContent = '录制中';
+      }
+    }
+
+    // ==================== 可见范围切换 ====================
+    function setVisibility(type) {
+      const privBtn = document.getElementById('vis-private');
+      const pubBtn = document.getElementById('vis-public');
+      if (type === 'private') {
+        privBtn.style.background = 'var(--primary)';
+        privBtn.style.color = '#fff';
+        pubBtn.style.background = 'transparent';
+        pubBtn.style.color = 'var(--text-hint)';
+      } else {
+        pubBtn.style.background = 'var(--primary)';
+        pubBtn.style.color = '#fff';
+        privBtn.style.background = 'transparent';
+        privBtn.style.color = 'var(--text-hint)';
+      }
+    }
+
+    // ==================== 打卡点列表面板 ====================
+    let spotPanelOpen = false;
+    function toggleRecSpotPanel() {
+      spotPanelOpen = !spotPanelOpen;
+      const panel = document.getElementById('recSpotsPanel');
+      if (spotPanelOpen) {
+        panel.style.transform = 'translateY(0)';
+      } else {
+        panel.style.transform = 'translateY(100%)';
+      }
+    }
+
+    // ==================== 图层面板 ====================
+    function toggleLayerPanel() {
+      const panel = document.getElementById('layerPanel');
+      panel.classList.toggle('active');
+    }
+
+    // ==================== 分享弹窗 ====================
+    function showShareModal() {
+      document.getElementById('modal-share').classList.add('active');
+    }
+    function hideShareModal() {
+      document.getElementById('modal-share').classList.remove('active');
+    }
+
+    // ==================== 对话框 ====================
+    function showDialog(id) {
+      document.getElementById('dialog-' + id).classList.add('active');
+    }
+    function hideDialog(id) {
+      document.getElementById('dialog-' + id).classList.remove('active');
+    }
+
+    // ==================== 启动页自动跳转 ====================
+    setTimeout(() => {
+      // 自动从启动页跳到登录页（3秒后）
+      const splash = document.getElementById('page-splash');
+      if (splash && splash.classList.contains('active')) {
+        // goPage('login'); // 取消自动跳转，改为手动点击
+      }
+    }, 3000);
+
+    // ==================== 点击图层选项 ====================
+    document.querySelectorAll('.layer-option').forEach(opt => {
+      opt.addEventListener('click', function() {
+        document.querySelectorAll('.layer-option').forEach(o => o.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('layerPanel').classList.remove('active');
+      });
+    });
+
+    // 点击弹窗外部关闭
+    document.getElementById('modal-share').addEventListener('click', function(e) {
+      if (e.target === this) hideShareModal();
+    });
+</script>
+
+</body>
+</html>
