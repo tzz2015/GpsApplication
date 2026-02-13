@@ -274,8 +274,7 @@ export class CloudStorageService {
     try {
       const uploadTask: request.agent.Task = await bucket.uploadFile(context, {
         localPath: relativeLocalPath,
-        cloudPath: cloudPath,
-        mode: request.agent.Mode.BACKGROUND
+        cloudPath: cloudPath
       });
 
       // 用 Promise 封装 Task 的 completed / failed 事件，等待上传真正完成

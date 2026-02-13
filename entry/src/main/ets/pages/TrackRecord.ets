@@ -9,6 +9,7 @@ import { fileIo } from '@kit.CoreFileKit';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { SyncService } from '../common/SyncService';
+import { Config } from '../common/Config';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'TrackRecord';
@@ -86,6 +87,15 @@ struct TrackRecord {
   private allTrackPoints: TrackModel.TrackPointItem[] = [];
   private lastLat: number = 0;
   private lastLng: number = 0;
+  // 上一个有效运动向量（用于航向突变过滤）
+  private lastVectorLat: number = 0;
+  private lastVectorLng: number = 0;
+  // 连续丢点计数（仅日志观测）
+  private droppedAccuracyCount: number = 0;
+  private droppedSpeedCount: number = 0;
+  private droppedDistanceCount: number = 0;
+  private droppedHeadingCount: number = 0;
+  private acceptedPointCount: number = 0;
 
   aboutToAppear(): void {
     const params = this.getUIContext().getRouter().getParams() as TrackRecordParams | undefined;
@@ -326,6 +336,61 @@ struct TrackRecord {
   // 上次有效定位的时间戳，用于速度过滤
   private lastLocationTime: number = 0;
 
+  /** 根据精度和运动状态，动态选择最小记录距离 */
+  private selectDynamicMinDistance(accuracy: number, speedKmh: number): number {
+    let base = Config.GPS_MIN_DISTANCE_POOR;
+    if (accuracy <= Config.GPS_ACCURACY_STRICT) {
+      base = Config.GPS_MIN_DISTANCE_STRICT;
+    } else if (accuracy <= Config.GPS_ACCURACY_THRESHOLD) {
+      base = Config.GPS_MIN_DISTANCE_NORMAL;
+    }
+    if (speedKmh <= Config.GPS_IDLE_SPEED_KMH) {
+      return Math.max(base, Config.GPS_IDLE_MIN_DISTANCE);
+    }
+    return base;
+  }
+
+  /** 低速且短位移时，若航向突变过大，视为漂移跳点 */
+  private isHeadingJump(prevVectorLat: number, prevVectorLng: number, nextVectorLat: number, nextVectorLng: number): boolean {
+    const prevLen = Math.sqrt(prevVectorLat * prevVectorLat + prevVectorLng * prevVectorLng);
+    const nextLen = Math.sqrt(nextVectorLat * nextVectorLat + nextVectorLng * nextVectorLng);
+    if (prevLen === 0 || nextLen === 0) {
+      return false;
+    }
+    const dot = prevVectorLat * nextVectorLat + prevVectorLng * nextVectorLng;
+    let cosTheta = dot / (prevLen * nextLen);
+    if (cosTheta > 1) {
+      cosTheta = 1;
+    }
+    if (cosTheta < -1) {
+      cosTheta = -1;
+    }
+    const angleDeg = Math.acos(cosTheta) * 180 / Math.PI;
+    return angleDeg >= Config.GPS_HEADING_JUMP_DEG;
+  }
+
+  private reportDropStats(): void {
+    const totalDropped = this.droppedAccuracyCount + this.droppedSpeedCount + this.droppedDistanceCount + this.droppedHeadingCount;
+    const totalSeen = totalDropped + this.acceptedPointCount;
+    if (totalSeen <= 0) {
+      return;
+    }
+    if (totalSeen % 20 !== 0) {
+      return;
+    }
+    hilog.info(
+      LOG_DOMAIN,
+      LOG_TAG,
+      'Point filter stats: accepted=%{public}d dropped=%{public}d (acc=%{public}d speed=%{public}d dist=%{public}d heading=%{public}d)',
+      this.acceptedPointCount,
+      totalDropped,
+      this.droppedAccuracyCount,
+      this.droppedSpeedCount,
+      this.droppedDistanceCount,
+      this.droppedHeadingCount
+    );
+  }
+
   /** 开始持续定位记录 */
   private startLocationTracking(): void {
     // 初始化 lastLocationTime，避免速度计算异常
@@ -336,7 +401,7 @@ struct TrackRecord {
     this.startBackgroundTask();
     try {
       const request: geoLocationManager.ContinuousLocationRequest = {
-        interval: 3,
+        interval: Config.GPS_INTERVAL,
         locationScenario: geoLocationManager.UserActivityScenario.NAVIGATION
       };
       geoLocationManager.on('locationChange', request, (location: geoLocationManager.Location) => {
@@ -367,31 +432,58 @@ struct TrackRecord {
           return;
         }
 
-        // ① GPS 精度过滤：精度 > 50m 说明信号差，丢弃（放宽到50m，避免山区丢点过多）
-        if (accuracy > 50) {
+        // 0) 基础合法性过滤
+        if (lat === 0 || lng === 0 || !isFinite(lat) || !isFinite(lng) || !isFinite(accuracy)) {
+          return;
+        }
+
+        // ① GPS 精度硬门槛
+        if (accuracy > Config.GPS_ACCURACY_MAX) {
+          this.droppedAccuracyCount += 1;
+          this.reportDropStats();
           hilog.info(LOG_DOMAIN, LOG_TAG, 'Skip low accuracy point: %{public}f m', accuracy);
           return;
         }
 
         if (this.lastLat !== 0) {
           const dist = TrackModel.calculateDistance(this.lastLat, this.lastLng, lat, lng);
+          const timeDiffSec = (now - this.lastLocationTime) / 1000;
+          let speedKmh = 0;
+          if (timeDiffSec > 0) {
+            speedKmh = (dist / timeDiffSec) * 3.6;
+          }
 
-          // ② 距离阈值过滤：至少移动 3 米才记录（降低阈值，减少丢点）
-          if (dist < 3) {
+          // ② 高速跳点过滤（步行高精度模式）
+          if (speedKmh > Config.GPS_MAX_SPEED_KMH) {
+            this.droppedSpeedCount += 1;
+            this.reportDropStats();
+            hilog.info(LOG_DOMAIN, LOG_TAG, 'Skip high speed point: dist=%{public}f speed=%{public}f km/h', dist, speedKmh);
             return;
           }
 
-          // ③ 速度过滤：两点间速度超过 150km/h 视为 GPS 跳点，丢弃
-          const timeDiffSec = (now - this.lastLocationTime) / 1000;
-          if (timeDiffSec > 0) {
-            const speedKmh = (dist / timeDiffSec) * 3.6;
-            if (speedKmh > 150) {
-              hilog.info(LOG_DOMAIN, LOG_TAG, 'Skip GPS jump: dist=%{public}f speed=%{public}f km/h', dist, speedKmh);
+          // ③ 动态最小距离阈值
+          const minDistance = this.selectDynamicMinDistance(accuracy, speedKmh);
+          if (dist < minDistance) {
+            this.droppedDistanceCount += 1;
+            this.reportDropStats();
+            return;
+          }
+
+          // ④ 低速航向突变过滤（短距离突刺）
+          if (speedKmh <= 10 && dist <= 15) {
+            const nextVectorLat = lat - this.lastLat;
+            const nextVectorLng = lng - this.lastLng;
+            if (this.isHeadingJump(this.lastVectorLat, this.lastVectorLng, nextVectorLat, nextVectorLng)) {
+              this.droppedHeadingCount += 1;
+              this.reportDropStats();
+              hilog.info(LOG_DOMAIN, LOG_TAG, 'Skip heading jump point');
               return;
             }
           }
 
           this.totalDistance += dist;
+          this.lastVectorLat = lat - this.lastLat;
+          this.lastVectorLng = lng - this.lastLng;
           hilog.debug(LOG_DOMAIN, LOG_TAG,
             'Track point: dist=%{public}f, total=%{public}f, acc=%{public}f',
             dist, this.totalDistance, accuracy);
@@ -413,6 +505,8 @@ struct TrackRecord {
           syncStatus: 'pending'
         };
         this.allTrackPoints.push(point);
+        this.acceptedPointCount += 1;
+        this.reportDropStats();
 
         // 更新地图折线
         this.updatePolyline();
@@ -642,6 +736,13 @@ struct TrackRecord {
     this.lastLat = startLat;
     this.lastLng = startLng;
     this.lastLocationTime = Date.now();
+    this.lastVectorLat = 0;
+    this.lastVectorLng = 0;
+    this.droppedAccuracyCount = 0;
+    this.droppedSpeedCount = 0;
+    this.droppedDistanceCount = 0;
+    this.droppedHeadingCount = 0;
+    this.acceptedPointCount = 0;
     this.currentAltitude = startAlt;
     this.currentPreciseLat = startLat;
     this.currentPreciseLng = startLng;
@@ -796,20 +897,8 @@ struct TrackRecord {
     // 结束轨迹后，后台同步到云端，同步完成发通知
     const uiContext = this.getUIContext();
     SyncService.syncTrack(context, this.trackId).then(() => {
-      // 上传完成，发送提示
-      try {
-        uiContext.getPromptAction().showToast({ message: '轨迹数据已同步到云端', duration: 2000 });
-      } catch (_e) {
-        // 页面可能已离开
-      }
       hilog.info(LOG_DOMAIN, LOG_TAG, 'Track sync completed for: %{public}s', this.trackId);
     }).catch((e: Error) => {
-      // 上传失败也提示
-      try {
-        uiContext.getPromptAction().showToast({ message: '数据同步失败，将在下次打开时重试', duration: 2000 });
-      } catch (_e) {
-        // 忽略
-      }
       hilog.warn(LOG_DOMAIN, LOG_TAG, 'Sync track after end: %{public}s', JSON.stringify(e));
     });
 

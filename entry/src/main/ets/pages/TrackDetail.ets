@@ -1,7 +1,7 @@
 import { promptAction, componentSnapshot } from '@kit.ArkUI';
 import { MapComponent, mapCommon, map } from '@kit.MapKit';
 import { AsyncCallback, BusinessError } from '@kit.BasicServicesKit';
-import { common, abilityAccessCtrl } from '@kit.AbilityKit';
+import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit';
@@ -11,6 +11,7 @@ import { TrackModel } from '../common/TrackModel';
 import { AuthStore } from '../common/AuthStore';
 import { NavBar } from '../common/NavBar';
 import { SyncService } from '../common/SyncService';
+import { Config } from '../common/Config';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'TrackDetail';
@@ -45,13 +46,16 @@ struct TrackDetail {
   @State showShareCover: boolean = false;
   @State shareImagePath: string = '';
   @State isGeneratingShare: boolean = false;
+  @State showCenterToast: boolean = false;
+  @State centerToastText: string = '';
   private trackId: string = '';
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private mapController?: map.MapComponentController;
   private mapReady: boolean = false;
   private dataReady: boolean = false;
-  /** 极小透明图标，替代默认 pin 让信息窗口紧贴坐标点 */
-  private tinyMarkerIcon: image.PixelMap | null = null;
+  private centerToastTimer: number = -1;
+  /** 透明大点击区域图标，提升打卡点点击命中率 */
+  private hitAreaMarkerIcon: image.PixelMap | null = null;
 
   aboutToAppear(): void {
     const params = this.getUIContext().getRouter().getParams() as TrackDetailParams | undefined;
@@ -148,20 +152,80 @@ struct TrackDetail {
     }
   }
 
+  /** 详情展示前抽稀：去抖动毛刺，保留拐点与关键点（不改存储数据） */
+  private simplifyTrackPointsForDisplay(points: TrackModel.TrackPointItem[]): TrackModel.TrackPointItem[] {
+    if (points.length <= 2) {
+      return points;
+    }
+    const sorted = points.slice(0).sort((a: TrackModel.TrackPointItem, b: TrackModel.TrackPointItem) => a.timestamp - b.timestamp);
+    const kept: TrackModel.TrackPointItem[] = [];
+    kept.push(sorted[0]);
+
+    for (let i = 1; i < sorted.length - 1; i++) {
+      const current = sorted[i];
+      const next = sorted[i + 1];
+      const lastKept = kept[kept.length - 1];
+
+      if ((current.accuracy || 0) > Config.GPS_ACCURACY_MAX) {
+        continue;
+      }
+
+      const dist = TrackModel.calculateDistance(lastKept.latitude, lastKept.longitude, current.latitude, current.longitude);
+      const minDist = Config.GPS_MIN_DISTANCE_STRICT;
+      if (dist >= minDist) {
+        kept.push(current);
+        continue;
+      }
+
+      const angle = this.computeTurningAngle(lastKept, current, next);
+      if (angle >= 20) {
+        kept.push(current);
+      }
+    }
+
+    kept.push(sorted[sorted.length - 1]);
+    return kept;
+  }
+
+  private computeTurningAngle(
+    prev: TrackModel.TrackPointItem,
+    cur: TrackModel.TrackPointItem,
+    next: TrackModel.TrackPointItem
+  ): number {
+    const v1x = cur.latitude - prev.latitude;
+    const v1y = cur.longitude - prev.longitude;
+    const v2x = next.latitude - cur.latitude;
+    const v2y = next.longitude - cur.longitude;
+    const len1 = Math.sqrt(v1x * v1x + v1y * v1y);
+    const len2 = Math.sqrt(v2x * v2x + v2y * v2y);
+    if (len1 === 0 || len2 === 0) {
+      return 0;
+    }
+    let cosTheta = (v1x * v2x + v1y * v2y) / (len1 * len2);
+    if (cosTheta > 1) {
+      cosTheta = 1;
+    }
+    if (cosTheta < -1) {
+      cosTheta = -1;
+    }
+    return Math.acos(cosTheta) * 180 / Math.PI;
+  }
+
   /** 绘制轨迹 + 打卡点，并自动适配相机让整条轨迹居中 */
   private async moveCameraAndDraw(): Promise<void> {
     if (!this.mapController) {
       return;
     }
-    // 创建 2x2 透明图标替代默认 pin（仅创建一次）
-    if (!this.tinyMarkerIcon) {
+    // 创建透明大点击区域（仅创建一次）
+    if (!this.hitAreaMarkerIcon) {
       try {
-        const buf = new ArrayBuffer(16); // 2x2 RGBA，全零 = 全透明
+        const size = 36;
+        const buf = new ArrayBuffer(size * size * 4);
         const opts: image.InitializationOptions = {
-          size: { width: 2, height: 2 },
+          size: { width: size, height: size },
           pixelFormat: image.PixelMapFormat.RGBA_8888
         };
-        this.tinyMarkerIcon = await image.createPixelMap(buf, opts);
+        this.hitAreaMarkerIcon = await image.createPixelMap(buf, opts);
       } catch (e) {
         hilog.warn(LOG_DOMAIN, LOG_TAG, 'createTinyIcon: %{public}s', JSON.stringify(e));
       }
@@ -177,19 +241,26 @@ struct TrackDetail {
     }
     const context = this.getUIContext().getHostContext() as common.Context;
     const points = await TrackStore.getTrackPointsByTrackId(context, this.trackId);
+    const displayPoints = this.simplifyTrackPointsForDisplay(points);
 
-    hilog.info(LOG_DOMAIN, LOG_TAG, 'drawTrackOnMap start: GPS pts=%{public}d, spots=%{public}d',
-      points.length, this.tombSpots.length);
+    hilog.info(
+      LOG_DOMAIN,
+      LOG_TAG,
+      'drawTrackOnMap start: GPS pts=%{public}d -> display pts=%{public}d, spots=%{public}d',
+      points.length,
+      displayPoints.length,
+      this.tombSpots.length
+    );
 
     // 收集所有需要显示在地图上的坐标，用于包围盒计算
     const allLatLngs: mapCommon.LatLng[] = [];
 
     // ===== 1. 绘制轨迹折线 =====
-    if (points.length >= 2) {
+    if (displayPoints.length >= 2) {
       // 方案 A：GPS 轨迹点充足，画精确折线
       const gcj02Points: mapCommon.LatLng[] = [];
-      for (let i = 0; i < points.length; i++) {
-        const converted = await this.convertToGCJ02(points[i].latitude, points[i].longitude);
+      for (let i = 0; i < displayPoints.length; i++) {
+        const converted = await this.convertToGCJ02(displayPoints[i].latitude, displayPoints[i].longitude);
         gcj02Points.push(converted);
         allLatLngs.push(converted);
       }
@@ -206,7 +277,7 @@ struct TrackDetail {
       }
     } else {
       // 方案 B：GPS 轨迹点不足，用 起点→打卡点→终点 的坐标连线作为回退路线
-      hilog.info(LOG_DOMAIN, LOG_TAG, 'GPS pts < 2, fallback to waypoints route');
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Display pts < 2, fallback to waypoints route');
       const waypoints: mapCommon.LatLng[] = [];
 
       // 起点坐标
@@ -258,7 +329,7 @@ struct TrackDetail {
         // 绘制小圆点作为视觉标记
         await this.mapController.addCircle({
           center: startP,
-          radius: 8,
+          radius: 10,
           fillColor: 0xFF10B981,
           strokeColor: 0xFFFFFFFF,
           strokeWidth: 3,
@@ -274,8 +345,8 @@ struct TrackDetail {
           anchorU: 0.5,
           anchorV: 0.5
         };
-        if (this.tinyMarkerIcon) {
-          startMarkerOpts.icon = this.tinyMarkerIcon;
+        if (this.hitAreaMarkerIcon) {
+          startMarkerOpts.icon = this.hitAreaMarkerIcon;
         } else {
           startMarkerOpts.alpha = 0.01;
         }
@@ -292,7 +363,7 @@ struct TrackDetail {
         const endP = await this.convertToGCJ02(this.track.endLat, this.track.endLng);
         await this.mapController.addCircle({
           center: endP,
-          radius: 8,
+          radius: 10,
           fillColor: 0xFFEF4444,
           strokeColor: 0xFFFFFFFF,
           strokeWidth: 3,
@@ -307,8 +378,8 @@ struct TrackDetail {
           anchorU: 0.5,
           anchorV: 0.5
         };
-        if (this.tinyMarkerIcon) {
-          endMarkerOpts.icon = this.tinyMarkerIcon;
+        if (this.hitAreaMarkerIcon) {
+          endMarkerOpts.icon = this.hitAreaMarkerIcon;
         } else {
           endMarkerOpts.alpha = 0.01;
         }
@@ -346,8 +417,15 @@ struct TrackDetail {
       }
     }
 
-    hilog.info(LOG_DOMAIN, LOG_TAG, 'drawTrackOnMap done: GPS=%{public}d, spots=%{public}d, bounds=%{public}d',
-      points.length, this.tombSpots.length, allLatLngs.length);
+    hilog.info(
+      LOG_DOMAIN,
+      LOG_TAG,
+      'drawTrackOnMap done: raw=%{public}d display=%{public}d spots=%{public}d bounds=%{public}d',
+      points.length,
+      displayPoints.length,
+      this.tombSpots.length,
+      allLatLngs.length
+    );
   }
 
   /** 在地图上标记所有打卡点（蓝色圆点 + 可点击标记显示名称） */
@@ -365,7 +443,7 @@ struct TrackDetail {
       try {
         await this.mapController.addCircle({
           center: gcj02,
-          radius: 6,
+          radius: 9,
           fillColor: 0xFFF59E0B,
           strokeColor: 0xFFFFFFFF,
           strokeWidth: 3,
@@ -386,8 +464,8 @@ struct TrackDetail {
           anchorU: 0.5,
           anchorV: 0.5
         };
-        if (this.tinyMarkerIcon) {
-          spotMarkerOpts.icon = this.tinyMarkerIcon;
+        if (this.hitAreaMarkerIcon) {
+          spotMarkerOpts.icon = this.hitAreaMarkerIcon;
         } else {
           spotMarkerOpts.alpha = 0.01;
         }
@@ -486,10 +564,7 @@ struct TrackDetail {
   /** 分享轨迹：截取地图并展示包含标题/起终点/打卡点等信息的分享卡 */
   private async shareTrackAsImage(): Promise<void> {
     if (!this.mapController) {
-      try {
-        promptAction.showToast({ message: '请稍候，地图加载完成后重试' });
-      } catch (_t) {
-      }
+      this.showMiddleToast('请稍候，地图加载完成后重试');
       return;
     }
 
@@ -510,10 +585,7 @@ struct TrackDetail {
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'share snapshot: %{public}s', JSON.stringify(e));
       this.isGeneratingShare = false;
-      try {
-        promptAction.showToast({ message: '生成分享图失败' });
-      } catch (_t) {
-      }
+      this.showMiddleToast('生成分享图失败');
       return;
     }
 
@@ -545,19 +617,13 @@ struct TrackDetail {
         fileIo.readSync(srcFile.fd, imageData);
         fileIo.closeSync(srcFile.fd);
       } catch (_readErr) {
-        try {
-          promptAction.showToast({ message: '保存失败' });
-        } catch (_t) {
-        }
+        this.showMiddleToast('保存失败');
         return;
       }
     }
 
     if (!imageData) {
-      try {
-        promptAction.showToast({ message: '保存失败' });
-      } catch (_t) {
-      }
+      this.showMiddleToast('保存失败');
       return;
     }
 
@@ -568,17 +634,11 @@ struct TrackDetail {
       const file = fileIo.openSync(assetUri, fileIo.OpenMode.READ_WRITE);
       fileIo.writeSync(file.fd, imageData);
       fileIo.closeSync(file.fd);
-      try {
-        promptAction.showToast({ message: '已保存到图库' });
-      } catch (_t) {
-      }
+      this.showMiddleToast('已保存到图库');
       hilog.info(LOG_DOMAIN, LOG_TAG, 'Share card saved to gallery: %{public}s', assetUri);
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'saveToGallery: %{public}s', JSON.stringify(e));
-      try {
-        promptAction.showToast({ message: '保存到图库失败，请检查存储权限' });
-      } catch (_t) {
-      }
+      this.showMiddleToast('保存到图库失败，请检查存储权限');
     }
 
     // 3. 清理临时文件并关闭预览
@@ -760,10 +820,7 @@ struct TrackDetail {
               if (result === SaveButtonOnClickResult.SUCCESS) {
                 this.saveShareCardToGallery();
               } else {
-                try {
-                  promptAction.showToast({ message: '保存授权失败' });
-                } catch (_t) {
-                }
+                this.showMiddleToast('保存授权失败');
               }
             });
         }
@@ -798,6 +855,19 @@ struct TrackDetail {
         });
       }
     }).catch(() => {});
+  }
+
+  private showMiddleToast(message: string): void {
+    this.centerToastText = message;
+    this.showCenterToast = true;
+    if (this.centerToastTimer !== -1) {
+      clearTimeout(this.centerToastTimer);
+      this.centerToastTimer = -1;
+    }
+    this.centerToastTimer = setTimeout(() => {
+      this.showCenterToast = false;
+      this.centerToastTimer = -1;
+    }, 1800);
   }
 
   build() {
@@ -1228,6 +1298,23 @@ struct TrackDetail {
       .justifyContent(FlexAlign.Center)
       .zIndex(200);
     }
+
+    if (this.showCenterToast) {
+      Column() {
+        Text(this.centerToastText)
+          .fontSize(14)
+          .fontColor(Color.White)
+          .maxLines(2)
+          .textAlign(TextAlign.Center);
+      }
+      .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+      .backgroundColor($r('app.color.overlay_dark_strong'))
+      .borderRadius(10)
+      .position({ x: '50%', y: '50%' })
+      .translate({ x: -120, y: -24 })
+      .width(240)
+      .zIndex(300);
+    }
     }
     .width('100%')
     .height('100%')
@@ -1253,7 +1340,17 @@ struct TrackDetail {
   TimelineItem(name: string, tag: string, meta: string, isStart: boolean, isEnd: boolean, tombId: string, canEditName: boolean) {
     Row({ space: 8 }) {
       // 时间轴图标
-      Column() {
+      Column({ space: 4 }) {
+        if (!isStart) {
+          Column()
+            .width(2)
+            .height(10)
+            .backgroundColor($r('app.color.separator'));
+        } else {
+          Blank()
+            .height(10);
+        }
+
         if (isStart) {
           Image($r('app.media.ic_seedling'))
             .width(16)
@@ -1268,9 +1365,19 @@ struct TrackDetail {
           Circle({ width: 10, height: 10 })
             .fill($r('app.color.primary'));
         }
+
+        if (!isEnd) {
+          Column()
+            .width(2)
+            .height(24)
+            .backgroundColor($r('app.color.separator'));
+        } else {
+          Blank()
+            .height(24);
+        }
       }
       .width(16)
-      .margin({ top: 4 });
+      .alignItems(HorizontalAlign.Center);
 
       // 内容
       Column({ space: 4 }) {

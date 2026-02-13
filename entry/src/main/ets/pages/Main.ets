@@ -1,6 +1,6 @@
 import { promptAction } from '@kit.ArkUI';
 import { window } from '@kit.ArkUI';
-import { common } from '@kit.AbilityKit';
+import { common, abilityAccessCtrl } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackStore } from '../common/TrackStore';
@@ -13,6 +13,10 @@ const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'Main';
 /** 我的轨迹列表每页条数，支持分页加载更多 */
 const MY_TRACKS_PAGE_SIZE = 20;
+
+interface PermissionRequestResult {
+  authResults: number[];
+}
 
 /**
  * P1-0 首页（顶部 Tab：我的轨迹 | 公开轨迹）+ P3-1 个人中心
@@ -151,6 +155,47 @@ struct Main {
     return TrackModel.formatDistance(total);
   }
 
+  /** 首页创建轨迹前强制申请定位权限；未授权则不允许进入 */
+  private requestPermissionsAndGoCreate(): void {
+    try {
+      const atManager = abilityAccessCtrl.createAtManager();
+      const context = this.getUIContext().getHostContext() as common.Context;
+      atManager.requestPermissionsFromUser(context, [
+        'ohos.permission.LOCATION',
+        'ohos.permission.APPROXIMATELY_LOCATION'
+      ]).then((data: PermissionRequestResult) => {
+        const authResults = data.authResults;
+        let allGranted = true;
+        if (authResults && authResults.length > 0) {
+          for (let i = 0; i < authResults.length; i++) {
+            if (authResults[i] !== 0) {
+              allGranted = false;
+              break;
+            }
+          }
+        }
+        if (allGranted) {
+          this.getUIContext().getRouter().pushUrl({ url: 'pages/CreateOrEditTrack' });
+          return;
+        }
+        this.getUIContext().getPromptAction().showDialog({
+          message: '未获得定位权限，无法创建轨迹。请先在系统设置中允许定位权限。',
+          buttons: [{ text: '知道了', color: $r('app.color.primary') }]
+        }).catch(() => {});
+      }).catch((_e: BusinessError) => {
+        this.getUIContext().getPromptAction().showDialog({
+          message: '定位权限申请失败，无法创建轨迹。',
+          buttons: [{ text: '知道了', color: $r('app.color.primary') }]
+        }).catch(() => {});
+      });
+    } catch (_e) {
+      this.getUIContext().getPromptAction().showDialog({
+        message: '定位权限申请异常，无法创建轨迹。',
+        buttons: [{ text: '知道了', color: $r('app.color.primary') }]
+      }).catch(() => {});
+    }
+  }
+
   build() {
     Tabs({ barPosition: BarPosition.End, index: this.currentBottomIndex }) {
       TabContent() {
@@ -287,7 +332,7 @@ struct Main {
             .borderColor($r('app.color.accent'))
             .borderStyle(BorderStyle.Dashed)
             .onClick(() => {
-              this.getUIContext().getRouter().pushUrl({ url: 'pages/CreateOrEditTrack' });
+              this.requestPermissionsAndGoCreate();
             });
           }
           .margin({ left: 16, right: 16, top: 12 });
@@ -355,7 +400,7 @@ struct Main {
             .borderRadius(24)
             .margin({ top: 8 })
             .onClick(() => {
-              this.getUIContext().getRouter().pushUrl({ url: 'pages/CreateOrEditTrack' });
+              this.requestPermissionsAndGoCreate();
             });
         }
         .layoutWeight(1)

@@ -54,6 +54,8 @@ struct TombSpotDetail {
   @State viewerOffsetX: number = 0;
   @State viewerOffsetY: number = 0;
   @State isDownloading: boolean = false;
+  @State showCenterToast: boolean = false;
+  @State centerToastText: string = '';
   private tombId: string = '';
   private pinchStartScale: number = 1;
   private panStartX: number = 0;
@@ -61,6 +63,7 @@ struct TombSpotDetail {
   private trackId: string = '';
   private trackTitle: string = '';
   private fromRecording: boolean = false;
+  private centerToastTimer: number = -1;
 
   aboutToAppear(): void {
     const params = this.getUIContext().getRouter().getParams() as TombSpotDetailParams | undefined;
@@ -227,17 +230,26 @@ struct TombSpotDetail {
         }
       }
       if (savedPath.length > 0) {
-        promptAction.openToast({ message: '已保存至：' + savedPath });
+        this.showMiddleToast('已保存至：' + savedPath);
       }
     } catch (e) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'Download image failed: %{public}s', JSON.stringify(e));
-      try {
-        promptAction.openToast({ message: '保存失败' });
-      } catch (_t) {
-        // 忽略 Toast 异常
-      }
+      this.showMiddleToast('保存失败');
     }
     this.isDownloading = false;
+  }
+
+  private showMiddleToast(message: string): void {
+    this.centerToastText = message;
+    this.showCenterToast = true;
+    if (this.centerToastTimer !== -1) {
+      clearTimeout(this.centerToastTimer);
+      this.centerToastTimer = -1;
+    }
+    this.centerToastTimer = setTimeout(() => {
+      this.showCenterToast = false;
+      this.centerToastTimer = -1;
+    }, 1800);
   }
 
   /** 删除打卡点 */
@@ -676,10 +688,33 @@ struct TombSpotDetail {
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .backgroundColor($r('app.color.app_background'));
       }
+
+      if (this.showCenterToast) {
+        this.centerToastCover();
+      }
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.app_background'))
     .bindContentCover(this.showImageViewer, this.imageViewerCover());
+  }
+
+  @Builder
+  centerToastCover(): void {
+    Column() {
+      Text(this.centerToastText)
+        .fontSize(14)
+        .fontColor(Color.White)
+        .maxLines(2)
+        .textAlign(TextAlign.Center)
+        .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+        .backgroundColor($r('app.color.overlay_dark_strong'))
+        .borderRadius(10)
+        .width(260);
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center);
   }
 }

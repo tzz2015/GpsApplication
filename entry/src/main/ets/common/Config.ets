@@ -87,7 +87,16 @@ export class Config {
   /**
    * GPS 采集配置
    */
-  static readonly GPS_INTERVAL: number = 2;              // 定位间隔（秒）
+  static readonly GPS_INTERVAL: number = 1;              // 定位间隔（秒）
   static readonly GPS_MIN_DISTANCE: number = 2;          // 最小移动距离（米）
   static readonly GPS_ACCURACY_THRESHOLD: number = 30;   // 精度阈值（米）
+  static readonly GPS_ACCURACY_STRICT: number = 12;      // 高置信精度阈值（米）
+  static readonly GPS_ACCURACY_MAX: number = 25;         // 可接受最大精度（米）
+  static readonly GPS_MIN_DISTANCE_STRICT: number = 4;   // 高精度最小记录距离（米）
+  static readonly GPS_MIN_DISTANCE_NORMAL: number = 3;   // 常规最小记录距离（米）
+  static readonly GPS_MIN_DISTANCE_POOR: number = 6;     // 低质量定位最小记录距离（米）
+  static readonly GPS_MAX_SPEED_KMH: number = 30;        // 步行高精度速度上限（km/h）
+  static readonly GPS_IDLE_SPEED_KMH: number = 1.2;      // 近静止速度阈值（km/h）
+  static readonly GPS_IDLE_MIN_DISTANCE: number = 6;     // 近静止最小记录距离（米）
+  static readonly GPS_HEADING_JUMP_DEG: number = 75;     // 航向突变阈值（度）
 }
