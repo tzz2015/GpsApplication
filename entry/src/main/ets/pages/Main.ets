@@ -802,12 +802,8 @@ struct Main {
         .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 });
 
         Column() {
-          this.MenuItem($r('app.media.ic_document'), $r('app.string.menu_privacy'), '', $r('app.color.menu_icon_sky'), () => {
-            this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacyPolicy' });
-          });
-          Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
-          this.MenuItem($r('app.media.ic_clipboard'), $r('app.string.menu_user_agreement'), '', $r('app.color.menu_icon_sky'), () => {
-            this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgreement' });
+          this.MenuItem($r('app.media.ic_lock'), '隐私设置', '', $r('app.color.menu_icon_sky'), () => {
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/PrivacySettings' });
           });
           Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
           this.MenuItem($r('app.media.ic_info'), $r('app.string.menu_about'), 'V1.0', $r('app.color.primary'), () => {

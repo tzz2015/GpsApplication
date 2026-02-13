@@ -104,6 +104,7 @@ struct CreateOrEditTrack {
                 .onChange((value: string) => {
                   this.title = value;
                 })
+                .maxLength(30)
                 .width('100%')
                 .height(46)
                 .fontSize(15)
@@ -124,6 +125,8 @@ struct CreateOrEditTrack {
                 .onChange((value: string) => {
                   this.description = value;
                 })
+                .maxLength(200)
+                .showCounter(true)
                 .width('100%')
                 .height(100)
                 .fontSize(15)

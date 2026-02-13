@@ -9,6 +9,7 @@ import { TrackEntity } from '../model/TrackEntity';
 import { TrackPointEntity } from '../model/TrackPointEntity';
 import { TombSpotEntity } from '../model/TombSpotEntity';
 import { PostEntity } from '../model/PostEntity';
+import { FeedbackEntity } from '../model/FeedbackEntity';
 import { Config } from './Config';
 import { TestEnvStore } from './TestEnvStore';
 
@@ -553,6 +554,30 @@ export class CloudDBService {
     } catch (e) {
       const err = e as BusinessError;
       hilog.error(LOG_DOMAIN, LOG_TAG, 'Delete post failed: %{public}s', err.message);
+      return 0;
+    }
+  }
+
+  // ==================== Feedback 操作 ====================
+
+  /**
+   * 提交用户反馈到云端
+   */
+  static async upsertFeedback(feedbackId: string, userId: string, content: string,
+    contact: string): Promise<number> {
+    try {
+      const entity = new FeedbackEntity();
+      entity.feedbackId = feedbackId;
+      entity.userId = userId;
+      entity.content = content;
+      entity.contact = contact;
+      entity.createdAt = new Date();
+      const count = await CloudDBService.getZone().upsert(entity);
+      hilog.info(LOG_DOMAIN, LOG_TAG, 'Upsert feedback success, count: %{public}d', count);
+      return count;
+    } catch (e) {
+      const err = e as BusinessError;
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'Upsert feedback failed: %{public}s', err.message);
       return 0;
     }
   }

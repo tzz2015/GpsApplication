@@ -161,6 +161,7 @@ struct ProfileEdit {
                   .onChange((value: string) => {
                     this.nickname = value;
                   })
+                  .maxLength(20)
                   .width('100%')
                   .height(46)
                   .fontSize(15)
@@ -181,6 +182,7 @@ struct ProfileEdit {
                   .onChange((value: string) => {
                     this.familyName = value;
                   })
+                  .maxLength(20)
                   .width('100%')
                   .height(46)
                   .fontSize(15)

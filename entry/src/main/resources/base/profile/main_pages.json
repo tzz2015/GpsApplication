@@ -14,6 +14,7 @@
     "pages/UserAgreement",
     "pages/About",
     "pages/Feedback",
+    "pages/PrivacySettings",
     "pages/TestLab"
   ]
 }

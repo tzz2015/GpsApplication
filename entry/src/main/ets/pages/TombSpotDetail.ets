@@ -365,6 +365,7 @@ struct TombSpotDetail {
                 .onChange((value: string) => {
                   this.spotName = value;
                 })
+                .maxLength(30)
                 .width('100%')
                 .height(44)
                 .fontSize(20)
@@ -462,6 +463,8 @@ struct TombSpotDetail {
                 .onChange((value: string) => {
                   this.contentText = value;
                 })
+                .maxLength(500)
+                .showCounter(true)
                 .width('100%')
                 .height(120)
                 .fontSize(15)
@@ -575,6 +578,7 @@ struct TombSpotDetail {
                 .onChange((value: string) => {
                   this.personInfo = value;
                 })
+                .maxLength(100)
                 .width('100%')
                 .height(80)
                 .fontSize(15)
@@ -586,6 +590,7 @@ struct TombSpotDetail {
                 .onChange((value: string) => {
                   this.remark = value;
                 })
+                .maxLength(200)
                 .width('100%')
                 .height(60)
                 .fontSize(15)

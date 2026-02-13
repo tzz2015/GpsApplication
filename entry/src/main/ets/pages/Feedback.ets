@@ -1,8 +1,10 @@
 import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { NavBar } from '../common/NavBar';
 import { AuthStore } from '../common/AuthStore';
+import { CloudDBService } from '../common/CloudDBService';
 
 const PREF_NAME = 'feedback_prefs';
 const KEY_LIST = 'feedback_list';
@@ -56,16 +58,24 @@ struct Feedback {
       createdAt: Date.now()
     };
     try {
+      // 同时保存本地和提交云端
       await Feedback.saveToLocal(context, item);
+      // 异步提交云端（不阻塞返回）
+      CloudDBService.upsertFeedback(item.id, item.userId, item.content, item.contact)
+        .catch((e: Error) => {
+          hilog.warn(0x0000, 'Feedback', 'Cloud upsert failed: %{public}s', JSON.stringify(e));
+        });
       try {
-        promptAction.showToast({ message: '感谢反馈，已提交' });
+        promptAction.showToast({ message: '感谢反馈，已提交', alignment: Alignment.Center });
       } catch (_t) {
       }
-      this.content = '';
-      this.contact = '';
+      // 提交成功后返回上一页
+      this.isSubmitting = false;
+      this.getUIContext().getRouter().back();
+      return;
     } catch (e) {
       try {
-        promptAction.showToast({ message: '提交失败，请重试' });
+        promptAction.showToast({ message: '提交失败，请重试', alignment: Alignment.Center });
       } catch (_t) {
       }
     }
@@ -108,6 +118,8 @@ struct Feedback {
                 .onChange((value: string) => {
                   this.content = value;
                 })
+                .maxLength(500)
+                .showCounter(true)
                 .width('100%')
                 .height(140)
                 .fontSize(15)
@@ -128,6 +140,7 @@ struct Feedback {
                 .onChange((value: string) => {
                   this.contact = value;
                 })
+                .maxLength(50)
                 .width('100%')
                 .height(46)
                 .fontSize(15)
@@ -160,7 +173,7 @@ struct Feedback {
           .margin({ left: 20, right: 20 });
 
           // 底部提示
-          Text('反馈将保存在本地，后续版本将支持云端同步')
+          Text('反馈将同步到云端，我们会尽快查看')
             .fontSize(12)
             .fontColor($r('app.color.label_tertiary'))
             .margin({ top: 16, bottom: 40 });

@@ -1404,6 +1404,7 @@ struct TrackRecord {
           .onChange((value: string) => {
             this.dialogInputText = value;
           })
+          .maxLength(30)
           .width('100%')
           .height(44)
           .fontSize(15)

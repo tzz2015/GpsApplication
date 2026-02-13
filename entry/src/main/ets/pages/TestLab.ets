@@ -45,7 +45,8 @@ struct TestLab {
     this.useTestData = enable;
     try {
       promptAction.showToast({
-        message: enable ? '已切换到测试数据' : '已切换到正式数据'
+        message: enable ? '已切换到测试数据' : '已切换到正式数据',
+        alignment: Alignment.Center
       });
     } catch (_e) {
     }

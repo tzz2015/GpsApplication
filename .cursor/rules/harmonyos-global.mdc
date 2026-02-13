@@ -135,6 +135,7 @@ alwaysApply: true
 - 合理使用动画和过渡效果。
 - 实现响应式布局。
 - 适配不同屏幕尺寸。
+- **⚠️ 滑动回弹（必须）**：所有可滚动容器（`Scroll`、`List`、`WaterFlow` 等）必须添加 `.edgeEffect(EdgeEffect.Spring)`，确保上拉/下拉到边界时有弹簧回弹效果。这是华为云测体验规范的硬性要求，缺失回弹会导致测试不通过。新建页面时，若页面内容可能超出一屏或含列表，默认使用 `Scroll` 包裹并加 `.edgeEffect(EdgeEffect.Spring)`。注意：`EdgeEffect` 是 ArkUI 全局内置枚举，**不需要 import**，直接使用即可。
 
 ## 十七、调试与日志
 

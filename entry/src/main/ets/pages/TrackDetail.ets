@@ -1173,6 +1173,7 @@ struct TrackDetail {
             .onChange((value: string) => {
               this.editInputText = value;
             })
+            .maxLength(30)
             .width('100%')
             .height(44)
             .fontSize(15)
@@ -1231,6 +1232,7 @@ struct TrackDetail {
             .onChange((value: string) => {
               this.editInputText = value;
             })
+            .maxLength(30)
             .width('100%')
             .height(44)
             .fontSize(15)
