@@ -39,7 +39,7 @@ export class Config {
    */
   static readonly IS_DEVELOPMENT_MODE: boolean = true;
 
-  static readonly APP_VERSION: string = '1.0.1';
+  static readonly APP_VERSION: string = '1.0.2';
   static readonly BUILD_NUMBER: string = '20260208';
 
   static readonly AGC_CONFIG: AGCConfig = {
