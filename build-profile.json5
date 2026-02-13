@@ -6,12 +6,12 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.p12",
-          "storePassword": "0000001A5C1F8BC486E3027D43022036170F119F223E45BE60DEAADA0EE80C34E531F917FB0029A56FF3",
+          "storePassword": "0000001A901CE8B35E3C82A334739940C4DFB764CC8F3FE0D12866DEFDF6CD23404C3046566630D3959F",
           "keyAlias": "lyy",
-          "keyPassword": "0000001A9B88F56DBD2CBEE3ED00CE19915572CEDF0668C22EFA6B5799F70D7C8AAEF640D945DEDB8477",
+          "keyPassword": "0000001A04A0AEA527BEB13C9334216D38120466319D92EAB81AF2E8EB40074AD35C83D2510E309913EE",
           "signAlg": "SHA256withECDSA",
-          "profile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_testRelease.p7b",
-          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_test.cer"
+          "profile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debugDebug.p7b",
+          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.cer"
         }
       },
       {
@@ -19,12 +19,12 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.p12",
-          "storePassword": "0000001A88E59F04260924C787007E7422143FDB4A78D63B83810A51C73CF85ADA76B9E29F3518BF5A01",
+          "storePassword": "0000001A5325FB27C6772D956BA2493E37D3FC0BC70E2F77F21FC1393588591158B0727AF43E27F6DD5B",
           "keyAlias": "lyy",
-          "keyPassword": "0000001AF2B950172B6B235ADFE8F72A2F11D503D4FAE502EA0E2F8051E9C43652CF3F761CBE78EDD577",
+          "keyPassword": "0000001A2AB6146BF876A244EF4287C0099BA082B66072093157821B5ED6DAB3D676B2653A6734731E06",
           "signAlg": "SHA256withECDSA",
-          "profile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_testRelease.p7b",
-          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_test.cer"
+          "profile": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debugDebug.p7b",
+          "certpath": "/Users/lyf/code/hm/GpsApplication/signingConfigs/gps_debug.cer"
         }
       }
     ],

@@ -727,6 +727,7 @@ struct TrackDetail {
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .width('100%');
 
       // 底部按钮
@@ -1082,6 +1083,7 @@ struct TrackDetail {
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .backgroundColor($r('app.color.app_background'));
     }
     .width('100%')

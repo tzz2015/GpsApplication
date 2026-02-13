@@ -55,6 +55,7 @@ struct PrivacyPolicy {
       .width('100%')
       .align(Alignment.Top)
       .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .backgroundColor($r('app.color.app_background'));
     }
     .width('100%')

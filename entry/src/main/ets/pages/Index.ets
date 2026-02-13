@@ -254,6 +254,7 @@ struct Index {
           }
           .height(200)
           .width('90%')
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
 
         } else {
           Text('暂无位置记录')

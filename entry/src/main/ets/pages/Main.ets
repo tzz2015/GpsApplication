@@ -213,6 +213,7 @@ struct Main {
       }
       .barMode(BarMode.Fixed)
       .barHeight(44)
+      .barOverlap(false)
       .barBackgroundColor(Color.White)
       .onChange((index: number) => {
         this.currentTopIndex = index;
@@ -291,7 +292,7 @@ struct Main {
               this.getUIContext().getRouter().pushUrl({ url: 'pages/CreateOrEditTrack' });
             });
           }
-          .margin({ left: 16, right: 16 });
+          .margin({ left: 16, right: 16, top: 12 });
 
           // 轨迹卡片列表（分页展示，避免一次渲染过多）
           ForEach(this.myTracks.slice(0, this.myTracksDisplayCount), (item: TrackModel.Track) => {
@@ -321,11 +322,15 @@ struct Main {
             }
             .margin({ left: 16, right: 16 });
           }
+          // 底部间距占位（随列表滚动，不固定遮挡）
+          ListItem() {
+            Row().height(4);
+          }
         }
         .layoutWeight(1)
         .width('100%')
-        .padding({ top: 12, bottom: 16 })
-        .scrollBar(BarState.Off);
+        .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.Spring);
       } else {
         // 空状态
         Column({ space: 12 }) {
@@ -494,11 +499,11 @@ struct Main {
     Column() {
       if (this.publicTracks.length > 0) {
         List({ space: 12 }) {
-          ForEach(this.publicTracks.slice(0, this.publicTracksDisplayCount), (item: TrackModel.Track) => {
+          ForEach(this.publicTracks.slice(0, this.publicTracksDisplayCount), (item: TrackModel.Track, index: number) => {
             ListItem() {
               this.PublicTrackCard(item);
             }
-            .margin({ left: 16, right: 16 });
+            .margin({ left: 16, right: 16, top: index === 0 ? 12 : 0 });
           }, (item: TrackModel.Track) => item.trackId);
           if (this.publicTracksDisplayCount < this.publicTracks.length) {
             ListItem() {
@@ -519,11 +524,15 @@ struct Main {
             }
             .margin({ left: 16, right: 16 });
           }
+          // 底部间距占位（随列表滚动，不固定遮挡）
+          ListItem() {
+            Row().height(4);
+          }
         }
         .layoutWeight(1)
         .width('100%')
-        .padding({ top: 12, bottom: 16 })
-        .scrollBar(BarState.Off);
+        .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.Spring);
       } else {
         Column({ space: 12 }) {
           Image($r('app.media.ic_globe'))
