@@ -5,6 +5,7 @@ import { buffer } from '@kit.ArkTS';
 import auth from '@hw-agconnect/auth';
 import { CloudDBService } from '../common/CloudDBService';
 import { SyncService } from '../common/SyncService';
+import { TestEnvStore } from '../common/TestEnvStore';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility';
@@ -34,6 +35,11 @@ export default class EntryAbility extends UIAbility {
     this.authReadyPromise = CloudDBService.ensureAuth();
     this.authReadyPromise.then((ok: boolean) => {
       hilog.info(DOMAIN, TAG, 'Auth ensureAuth result: %{public}s', ok ? 'SUCCESS' : 'FAILED');
+    });
+
+    // 初始化测试数据开关缓存（仅开发模式生效）
+    TestEnvStore.init(this.context).catch((e: Error) => {
+      hilog.warn(DOMAIN, TAG, 'TestEnvStore init failed: %{public}s', JSON.stringify(e));
     });
 
     hilog.info(DOMAIN, TAG, 'Ability onCreate');

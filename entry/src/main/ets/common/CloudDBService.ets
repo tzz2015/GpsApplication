@@ -9,12 +9,11 @@ import { TrackEntity } from '../model/TrackEntity';
 import { TrackPointEntity } from '../model/TrackPointEntity';
 import { TombSpotEntity } from '../model/TombSpotEntity';
 import { PostEntity } from '../model/PostEntity';
+import { Config } from './Config';
+import { TestEnvStore } from './TestEnvStore';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'CloudDBService';
-
-/** 云存储区名称 */
-const ZONE_NAME = 'aoyou';
 
 /**
  * Cloud DB 操作服务
@@ -24,12 +23,24 @@ const ZONE_NAME = 'aoyou';
 export class CloudDBService {
   /** 懒加载数据库 Zone 实例，避免模块级初始化时 AGC 未就绪 */
   private static _zone: cloudDatabase.DatabaseZone | null = null;
+  private static _zoneName: string = '';
+
+  static getCurrentZoneName(): string {
+    return TestEnvStore.isUseTestDataSync() ? Config.CLOUD_DB_ZONE_TEST : Config.CLOUD_DB_ZONE_PROD;
+  }
+
+  static resetZoneCache(): void {
+    CloudDBService._zone = null;
+    CloudDBService._zoneName = '';
+  }
 
   private static getZone(): cloudDatabase.DatabaseZone {
-    if (!CloudDBService._zone) {
+    const zoneName = CloudDBService.getCurrentZoneName();
+    if (!CloudDBService._zone || CloudDBService._zoneName !== zoneName) {
       try {
-        CloudDBService._zone = cloudDatabase.zone(ZONE_NAME);
-        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Database zone initialized: %{public}s', ZONE_NAME);
+        CloudDBService._zone = cloudDatabase.zone(zoneName);
+        CloudDBService._zoneName = zoneName;
+        hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] Database zone initialized: %{public}s', zoneName);
       } catch (e) {
         const err = e as BusinessError;
         hilog.error(LOG_DOMAIN, LOG_TAG, '[ERR] Database zone init FAILED: code=%{public}d, msg=%{public}s',
@@ -193,9 +204,9 @@ export class CloudDBService {
     // 2. 测试 Zone 初始化
     try {
       // 重置 zone 以重新获取（带上新的 AuthProvider）
-      CloudDBService._zone = null;
+      CloudDBService.resetZoneCache();
       CloudDBService.getZone();
-      results.push('[OK] Zone "aoyou" 初始化成功');
+      results.push('[OK] Zone "' + CloudDBService.getCurrentZoneName() + '" 初始化成功');
       hilog.info(LOG_DOMAIN, LOG_TAG, '[OK] [2/5] Zone 初始化成功');
     } catch (e) {
       const err = e as BusinessError;

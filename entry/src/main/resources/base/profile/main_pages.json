@@ -13,6 +13,7 @@
     "pages/PrivacyPolicy",
     "pages/UserAgreement",
     "pages/About",
-    "pages/Feedback"
+    "pages/Feedback",
+    "pages/TestLab"
   ]
 }

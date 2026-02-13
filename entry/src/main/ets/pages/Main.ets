@@ -7,7 +7,7 @@ import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { AuthStore, AuthUser } from '../common/AuthStore';
 import { SyncService } from '../common/SyncService';
-import { CloudDBService } from '../common/CloudDBService';
+import { Config } from '../common/Config';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'Main';
@@ -30,8 +30,6 @@ struct Main {
   @State publicTracksDisplayCount: number = MY_TRACKS_PAGE_SIZE;
   @State isLoading: boolean = false;
   @State currentUser: AuthUser | null = null;
-  @State diagResult: string = '';
-  @State isDiagnosing: boolean = false;
   /** 缓存窗口实例，避免每次切换 Tab 都异步获取 */
   private cachedWindow: window.Window | null = null;
 
@@ -774,43 +772,16 @@ struct Main {
           this.MenuItem($r('app.media.ic_chat'), $r('app.string.menu_feedback'), '', $r('app.color.accent'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/Feedback' });
           });
+          if (Config.IS_DEVELOPMENT_MODE) {
+            Divider().color($r('app.color.separator')).margin({ left: 56, right: 16 });
+            this.MenuItem($r('app.media.ic_tool'), '测试入口', '', $r('app.color.warning'), () => {
+              this.getUIContext().getRouter().pushUrl({ url: 'pages/TestLab' });
+            });
+          }
         }
         .backgroundColor($r('app.color.card_background'))
         .borderRadius(12)
         .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 });
-
-        // 开发调试：Cloud DB 诊断
-        Column({ space: 8 }) {
-          Button(this.isDiagnosing ? '诊断中...' : '诊断 Cloud DB 连通性')
-            .width('100%')
-            .height(48)
-            .fontSize(14)
-            .fontColor($r('app.color.primary'))
-            .backgroundColor($r('app.color.card_background'))
-            .borderRadius(12)
-            .enabled(!this.isDiagnosing)
-            .onClick(() => {
-              this.isDiagnosing = true;
-              this.diagResult = '';
-              CloudDBService.diagnose().then((result: string) => {
-                this.diagResult = result;
-                this.isDiagnosing = false;
-              }).catch((e: Error) => {
-                this.diagResult = '诊断异常: ' + JSON.stringify(e);
-                this.isDiagnosing = false;
-              });
-            });
-
-          if (this.diagResult.length > 0) {
-            Text(this.diagResult)
-              .fontSize(12)
-              .fontColor($r('app.color.label_secondary'))
-              .width('100%')
-              .padding(12)
-              .backgroundColor($r('app.color.layer_inactive_bg'))
-              .borderRadius(8);
-          }
-        }
 
         Button($r('app.string.profile_logout'))
           .width('100%')

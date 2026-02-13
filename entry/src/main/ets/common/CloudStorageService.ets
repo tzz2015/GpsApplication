@@ -5,6 +5,8 @@ import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError, request } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
+import { Config } from './Config';
+import { TestEnvStore } from './TestEnvStore';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'CloudStorageService';
@@ -29,6 +31,15 @@ const UPLOAD_TASK_TIMEOUT_MS: number = 180000;
  *  - 用户头像:  users/{userId}/avatar.jpg
  */
 export class CloudStorageService {
+  private static withDataPrefix(cloudPath: string): string {
+    if (!TestEnvStore.isUseTestDataSync()) {
+      return cloudPath;
+    }
+    if (cloudPath.startsWith(Config.CLOUD_STORAGE_TEST_PREFIX)) {
+      return cloudPath;
+    }
+    return Config.CLOUD_STORAGE_TEST_PREFIX + cloudPath;
+  }
 
   // ==================== 工具方法 ====================
 
@@ -367,7 +378,7 @@ export class CloudStorageService {
     if (compressedPath.length === 0) {
       return '';
     }
-    const cloudPath = 'users/' + userId + '/avatar.jpg';
+    const cloudPath = CloudStorageService.withDataPrefix('users/' + userId + '/avatar.jpg');
     const url: string = await CloudStorageService.uploadFile(context, compressedPath, cloudPath);
     return url;
   }
@@ -392,7 +403,7 @@ export class CloudStorageService {
       return localPath;
     }
 
-    const cloudPath = 'tracks/' + trackId + '/cover.jpg';
+    const cloudPath = CloudStorageService.withDataPrefix('tracks/' + trackId + '/cover.jpg');
     const url: string = await CloudStorageService.uploadFile(context, compressedPath, cloudPath);
     return url.length > 0 ? url : localPath;
   }
@@ -445,7 +456,9 @@ export class CloudStorageService {
         continue;
       }
 
-      const cloudPath = 'tracks/' + trackId + '/tombs/' + tombId + '/' + i.toString() + '.jpg';
+      const cloudPath = CloudStorageService.withDataPrefix(
+        'tracks/' + trackId + '/tombs/' + tombId + '/' + i.toString() + '.jpg'
+      );
       const cloudUrl: string = await CloudStorageService.uploadFile(context, compressedPath, cloudPath);
 
       if (cloudUrl.length > 0) {
@@ -583,8 +596,16 @@ export class CloudStorageService {
    * 若解析不到则返回空字符串，不删文件
    */
   private static cloudPathFromDownloadUrl(url: string): string {
-    const prefix = 'tracks/';
-    const idx = url.indexOf(prefix);
+    const prefixes = ['tracks/', 'users/', 'test/tracks/', 'test/users/'];
+    let idx = -1;
+    for (let i = 0; i < prefixes.length; i++) {
+      const p = prefixes[i];
+      const pos = url.indexOf(p);
+      if (pos >= 0) {
+        idx = pos;
+        break;
+      }
+    }
     if (idx < 0) {
       return '';
     }
@@ -615,7 +636,7 @@ export class CloudStorageService {
    * 调用场景：删除轨迹时清理云存储
    */
   static async deleteTrackCover(trackId: string): Promise<void> {
-    const cloudPath = 'tracks/' + trackId + '/cover.jpg';
+    const cloudPath = CloudStorageService.withDataPrefix('tracks/' + trackId + '/cover.jpg');
     await CloudStorageService.deleteFile(cloudPath);
   }
 
@@ -636,7 +657,9 @@ export class CloudStorageService {
         for (let t = 0; t < tombIds.length; t++) {
           const tombId: string = tombIds[t];
           for (let i = 0; i < maxImg; i++) {
-            const jpgPath = 'tracks/' + trackId + '/tombs/' + tombId + '/' + i.toString() + '.jpg';
+            const jpgPath = CloudStorageService.withDataPrefix(
+              'tracks/' + trackId + '/tombs/' + tombId + '/' + i.toString() + '.jpg'
+            );
             try {
               const bucket: cloudStorage.StorageBucket = cloudStorage.bucket();
               await bucket.deleteFile(jpgPath);

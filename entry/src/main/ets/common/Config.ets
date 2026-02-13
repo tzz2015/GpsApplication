@@ -25,6 +25,7 @@ interface RoutesConfig {
   PRIVACY_POLICY: string;
   USER_AGREEMENT: string;
   ABOUT: string;
+  TEST_LAB: string;
 }
 
 interface StorageConfig {
@@ -41,6 +42,9 @@ export class Config {
 
   static readonly APP_VERSION: string = '1.0.2';
   static readonly BUILD_NUMBER: string = '20260208';
+  static readonly CLOUD_DB_ZONE_PROD: string = 'aoyou';
+  static readonly CLOUD_DB_ZONE_TEST: string = 'aoyouTest';
+  static readonly CLOUD_STORAGE_TEST_PREFIX: string = 'test/';
 
   static readonly AGC_CONFIG: AGCConfig = {
     clientId: '6917590279469130152',
@@ -71,7 +75,8 @@ export class Config {
     PROFILE_EDIT: 'pages/ProfileEdit',
     PRIVACY_POLICY: 'pages/PrivacyPolicy',
     USER_AGREEMENT: 'pages/UserAgreement',
-    ABOUT: 'pages/About'
+    ABOUT: 'pages/About',
+    TEST_LAB: 'pages/TestLab'
   };
 
   static readonly STORAGE_CONFIG: StorageConfig = {
