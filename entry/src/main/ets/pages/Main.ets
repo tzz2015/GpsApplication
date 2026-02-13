@@ -701,10 +701,9 @@ struct Main {
   // ==================== 个人中心 ====================
   @Builder
   ProfileTabContent() {
-    Scroll() {
-      Column() {
-        // 头部
-        Column({ space: 12 }) {
+    Column() {
+      // 头部
+      Column({ space: 12 }) {
         if (this.currentUser && this.currentUser.avatarUrl.length > 0) {
           Image(this.currentUser.avatarUrl)
             .width(72)
@@ -855,15 +854,11 @@ struct Main {
           });
         }
         .width('100%')
-        .padding(16);
-      }
-      .width('100%')
-      .backgroundColor($r('app.color.app_background'));
+        .padding(16)
+        .layoutWeight(1);
     }
     .width('100%')
     .height('100%')
-    .scrollBar(BarState.Off)
-    .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .backgroundColor($r('app.color.app_background'));
   }
 
