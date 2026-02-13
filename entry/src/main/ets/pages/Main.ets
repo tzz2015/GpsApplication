@@ -373,7 +373,7 @@ struct Main {
         .layoutWeight(1)
         .width('100%')
         .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring);
+        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true });
       } else {
         // 空状态
         Column({ space: 12 }) {
@@ -575,7 +575,7 @@ struct Main {
         .layoutWeight(1)
         .width('100%')
         .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring);
+        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true });
       } else {
         Column({ space: 12 }) {
           Image($r('app.media.ic_globe'))
@@ -701,9 +701,10 @@ struct Main {
   // ==================== 个人中心 ====================
   @Builder
   ProfileTabContent() {
-    Column() {
-      // 头部
-      Column({ space: 12 }) {
+    Scroll() {
+      Column() {
+        // 头部
+        Column({ space: 12 }) {
         if (this.currentUser && this.currentUser.avatarUrl.length > 0) {
           Image(this.currentUser.avatarUrl)
             .width(72)
@@ -781,17 +782,17 @@ struct Main {
         .backgroundColor($r('app.color.icon_overlay_light'))
         .borderRadius(12)
         .margin({ top: 8 });
-      }
-      .width('100%')
-      .padding({ top: 16 + this.statusBarHeight, bottom: 24, left: 20, right: 20 })
-      .linearGradient({
-        angle: 160,
-        colors: [[$r('app.color.primary'), 0], [$r('app.color.primary_dark'), 0.5], [$r('app.color.gradient_end'), 1]]
-      })
-      .alignItems(HorizontalAlign.Center);
+        }
+        .width('100%')
+        .padding({ top: 16 + this.statusBarHeight, bottom: 24, left: 20, right: 20 })
+        .linearGradient({
+          angle: 160,
+          colors: [[$r('app.color.primary'), 0], [$r('app.color.primary_dark'), 0.5], [$r('app.color.gradient_end'), 1]]
+        })
+        .alignItems(HorizontalAlign.Center);
 
-      // 菜单
-      Column({ space: 12 }) {
+        // 菜单
+        Column({ space: 12 }) {
         Column() {
           this.MenuItem($r('app.media.ic_user'), $r('app.string.menu_edit_profile'), '', $r('app.color.primary'), () => {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/ProfileEdit' });
@@ -852,13 +853,17 @@ struct Main {
               }
             }).catch(() => {});
           });
+        }
+        .width('100%')
+        .padding(16);
       }
       .width('100%')
-      .padding(16)
-      .layoutWeight(1);
+      .backgroundColor($r('app.color.app_background'));
     }
     .width('100%')
     .height('100%')
+    .scrollBar(BarState.Off)
+    .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .backgroundColor($r('app.color.app_background'));
   }
 
