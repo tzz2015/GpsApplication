@@ -12,6 +12,7 @@ import { AuthStore } from '../common/AuthStore';
 import { NavBar } from '../common/NavBar';
 import { SyncService } from '../common/SyncService';
 import { Config } from '../common/Config';
+import { convertToGCJ02, fitCameraToBounds, MAP_DEFAULT_LAT, MAP_DEFAULT_LNG, MAP_COLOR_TRACK_LINE, MAP_COLOR_START_POINT, MAP_COLOR_END_POINT, MAP_COLOR_SPOT_POINT, MAP_COLOR_STROKE_WHITE, MAP_MARKER_RADIUS, MAP_SPOT_MARKER_RADIUS, MAP_MARKER_STROKE_WIDTH, MAP_POLYLINE_WIDTH, MAP_WAYPOINT_LINE_WIDTH } from '../common/MapUtils';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'TrackDetail';
@@ -37,8 +38,8 @@ struct TrackDetail {
   @State isPrivate: boolean = true;
   @State isOwner: boolean = false;
   @State isPublicView: boolean = false;
-  @State mapCenterLat: number = 23.7275;
-  @State mapCenterLng: number = 108.3426;
+  @State mapCenterLat: number = MAP_DEFAULT_LAT;
+  @State mapCenterLng: number = MAP_DEFAULT_LNG;
   @State showEditTitleDialog: boolean = false;
   @State showEditSpotNameDialog: boolean = false;
   @State editInputText: string = '';
@@ -69,9 +70,9 @@ struct TrackDetail {
         this.mapController = controller;
         this.mapReady = true;
         // 先将地图移动到已知的起点位置（GCJ02），避免显示默认坐标
-        if (this.mapCenterLat !== 23.7275 || this.mapCenterLng !== 108.3426) {
+        if (this.mapCenterLat !== MAP_DEFAULT_LAT || this.mapCenterLng !== MAP_DEFAULT_LNG) {
           try {
-            const gcj02 = await this.convertToGCJ02(this.mapCenterLat, this.mapCenterLng);
+            const gcj02 = await convertToGCJ02(this.mapCenterLat, this.mapCenterLng);
             controller.moveCamera(map.newCameraPosition({
               target: gcj02,
               zoom: 15,
@@ -133,22 +134,6 @@ struct TrackDetail {
     // 如果地图已就绪，移动相机并绘制轨迹
     if (this.mapReady) {
       this.moveCameraAndDraw();
-    }
-  }
-
-  /** WGS84 坐标转 GCJ02（华为地图使用 GCJ02） */
-  private async convertToGCJ02(lat: number, lng: number): Promise<mapCommon.LatLng> {
-    try {
-      const wgs84: mapCommon.LatLng = { latitude: lat, longitude: lng };
-      const gcj02: mapCommon.LatLng = await map.convertCoordinate(
-        mapCommon.CoordinateType.WGS84,
-        mapCommon.CoordinateType.GCJ02,
-        wgs84
-      );
-      return gcj02;
-    } catch (e) {
-      hilog.error(LOG_DOMAIN, LOG_TAG, 'convertToGCJ02 error: %{public}s', JSON.stringify(e));
-      return { latitude: lat, longitude: lng };
     }
   }
 
@@ -260,15 +245,15 @@ struct TrackDetail {
       // 方案 A：GPS 轨迹点充足，画精确折线
       const gcj02Points: mapCommon.LatLng[] = [];
       for (let i = 0; i < displayPoints.length; i++) {
-        const converted = await this.convertToGCJ02(displayPoints[i].latitude, displayPoints[i].longitude);
+        const converted = await convertToGCJ02(displayPoints[i].latitude, displayPoints[i].longitude);
         gcj02Points.push(converted);
         allLatLngs.push(converted);
       }
       try {
         await this.mapController.addPolyline({
           points: gcj02Points,
-          color: 0xFF2563EB,
-          width: 12,
+          color: MAP_COLOR_TRACK_LINE,
+          width: MAP_POLYLINE_WIDTH,
           visible: true
         });
         hilog.info(LOG_DOMAIN, LOG_TAG, 'addPolyline GPS: %{public}d points drawn', gcj02Points.length);
@@ -282,7 +267,7 @@ struct TrackDetail {
 
       // 起点坐标
       if (this.track && this.track.startLat !== 0) {
-        const p = await this.convertToGCJ02(this.track.startLat, this.track.startLng);
+        const p = await convertToGCJ02(this.track.startLat, this.track.startLng);
         waypoints.push(p);
       }
       // 打卡点坐标（按 orderIndex 排序）
@@ -293,13 +278,13 @@ struct TrackDetail {
       sortedSpots.sort((a: TrackModel.TombSpot, b: TrackModel.TombSpot): number => a.orderIndex - b.orderIndex);
       for (let i = 0; i < sortedSpots.length; i++) {
         if (sortedSpots[i].latitude !== 0) {
-          const p = await this.convertToGCJ02(sortedSpots[i].latitude, sortedSpots[i].longitude);
+          const p = await convertToGCJ02(sortedSpots[i].latitude, sortedSpots[i].longitude);
           waypoints.push(p);
         }
       }
       // 终点坐标
       if (this.track && this.track.endLat !== 0 && this.track.endName.length > 0) {
-        const p = await this.convertToGCJ02(this.track.endLat, this.track.endLng);
+        const p = await convertToGCJ02(this.track.endLat, this.track.endLng);
         waypoints.push(p);
       }
 
@@ -308,8 +293,8 @@ struct TrackDetail {
         try {
           await this.mapController.addPolyline({
             points: waypoints,
-            color: 0xFF2563EB,
-            width: 10,
+            color: MAP_COLOR_TRACK_LINE,
+            width: MAP_WAYPOINT_LINE_WIDTH,
             visible: true
           });
           hilog.info(LOG_DOMAIN, LOG_TAG, 'addPolyline waypoints: %{public}d waypoints drawn', waypoints.length);
@@ -325,14 +310,14 @@ struct TrackDetail {
     // ===== 2. 起点标记（小绿色圆点 + 标题，点击显示名称） =====
     if (this.track && this.track.startLat !== 0) {
       try {
-        const startP = await this.convertToGCJ02(this.track.startLat, this.track.startLng);
+        const startP = await convertToGCJ02(this.track.startLat, this.track.startLng);
         // 绘制小圆点作为视觉标记
         await this.mapController.addCircle({
           center: startP,
-          radius: 10,
-          fillColor: 0xFF10B981,
-          strokeColor: 0xFFFFFFFF,
-          strokeWidth: 3,
+          radius: MAP_MARKER_RADIUS,
+          fillColor: MAP_COLOR_START_POINT,
+          strokeColor: MAP_COLOR_STROKE_WHITE,
+          strokeWidth: MAP_MARKER_STROKE_WIDTH,
           visible: true
         });
         // 添加可点击标记（用于显示名称，使用极小图标替代默认 pin）
@@ -360,13 +345,13 @@ struct TrackDetail {
     // ===== 3. 终点标记（小红色圆点 + 标题） =====
     if (this.track && this.track.endLat !== 0 && this.track.endName.length > 0) {
       try {
-        const endP = await this.convertToGCJ02(this.track.endLat, this.track.endLng);
+        const endP = await convertToGCJ02(this.track.endLat, this.track.endLng);
         await this.mapController.addCircle({
           center: endP,
-          radius: 10,
-          fillColor: 0xFFEF4444,
-          strokeColor: 0xFFFFFFFF,
-          strokeWidth: 3,
+          radius: MAP_MARKER_RADIUS,
+          fillColor: MAP_COLOR_END_POINT,
+          strokeColor: MAP_COLOR_STROKE_WHITE,
+          strokeWidth: MAP_MARKER_STROKE_WIDTH,
           visible: true
         });
         const endMarkerOpts: mapCommon.MarkerOptions = {
@@ -393,18 +378,18 @@ struct TrackDetail {
     // ===== 4. 打卡点坐标加入包围盒 =====
     for (let i = 0; i < this.tombSpots.length; i++) {
       if (this.tombSpots[i].latitude !== 0) {
-        const spotP = await this.convertToGCJ02(this.tombSpots[i].latitude, this.tombSpots[i].longitude);
+        const spotP = await convertToGCJ02(this.tombSpots[i].latitude, this.tombSpots[i].longitude);
         allLatLngs.push(spotP);
       }
     }
 
     // ===== 5. 计算包围盒并适配相机，让轨迹居中 =====
     if (allLatLngs.length > 0) {
-      this.fitCameraToBounds(allLatLngs);
+      fitCameraToBounds(this.mapController!, allLatLngs);
     } else {
       // 无任何坐标，回退到默认起点
       try {
-        const gcj02 = await this.convertToGCJ02(this.mapCenterLat, this.mapCenterLng);
+        const gcj02 = await convertToGCJ02(this.mapCenterLat, this.mapCenterLng);
         const cameraPosition: mapCommon.CameraPosition = {
           target: gcj02,
           zoom: 15,
@@ -438,15 +423,15 @@ struct TrackDetail {
       if (spot.latitude === 0 && spot.longitude === 0) {
         continue;
       }
-      const gcj02 = await this.convertToGCJ02(spot.latitude, spot.longitude);
+      const gcj02 = await convertToGCJ02(spot.latitude, spot.longitude);
       // 黄色/琥珀色圆点作为视觉标记（打卡点，符合原型）
       try {
         await this.mapController.addCircle({
           center: gcj02,
-          radius: 9,
-          fillColor: 0xFFF59E0B,
-          strokeColor: 0xFFFFFFFF,
-          strokeWidth: 3,
+          radius: MAP_SPOT_MARKER_RADIUS,
+          fillColor: MAP_COLOR_SPOT_POINT,
+          strokeColor: MAP_COLOR_STROKE_WHITE,
+          strokeWidth: MAP_MARKER_STROKE_WIDTH,
           visible: true
         });
       } catch (e) {
@@ -485,66 +470,6 @@ struct TrackDetail {
       } catch (e) {
         hilog.info(LOG_DOMAIN, LOG_TAG, 'on markerClick: %{public}s', JSON.stringify(e));
       }
-    }
-  }
-
-  /** 根据坐标集合计算包围盒，移动相机使所有点居中可见 */
-  private fitCameraToBounds(points: mapCommon.LatLng[]): void {
-    if (!this.mapController || points.length === 0) {
-      return;
-    }
-    try {
-      let minLat = points[0].latitude;
-      let maxLat = points[0].latitude;
-      let minLng = points[0].longitude;
-      let maxLng = points[0].longitude;
-      for (let i = 1; i < points.length; i++) {
-        const p = points[i];
-        if (p.latitude < minLat) {
-          minLat = p.latitude;
-        }
-        if (p.latitude > maxLat) {
-          maxLat = p.latitude;
-        }
-        if (p.longitude < minLng) {
-          minLng = p.longitude;
-        }
-        if (p.longitude > maxLng) {
-          maxLng = p.longitude;
-        }
-      }
-      // 计算中心点
-      const centerLat = (minLat + maxLat) / 2;
-      const centerLng = (minLng + maxLng) / 2;
-      // 根据范围计算合适的缩放等级
-      const latDiff = maxLat - minLat;
-      const lngDiff = maxLng - minLng;
-      const maxDiff = Math.max(latDiff, lngDiff);
-      let zoom = 16;
-      if (maxDiff > 0.1) {
-        zoom = 10;
-      } else if (maxDiff > 0.05) {
-        zoom = 11;
-      } else if (maxDiff > 0.02) {
-        zoom = 12;
-      } else if (maxDiff > 0.01) {
-        zoom = 13;
-      } else if (maxDiff > 0.005) {
-        zoom = 14;
-      } else if (maxDiff > 0.002) {
-        zoom = 15;
-      } else {
-        zoom = 16;
-      }
-      const cameraPosition: mapCommon.CameraPosition = {
-        target: { latitude: centerLat, longitude: centerLng },
-        zoom: zoom,
-        tilt: 0,
-        bearing: 0
-      };
-      this.mapController.moveCamera(map.newCameraPosition(cameraPosition));
-    } catch (e) {
-      hilog.error(LOG_DOMAIN, LOG_TAG, 'fitCameraToBounds error: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -617,6 +542,7 @@ struct TrackDetail {
         fileIo.readSync(srcFile.fd, imageData);
         fileIo.closeSync(srcFile.fd);
       } catch (_readErr) {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'read share file fallback: %{public}s', JSON.stringify(_readErr));
         this.showMiddleToast('保存失败');
         return;
       }
@@ -645,6 +571,7 @@ struct TrackDetail {
     try {
       fileIo.unlinkSync(this.shareImagePath);
     } catch (_e) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'unlink share temp: %{public}s', JSON.stringify(_e));
     }
     this.showShareCover = false;
     this.shareImagePath = '';
@@ -804,6 +731,7 @@ struct TrackDetail {
             try {
               fileIo.unlinkSync(this.shareImagePath);
             } catch (_e) {
+              hilog.warn(LOG_DOMAIN, LOG_TAG, 'unlink on cancel: %{public}s', JSON.stringify(_e));
             }
             this.showShareCover = false;
             this.shareImagePath = '';
@@ -854,7 +782,9 @@ struct TrackDetail {
           this.getUIContext().getRouter().back();
         });
       }
-    }).catch(() => {});
+    }).catch((e: Error) => {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'showDeleteConfirm: %{public}s', e.message);
+    });
   }
 
   private showMiddleToast(message: string): void {
@@ -994,8 +924,8 @@ struct TrackDetail {
               .borderRadius(12);
             }
 
-            // 可见范围（仅已完成状态）
-            if (!this.isEditing) {
+            // 可见范围（仅创建者 + 已完成状态）
+            if (this.isOwner && !this.isPublicView && !this.isEditing) {
               Row() {
                 Row({ space: 10 }) {
                   Image($r('app.media.ic_lock'))
@@ -1103,7 +1033,8 @@ struct TrackDetail {
 
             // 底部操作
             Column({ space: 8 }) {
-              if (this.isEditing) {
+              if (this.isOwner && this.isEditing) {
+                // 继续记录（仅创建者 + 编辑中状态）
                 Button('继续记录')
                   .width('100%')
                   .height(50)
@@ -1118,7 +1049,9 @@ struct TrackDetail {
                       params: { trackId: this.trackId, title: this.track ? this.track.title : '' }
                     });
                   });
-              } else {
+              }
+              if (!this.isEditing) {
+                // 分享轨迹（所有人可用）
                 Button(this.isGeneratingShare ? '生成中…' : '分享轨迹')
                   .width('100%')
                   .height(50)
@@ -1132,18 +1065,21 @@ struct TrackDetail {
                     this.shareTrackAsImage();
                   });
               }
-              Button('删除轨迹')
-                .width('100%')
-                .height(44)
-                .fontSize(15)
-                .fontColor($r('app.color.destructive'))
-                .backgroundColor(Color.Transparent)
-                .borderWidth(1.5)
-                .borderColor($r('app.color.destructive'))
-                .borderRadius(22)
-                .onClick(() => {
-                  this.showDeleteConfirm();
-                });
+              if (this.isOwner && !this.isPublicView) {
+                // 删除轨迹（仅创建者可见）
+                Button('删除轨迹')
+                  .width('100%')
+                  .height(44)
+                  .fontSize(15)
+                  .fontColor($r('app.color.destructive'))
+                  .backgroundColor(Color.Transparent)
+                  .borderWidth(1.5)
+                  .borderColor($r('app.color.destructive'))
+                  .borderRadius(22)
+                  .onClick(() => {
+                    this.showDeleteConfirm();
+                  });
+              }
             }
             .width('100%')
             .padding({ left: 16, right: 16, bottom: 40 });

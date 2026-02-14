@@ -72,7 +72,9 @@
         "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
       },
       {
-        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        "reason": "$string:location_des",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
       }
     ],
     "metadata": [

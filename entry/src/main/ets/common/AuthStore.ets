@@ -1,6 +1,9 @@
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
+const LOG_DOMAIN = 0x0000;
+const LOG_TAG = 'AuthStore';
 const PREF_NAME = 'auth_prefs';
 const KEY_USER = 'current_user';
 
@@ -41,7 +44,7 @@ export class AuthStore {
       await prefs.put(KEY_USER, JSON.stringify(user));
       await prefs.flush();
     } catch (e) {
-      console.error('AuthStore setUser error: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'setUser error: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -57,7 +60,7 @@ export class AuthStore {
       }
       return JSON.parse(json) as AuthUser;
     } catch (e) {
-      console.error('AuthStore getCurrentUser error: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'getCurrentUser error: %{public}s', JSON.stringify(e));
       return null;
     }
   }
@@ -82,7 +85,7 @@ export class AuthStore {
       };
       await AuthStore.setUser(context, updatedUser);
     } catch (e) {
-      console.error('AuthStore updateUser error: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'updateUser error: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -103,7 +106,7 @@ export class AuthStore {
       await prefs.delete(KEY_USER);
       await prefs.flush();
     } catch (e) {
-      console.error('AuthStore clearUser error: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'clearUser error: %{public}s', JSON.stringify(e));
     }
   }
 

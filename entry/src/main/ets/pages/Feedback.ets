@@ -1,4 +1,3 @@
-import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -65,19 +64,13 @@ struct Feedback {
         .catch((e: Error) => {
           hilog.warn(0x0000, 'Feedback', 'Cloud upsert failed: %{public}s', JSON.stringify(e));
         });
-      try {
-        promptAction.showToast({ message: '感谢反馈，已提交', alignment: Alignment.Center });
-      } catch (_t) {
-      }
+      this.getUIContext().getPromptAction().showToast({ message: '感谢反馈，已提交', alignment: Alignment.Center });
       // 提交成功后返回上一页
       this.isSubmitting = false;
       this.getUIContext().getRouter().back();
       return;
     } catch (e) {
-      try {
-        promptAction.showToast({ message: '提交失败，请重试', alignment: Alignment.Center });
-      } catch (_t) {
-      }
+      this.getUIContext().getPromptAction().showToast({ message: '提交失败，请重试', alignment: Alignment.Center });
     }
     this.isSubmitting = false;
   }

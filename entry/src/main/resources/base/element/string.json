@@ -358,6 +358,7 @@
     { "name": "menu_feedback", "value": "意见反馈" },
     { "name": "dialog_confirm_delete", "value": "确定删除" },
     { "name": "record_layer", "value": "图层" },
+    { "name": "record_layer_tip", "value": "可切换图层" },
     { "name": "record_distance", "value": "距离" },
     { "name": "record_duration", "value": "时长" },
     { "name": "record_altitude", "value": "海拔" },

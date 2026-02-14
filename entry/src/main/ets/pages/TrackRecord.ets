@@ -6,10 +6,12 @@ import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit';
+import { preferences } from '@kit.ArkData';
 import { TrackStore } from '../common/TrackStore';
 import { TrackModel } from '../common/TrackModel';
 import { SyncService } from '../common/SyncService';
 import { Config } from '../common/Config';
+import { convertToGCJ02, calculateBoundsZoom, MAP_DEFAULT_LAT, MAP_DEFAULT_LNG, MAP_COLOR_TRACK_LINE } from '../common/MapUtils';
 
 const LOG_DOMAIN = 0x0000;
 const LOG_TAG = 'TrackRecord';
@@ -65,9 +67,10 @@ struct TrackRecord {
   private pendingDialogAlt: number = 0;
 
   // 地图
-  @State mapCenterLat: number = 23.7275;
-  @State mapCenterLng: number = 108.3426;
+  @State mapCenterLat: number = MAP_DEFAULT_LAT;
+  @State mapCenterLng: number = MAP_DEFAULT_LNG;
   @State showLayerPanel: boolean = false;
+  @State showLayerBubbleTip: boolean = false;
   @State currentMapType: mapCommon.MapType = mapCommon.MapType.STANDARD;
   @State is3DMode: boolean = false;
   private mapOptions?: mapCommon.MapOptions;
@@ -111,6 +114,58 @@ struct TrackRecord {
     this.getPreciseLocation();
     this.loadExistingData();
     this.initMap();
+    this.loadLayerTipState();
+  }
+
+  private static readonly UI_PREFS_NAME: string = 'ui_prefs';
+  private static readonly KEY_LAYER_TIP_SHOWN: string = 'record_layer_tip_shown';
+  /** 泡泡自动消失定时器 */
+  private layerBubbleTipTimerId: number = -1;
+
+  /** 首次进入记录页时是否显示「可切换图层」泡泡提示 */
+  private loadLayerTipState(): void {
+    const context = this.getUIContext().getHostContext() as common.Context;
+    preferences.getPreferences(context, TrackRecord.UI_PREFS_NAME).then((prefs: preferences.Preferences) => {
+      prefs.get(TrackRecord.KEY_LAYER_TIP_SHOWN, false).then((value: preferences.ValueType) => {
+        const shown = (value as boolean) || false;
+        this.showLayerBubbleTip = !shown;
+        if (this.showLayerBubbleTip) {
+          this.startLayerBubbleTipTimer();
+        }
+      }).catch(() => {
+        this.showLayerBubbleTip = true;
+        this.startLayerBubbleTipTimer();
+      });
+    }).catch(() => {
+      this.showLayerBubbleTip = true;
+      this.startLayerBubbleTipTimer();
+    });
+  }
+
+  private startLayerBubbleTipTimer(): void {
+    this.clearLayerBubbleTipTimer();
+    this.layerBubbleTipTimerId = setTimeout((): void => {
+      this.showLayerBubbleTip = false;
+      this.saveLayerTipShown();
+      this.layerBubbleTipTimerId = -1;
+    }, 3000);
+  }
+
+  private clearLayerBubbleTipTimer(): void {
+    if (this.layerBubbleTipTimerId >= 0) {
+      clearTimeout(this.layerBubbleTipTimerId);
+      this.layerBubbleTipTimerId = -1;
+    }
+  }
+
+  private saveLayerTipShown(): void {
+    const context = this.getUIContext().getHostContext() as common.Context;
+    preferences.getPreferences(context, TrackRecord.UI_PREFS_NAME).then((prefs: preferences.Preferences) => {
+      prefs.put(TrackRecord.KEY_LAYER_TIP_SHOWN, true);
+      prefs.flush();
+    }).catch((e: BusinessError) => {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'saveLayerTipShown: %{public}s', JSON.stringify(e));
+    });
   }
 
   /** 检查并请求定位权限 */
@@ -213,6 +268,7 @@ struct TrackRecord {
     this.stopLocationTracking();
     this.stopTimer();
     this.stopBackgroundTask();
+    this.clearLayerBubbleTipTimer();
   }
 
   /** 加载已有数据（继续记录时用） */
@@ -284,7 +340,7 @@ struct TrackRecord {
         // 用当前已知最佳坐标立即定位地图（不再重复发起 GPS 请求）
         if (this.currentPreciseLat !== 0) {
           await this.moveCameraTo(this.currentPreciseLat, this.currentPreciseLng, 16);
-        } else if (this.mapCenterLat !== 23.7275) {
+        } else if (this.mapCenterLat !== MAP_DEFAULT_LAT) {
           await this.moveCameraTo(this.mapCenterLat, this.mapCenterLng, 16);
         }
         // 绘制已有轨迹（若 loadExistingData 已完成）
@@ -297,29 +353,13 @@ struct TrackRecord {
     };
   }
 
-  /** WGS84 坐标转 GCJ02（华为地图使用 GCJ02） */
-  private async convertToGCJ02(lat: number, lng: number): Promise<mapCommon.LatLng> {
-    try {
-      const wgs84: mapCommon.LatLng = { latitude: lat, longitude: lng };
-      const gcj02: mapCommon.LatLng = await map.convertCoordinate(
-        mapCommon.CoordinateType.WGS84,
-        mapCommon.CoordinateType.GCJ02,
-        wgs84
-      );
-      return gcj02;
-    } catch (e) {
-      hilog.error(LOG_DOMAIN, LOG_TAG, 'convertToGCJ02 error: %{public}s', JSON.stringify(e));
-      return { latitude: lat, longitude: lng };
-    }
-  }
-
   /** 移动地图相机到指定 WGS84 坐标（自动转换为 GCJ02） */
   private async moveCameraTo(lat: number, lng: number, zoom: number): Promise<void> {
     if (!this.mapController) {
       return;
     }
     try {
-      const gcj02 = await this.convertToGCJ02(lat, lng);
+      const gcj02 = await convertToGCJ02(lat, lng);
       const cameraPosition: mapCommon.CameraPosition = {
         target: gcj02,
         zoom: zoom,
@@ -590,44 +630,16 @@ struct TrackRecord {
       if (this.recordPoints.length >= 2) {
         const gcj02Points: mapCommon.LatLng[] = [];
         for (let i = 0; i < this.recordPoints.length; i++) {
-          const converted = await this.convertToGCJ02(
+          const converted = await convertToGCJ02(
             this.recordPoints[i].latitude,
             this.recordPoints[i].longitude
           );
           gcj02Points.push(converted);
         }
-        let minLat = gcj02Points[0].latitude;
-        let maxLat = gcj02Points[0].latitude;
-        let minLng = gcj02Points[0].longitude;
-        let maxLng = gcj02Points[0].longitude;
-        for (let i = 1; i < gcj02Points.length; i++) {
-          const p = gcj02Points[i];
-          if (p.latitude < minLat) { minLat = p.latitude; }
-          if (p.latitude > maxLat) { maxLat = p.latitude; }
-          if (p.longitude < minLng) { minLng = p.longitude; }
-          if (p.longitude > maxLng) { maxLng = p.longitude; }
+        const cameraPos = calculateBoundsZoom(gcj02Points, 1);
+        if (cameraPos) {
+          this.mapController.moveCamera(map.newCameraPosition(cameraPos));
         }
-        const centerLat = (minLat + maxLat) / 2;
-        const centerLng = (minLng + maxLng) / 2;
-        const latDiff = maxLat - minLat;
-        const lngDiff = maxLng - minLng;
-        const maxDiff = Math.max(latDiff, lngDiff);
-        let zoom = 16;
-        if (maxDiff > 0.1) { zoom = 11; }
-        else if (maxDiff > 0.05) { zoom = 12; }
-        else if (maxDiff > 0.02) { zoom = 13; }
-        else if (maxDiff > 0.01) { zoom = 14; }
-        else if (maxDiff > 0.005) { zoom = 15; }
-        else if (maxDiff > 0.002) { zoom = 16; }
-        else { zoom = 17; }
-        // 再额外放大 1 级
-        zoom = Math.min(zoom + 1, 20);
-        this.mapController.moveCamera(map.newCameraPosition({
-          target: { latitude: centerLat, longitude: centerLng },
-          zoom: zoom,
-          tilt: 0,
-          bearing: 0
-        }));
         // 等待地图渲染
         await new Promise<void>((resolve: Function) => {
           setTimeout(() => { resolve(); }, 600);
@@ -666,7 +678,7 @@ struct TrackRecord {
       // 将 WGS84 轨迹点转换为 GCJ02
       const gcj02Points: mapCommon.LatLng[] = [];
       for (let i = 0; i < this.recordPoints.length; i++) {
-        const converted = await this.convertToGCJ02(
+        const converted = await convertToGCJ02(
           this.recordPoints[i].latitude,
           this.recordPoints[i].longitude
         );
@@ -674,7 +686,7 @@ struct TrackRecord {
       }
       const polylineOption: mapCommon.MapPolylineOptions = {
         points: gcj02Points,
-        color: 0xFF2563EB,
+        color: MAP_COLOR_TRACK_LINE,
         width: 14,
         visible: true
       };
@@ -992,26 +1004,57 @@ struct TrackRecord {
         .position({ x: 12, y: 12 + this.statusBarHeight })
         .zIndex(10);
 
+        // 图层按钮泡泡提示（首次进入显示，箭头指向图层按钮；自动消失或点击消失）
+        if (this.showLayerBubbleTip) {
+          Row({ space: 0 }) {
+            Column() {
+              Text($r('app.string.record_layer_tip'))
+                .fontSize(12)
+                .fontColor(Color.White)
+                .padding({ left: 10, right: 10, top: 6, bottom: 6 });
+            }
+            .backgroundColor($r('app.color.overlay_dark_strong'))
+            .borderRadius(8);
+            // 箭头指向右侧的图层按钮（小三角）
+            Column() {
+              Path()
+                .commands('M0 0 L0 12 L8 6 Z')
+                .fill($r('app.color.overlay_dark_strong'))
+                .width(8)
+                .height(12);
+            }
+            .width(8)
+            .height(12)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center);
+          }
+          .position({ x: '100%', y: 12 + this.statusBarHeight })
+          .translate({ x: -(80 + 8 + 60), y: 14 })
+          .zIndex(12)
+          .onClick(() => {
+            this.clearLayerBubbleTipTimer();
+            this.showLayerBubbleTip = false;
+            this.saveLayerTipShown();
+          });
+        }
+
         // 地图控制按钮（右上角，仅保留图层切换与 2D/3D；定位使用地图右下角系统按钮）
         Column({ space: 10 }) {
-          // 图层切换（图标+文字，便于识别）
+          // 图层切换（仅图标，无「图层」文字）
           Button() {
-            Row({ space: 4 }) {
-              Image($r('app.media.ic_globe'))
-                .width(16)
-                .height(16)
-                .fillColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
-              Text($r('app.string.record_layer'))
-                .fontSize(12)
-                .fontColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
-            }
+            Image($r('app.media.ic_globe'))
+              .width(20)
+              .height(20)
+              .fillColor(this.showLayerPanel ? Color.White : $r('app.color.label_primary'));
           }
-          .width(56)
+          .width(40)
           .height(40)
           .backgroundColor(this.showLayerPanel ? $r('app.color.primary') : $r('app.color.card_background'))
           .borderRadius(12)
           .shadow({ radius: 8, color: $r('app.color.shadow_large'), offsetX: 0, offsetY: 2 })
           .onClick(() => {
+            this.showLayerBubbleTip = false;
+            this.saveLayerTipShown();
             this.showLayerPanel = !this.showLayerPanel;
           });
 
@@ -1034,7 +1077,7 @@ struct TrackRecord {
                 const tilt: number = this.is3DMode ? 45 : 0;
                 const lat: number = this.lastLat !== 0 ? this.lastLat : this.mapCenterLat;
                 const lng: number = this.lastLng !== 0 ? this.lastLng : this.mapCenterLng;
-                const gcj02: mapCommon.LatLng = await this.convertToGCJ02(lat, lng);
+                const gcj02: mapCommon.LatLng = await convertToGCJ02(lat, lng);
                 const cameraPosition: mapCommon.CameraPosition = {
                   target: gcj02,
                   zoom: 16,

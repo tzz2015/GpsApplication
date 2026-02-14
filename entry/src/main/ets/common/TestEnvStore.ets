@@ -1,6 +1,10 @@
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Config } from './Config';
+
+const LOG_DOMAIN = 0x0000;
+const LOG_TAG = 'TestEnvStore';
 
 const PREF_NAME = 'dev_test_env_prefs';
 const KEY_USE_TEST_DATA = 'use_test_data';
@@ -25,6 +29,7 @@ export class TestEnvStore {
       const value = await prefs.get(KEY_USE_TEST_DATA, true) as boolean;
       TestEnvStore.useTestDataCache = value;
     } catch (_e) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'init prefs: %{public}s', JSON.stringify(_e));
       TestEnvStore.useTestDataCache = true;
     } finally {
       TestEnvStore.initialized = true;
@@ -58,7 +63,7 @@ export class TestEnvStore {
       await prefs.put(KEY_USE_TEST_DATA, enabled);
       await prefs.flush();
     } catch (_e) {
-      // 忽略持久化失败，运行时缓存仍生效
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'setUseTestData persist: %{public}s', JSON.stringify(_e));
     }
   }
 }

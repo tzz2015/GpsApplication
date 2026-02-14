@@ -33,6 +33,7 @@ struct Main {
   @State publicTracks: TrackModel.Track[] = [];
   @State publicTracksDisplayCount: number = MY_TRACKS_PAGE_SIZE;
   @State isLoading: boolean = false;
+  @State isRefreshing: boolean = false;
   @State currentUser: AuthUser | null = null;
   /** 缓存窗口实例，避免每次切换 Tab 都异步获取 */
   private cachedWindow: window.Window | null = null;
@@ -124,14 +125,43 @@ struct Main {
       );
       this.publicTracksDisplayCount = Math.min(MY_TRACKS_PAGE_SIZE, this.publicTracks.length);
       this.isLoading = false;
+      this.isRefreshing = false;
 
       // 进入首页时，后台同步本地数据到云端
       SyncService.syncAll(context).catch((e: Error) => {
         hilog.warn(LOG_DOMAIN, LOG_TAG, 'Background sync: %{public}s', JSON.stringify(e));
       });
-    }).catch(() => {
+    }).catch((e: Error) => {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'loadAllData: %{public}s', JSON.stringify(e));
       this.isLoading = false;
+      this.isRefreshing = false;
     });
+  }
+
+  /** 下拉刷新回调 */
+  private onPullRefresh(): void {
+    this.isRefreshing = true;
+    this.loadAllData();
+  }
+
+  /** 我的轨迹上拉加载更多 */
+  private loadMoreMyTracks(): void {
+    if (this.myTracksDisplayCount < this.myTracks.length) {
+      this.myTracksDisplayCount = Math.min(
+        this.myTracksDisplayCount + MY_TRACKS_PAGE_SIZE,
+        this.myTracks.length
+      );
+    }
+  }
+
+  /** 公开轨迹上拉加载更多 */
+  private loadMorePublicTracks(): void {
+    if (this.publicTracksDisplayCount < this.publicTracks.length) {
+      this.publicTracksDisplayCount = Math.min(
+        this.publicTracksDisplayCount + MY_TRACKS_PAGE_SIZE,
+        this.publicTracks.length
+      );
+    }
   }
 
   /** 计算统计 */
@@ -181,18 +211,18 @@ struct Main {
         this.getUIContext().getPromptAction().showDialog({
           message: '未获得定位权限，无法创建轨迹。请先在系统设置中允许定位权限。',
           buttons: [{ text: '知道了', color: $r('app.color.primary') }]
-        }).catch(() => {});
+        }).catch((e: Error) => { hilog.warn(LOG_DOMAIN, LOG_TAG, 'dialog: %{public}s', e.message); });
       }).catch((_e: BusinessError) => {
         this.getUIContext().getPromptAction().showDialog({
           message: '定位权限申请失败，无法创建轨迹。',
           buttons: [{ text: '知道了', color: $r('app.color.primary') }]
-        }).catch(() => {});
+        }).catch((e: Error) => { hilog.warn(LOG_DOMAIN, LOG_TAG, 'dialog: %{public}s', e.message); });
       });
     } catch (_e) {
       this.getUIContext().getPromptAction().showDialog({
         message: '定位权限申请异常，无法创建轨迹。',
         buttons: [{ text: '知道了', color: $r('app.color.primary') }]
-      }).catch(() => {});
+      }).catch((e: Error) => { hilog.warn(LOG_DOMAIN, LOG_TAG, 'dialog: %{public}s', e.message); });
     }
   }
 
@@ -308,108 +338,96 @@ struct Main {
   // ==================== 我的轨迹列表 ====================
   @Builder
   MyTracksList() {
-    Column() {
-      if (this.myTracks.length > 0) {
-        List({ space: 12 }) {
-          // 新建按钮
-          ListItem() {
-            Row({ space: 6 }) {
-              Image($r('app.media.ic_plus'))
-                .width(18)
-                .height(18)
-                .fillColor($r('app.color.accent'));
-              Text($r('app.string.main_new_track_btn'))
-                .fontSize(15)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.accent_dark'));
-            }
-            .width('100%')
-            .height(48)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor($r('app.color.accent_light'))
-            .borderRadius(12)
-            .borderWidth(2)
-            .borderColor($r('app.color.accent'))
-            .borderStyle(BorderStyle.Dashed)
-            .onClick(() => {
-              this.requestPermissionsAndGoCreate();
-            });
-          }
-          .margin({ left: 16, right: 16, top: 12 });
-
-          // 轨迹卡片列表（分页展示，避免一次渲染过多）
-          ForEach(this.myTracks.slice(0, this.myTracksDisplayCount), (item: TrackModel.Track) => {
+    Refresh({ refreshing: $$this.isRefreshing }) {
+      Column() {
+        if (this.myTracks.length > 0) {
+          List({ space: 12 }) {
+            // 新建按钮
             ListItem() {
-              this.TrackCard(item);
-            }
-            .margin({ left: 16, right: 16 });
-          }, (item: TrackModel.Track) => item.trackId);
-
-          // 加载更多
-          if (this.myTracksDisplayCount < this.myTracks.length) {
-            ListItem() {
-              Row() {
-                Text('加载更多（' + (this.myTracks.length - this.myTracksDisplayCount).toString() + ' 条）')
-                  .fontSize(14)
-                  .fontColor($r('app.color.primary'));
+              Row({ space: 6 }) {
+                Image($r('app.media.ic_plus'))
+                  .width(18)
+                  .height(18)
+                  .fillColor($r('app.color.accent'));
+                Text($r('app.string.main_new_track_btn'))
+                  .fontSize(15)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.accent_dark'));
               }
               .width('100%')
               .height(48)
               .justifyContent(FlexAlign.Center)
+              .backgroundColor($r('app.color.accent_light'))
+              .borderRadius(12)
+              .borderWidth(2)
+              .borderColor($r('app.color.accent'))
+              .borderStyle(BorderStyle.Dashed)
               .onClick(() => {
-                this.myTracksDisplayCount = Math.min(
-                  this.myTracksDisplayCount + MY_TRACKS_PAGE_SIZE,
-                  this.myTracks.length
-                );
+                this.requestPermissionsAndGoCreate();
               });
             }
-            .margin({ left: 16, right: 16 });
+            .margin({ left: 16, right: 16, top: 12 });
+
+            // 轨迹卡片列表（分页展示，避免一次渲染过多）
+            ForEach(this.myTracks.slice(0, this.myTracksDisplayCount), (item: TrackModel.Track) => {
+              ListItem() {
+                this.TrackCard(item, false);
+              }
+              .margin({ left: 16, right: 16 });
+            }, (item: TrackModel.Track) => item.trackId);
+
+            // 底部间距占位（随列表滚动，不固定遮挡）
+            ListItem() {
+              Row().height(4);
+            }
           }
-          // 底部间距占位（随列表滚动，不固定遮挡）
-          ListItem() {
-            Row().height(4);
+          .layoutWeight(1)
+          .width('100%')
+          .scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+          .onReachEnd(() => {
+            this.loadMoreMyTracks();
+          });
+        } else {
+          // 空状态
+          Column({ space: 12 }) {
+            Image($r('app.media.ic_location_pin'))
+              .width(48)
+              .height(48)
+              .fillColor($r('app.color.primary'));
+            Text($r('app.string.empty_my_tracks_title'))
+              .fontSize(17)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.label_primary'));
+            Text($r('app.string.empty_my_tracks_hint'))
+              .fontSize(14)
+              .fontColor($r('app.color.label_tertiary'))
+              .textAlign(TextAlign.Center)
+              .lineHeight(22);
+            Button($r('app.string.empty_my_tracks_action'))
+              .fontSize(17)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(Color.White)
+              .backgroundColor($r('app.color.primary'))
+              .height(48)
+              .padding({ left: 32, right: 32 })
+              .borderRadius(24)
+              .margin({ top: 8 })
+              .onClick(() => {
+                this.requestPermissionsAndGoCreate();
+              });
           }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .width('100%');
         }
-        .layoutWeight(1)
-        .width('100%')
-        .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true });
-      } else {
-        // 空状态
-        Column({ space: 12 }) {
-          Image($r('app.media.ic_location_pin'))
-            .width(48)
-            .height(48)
-            .fillColor($r('app.color.primary'));
-          Text($r('app.string.empty_my_tracks_title'))
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.label_primary'));
-          Text($r('app.string.empty_my_tracks_hint'))
-            .fontSize(14)
-            .fontColor($r('app.color.label_tertiary'))
-            .textAlign(TextAlign.Center)
-            .lineHeight(22);
-          Button($r('app.string.empty_my_tracks_action'))
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(Color.White)
-            .backgroundColor($r('app.color.primary'))
-            .height(48)
-            .padding({ left: 32, right: 32 })
-            .borderRadius(24)
-            .margin({ top: 8 })
-            .onClick(() => {
-              this.requestPermissionsAndGoCreate();
-            });
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .width('100%');
       }
+      .width('100%')
+      .height('100%');
     }
-    .width('100%')
-    .height('100%');
+    .onRefreshing(() => {
+      this.onPullRefresh();
+    });
   }
 
   @Builder
@@ -427,8 +445,13 @@ struct Main {
     .alignItems(HorizontalAlign.Center);
   }
 
+  /**
+   * 统一轨迹卡片组件，支持"我的轨迹"和"公开轨迹"两种模式
+   * @param item 轨迹数据
+   * @param isPublicView 是否为公开轨迹模式
+   */
   @Builder
-  TrackCard(item: TrackModel.Track) {
+  TrackCard(item: TrackModel.Track, isPublicView: boolean = false) {
     Column() {
       // 封面图（如有）
       if (item.coverImageUrl.length > 0) {
@@ -441,6 +464,7 @@ struct Main {
       }
 
       Column() {
+        // 标题行 + 状态/公开标签
         Row({ space: 8 }) {
           Text(item.title)
             .fontSize(16)
@@ -449,7 +473,15 @@ struct Main {
             .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-          if (item.status === TrackModel.TRACK_STATUS_DONE) {
+          if (isPublicView) {
+            Text($r('app.string.visibility_public'))
+              .fontSize(11)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.primary'))
+              .backgroundColor($r('app.color.menu_selected_bg'))
+              .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+              .borderRadius(10);
+          } else if (item.status === TrackModel.TRACK_STATUS_DONE) {
             Text($r('app.string.status_done'))
               .fontSize(11)
               .fontWeight(FontWeight.Medium)
@@ -469,187 +501,31 @@ struct Main {
         }
         .width('100%');
 
-        Text(TrackModel.formatDate(item.createdAt))
-          .fontSize(12)
-          .fontColor($r('app.color.label_tertiary'))
-          .margin({ top: 4 });
-
-        if (item.description.length > 0) {
-          Text(item.description)
-            .fontSize(13)
-            .fontColor($r('app.color.label_secondary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .margin({ top: 4 });
-        }
-
-        Row({ space: 16 }) {
+        // 公开模式：作者 + 日期；我的模式：仅日期
+        if (isPublicView) {
           Row({ space: 4 }) {
-            Image($r('app.media.ic_location_pin'))
-              .width(14)
-              .height(14)
+            Image($r('app.media.ic_user'))
+              .width(12)
+              .height(12)
               .fillColor($r('app.color.label_secondary'));
-            Text(TrackModel.formatDistance(item.totalDistance))
+            Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : $r('app.string.profile_default_user'))
               .fontSize(12)
               .fontColor($r('app.color.label_secondary'));
+            Text('·')
+              .fontSize(12)
+              .fontColor($r('app.color.label_tertiary'));
+            Text(TrackModel.formatDate(item.createdAt))
+              .fontSize(12)
+              .fontColor($r('app.color.label_tertiary'));
           }
-          if (item.maxAltitude > 0) {
-            Row({ space: 4 }) {
-              Image($r('app.media.ic_mountain'))
-                .width(14)
-                .height(14)
-                .fillColor($r('app.color.label_secondary'));
-              Text(item.maxAltitude.toString() + 'm')
-                .fontSize(12)
-                .fontColor($r('app.color.label_secondary'));
-            }
-          }
-          if (item.totalDuration > 0) {
-            Row({ space: 4 }) {
-              Image($r('app.media.ic_timer'))
-                .width(14)
-                .height(14)
-                .fillColor($r('app.color.label_secondary'));
-              Text(TrackModel.formatDuration(item.totalDuration))
-                .fontSize(12)
-                .fontColor($r('app.color.label_secondary'));
-            }
-          }
-        }
-        .width('100%')
-        .margin({ top: 8 });
-      }
-      .width('100%')
-      .padding(item.coverImageUrl.length > 0 ? { left: 16, right: 16, top: 12, bottom: 16 } :
-        { left: 16, right: 16, top: 16, bottom: 16 });
-    }
-    .width('100%')
-    .backgroundColor($r('app.color.card_background'))
-    .borderRadius(12)
-    .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 })
-    .clip(true)
-    .onClick(() => {
-      this.getUIContext().getRouter().pushUrl({
-        url: 'pages/TrackDetail',
-        params: { trackId: item.trackId, title: item.title }
-      });
-    });
-  }
-
-  // ==================== 公开轨迹列表 ====================
-  @Builder
-  PublicTracksList() {
-    Column() {
-      if (this.publicTracks.length > 0) {
-        List({ space: 12 }) {
-          ForEach(this.publicTracks.slice(0, this.publicTracksDisplayCount), (item: TrackModel.Track, index: number) => {
-            ListItem() {
-              this.PublicTrackCard(item);
-            }
-            .margin({ left: 16, right: 16, top: index === 0 ? 12 : 0 });
-          }, (item: TrackModel.Track) => item.trackId);
-          if (this.publicTracksDisplayCount < this.publicTracks.length) {
-            ListItem() {
-              Row() {
-                Text('加载更多（' + (this.publicTracks.length - this.publicTracksDisplayCount).toString() + ' 条）')
-                  .fontSize(14)
-                  .fontColor($r('app.color.primary'));
-              }
-              .width('100%')
-              .height(48)
-              .justifyContent(FlexAlign.Center)
-              .onClick(() => {
-                this.publicTracksDisplayCount = Math.min(
-                  this.publicTracksDisplayCount + MY_TRACKS_PAGE_SIZE,
-                  this.publicTracks.length
-                );
-              });
-            }
-            .margin({ left: 16, right: 16 });
-          }
-          // 底部间距占位（随列表滚动，不固定遮挡）
-          ListItem() {
-            Row().height(4);
-          }
-        }
-        .layoutWeight(1)
-        .width('100%')
-        .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true });
-      } else {
-        Column({ space: 12 }) {
-          Image($r('app.media.ic_globe'))
-            .width(48)
-            .height(48)
-            .fillColor($r('app.color.primary'));
-          Text($r('app.string.empty_all_tracks_title'))
-            .fontSize(17)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.label_primary'));
-          Text($r('app.string.empty_all_tracks_hint'))
-            .fontSize(14)
-            .fontColor($r('app.color.label_tertiary'));
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .width('100%');
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('app.color.app_background'));
-  }
-
-  @Builder
-  PublicTrackCard(item: TrackModel.Track) {
-    Column() {
-      // 封面图（如有）
-      if (item.coverImageUrl.length > 0) {
-        Image(item.coverImageUrl)
           .width('100%')
-          .height(140)
-          .objectFit(ImageFit.Cover)
-          .borderRadius({ topLeft: 12, topRight: 12 })
-          .alt($r('app.color.separator'));
-      }
-
-      Column() {
-        Row({ space: 8 }) {
-          Text(item.title)
-            .fontSize(16)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.label_primary'))
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-          Text($r('app.string.visibility_public'))
-            .fontSize(11)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.primary'))
-            .backgroundColor($r('app.color.menu_selected_bg'))
-            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .borderRadius(10);
-        }
-        .width('100%');
-
-        // 作者信息
-        Row({ space: 4 }) {
-          Image($r('app.media.ic_user'))
-            .width(12)
-            .height(12)
-            .fillColor($r('app.color.label_secondary'));
-          Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : $r('app.string.profile_default_user'))
-            .fontSize(12)
-            .fontColor($r('app.color.label_secondary'));
-          Text('·')
-            .fontSize(12)
-            .fontColor($r('app.color.label_tertiary'));
+          .margin({ top: 4 });
+        } else {
           Text(TrackModel.formatDate(item.createdAt))
             .fontSize(12)
-            .fontColor($r('app.color.label_tertiary'));
+            .fontColor($r('app.color.label_tertiary'))
+            .margin({ top: 4 });
         }
-        .width('100%')
-        .margin({ top: 4 });
 
         if (item.description.length > 0) {
           Text(item.description)
@@ -660,6 +536,7 @@ struct Main {
             .margin({ top: 4 });
         }
 
+        // 统计信息行
         Row({ space: 16 }) {
           Row({ space: 4 }) {
             Image($r('app.media.ic_location_pin'))
@@ -692,6 +569,17 @@ struct Main {
                 .fontColor($r('app.color.label_secondary'));
             }
           }
+          if (!isPublicView && item.totalDuration > 0) {
+            Row({ space: 4 }) {
+              Image($r('app.media.ic_timer'))
+                .width(14)
+                .height(14)
+                .fillColor($r('app.color.label_secondary'));
+              Text(TrackModel.formatDuration(item.totalDuration))
+                .fontSize(12)
+                .fontColor($r('app.color.label_secondary'));
+            }
+          }
         }
         .width('100%')
         .margin({ top: 8 });
@@ -704,13 +592,70 @@ struct Main {
     .backgroundColor($r('app.color.card_background'))
     .borderRadius(12)
     .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 })
+    .clip(true)
     .onClick(() => {
       this.getUIContext().getRouter().pushUrl({
         url: 'pages/TrackDetail',
-        params: { trackId: item.trackId, title: item.title, isPublicView: true }
+        params: { trackId: item.trackId, title: item.title, isPublicView: isPublicView }
       });
     });
   }
+
+  // ==================== 公开轨迹列表 ====================
+  @Builder
+  PublicTracksList() {
+    Refresh({ refreshing: $$this.isRefreshing }) {
+      Column() {
+        if (this.publicTracks.length > 0) {
+          List({ space: 12 }) {
+            ForEach(this.publicTracks.slice(0, this.publicTracksDisplayCount), (item: TrackModel.Track, index: number) => {
+              ListItem() {
+                this.TrackCard(item, true);
+              }
+              .margin({ left: 16, right: 16, top: index === 0 ? 12 : 0 });
+            }, (item: TrackModel.Track) => item.trackId);
+
+            // 底部间距占位（随列表滚动，不固定遮挡）
+            ListItem() {
+              Row().height(4);
+            }
+          }
+          .layoutWeight(1)
+          .width('100%')
+          .scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+          .onReachEnd(() => {
+            this.loadMorePublicTracks();
+          });
+        } else {
+          Column({ space: 12 }) {
+            Image($r('app.media.ic_globe'))
+              .width(48)
+              .height(48)
+              .fillColor($r('app.color.primary'));
+            Text($r('app.string.empty_all_tracks_title'))
+              .fontSize(17)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.label_primary'));
+            Text($r('app.string.empty_all_tracks_hint'))
+              .fontSize(14)
+              .fontColor($r('app.color.label_tertiary'));
+          }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .width('100%');
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.app_background'));
+    }
+    .onRefreshing(() => {
+      this.onPullRefresh();
+    });
+  }
+
+  // PublicTrackCard 已合并到 TrackCard(item, isPublicView=true)
 
   // ==================== 个人中心 ====================
   @Builder
@@ -860,7 +805,7 @@ struct Main {
                   this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
                 });
               }
-            }).catch(() => {});
+            }).catch((e: Error) => { hilog.warn(LOG_DOMAIN, LOG_TAG, 'dialog: %{public}s', e.message); });
           });
         }
         .width('100%')

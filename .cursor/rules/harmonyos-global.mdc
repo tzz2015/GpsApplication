@@ -213,3 +213,10 @@ alwaysApply: true
 - 实现 API 文档自动生成（若适用）。
 - 维护项目开发文档（与 `doc/` 保持一致）。
 - 提供使用示例和最佳实践。
+
+## 二十八、编译验证（强制）
+
+- **每次修改代码后，必须自动执行编译命令验证**：在项目根目录运行 `hvigorw assembleHap --mode module -p product=default --no-daemon`。
+- 编译如有 ERROR（非第三方库 WARN），必须立即修复并重新编译，循环直到 `BUILD SUCCESSFUL`。
+- 仅第三方库的 WARN（如 `@hw-agconnect/auth` 的 `arkts-strict-typing-required`）和已知弃用提示（如 `PhotoViewPicker`）可忽略。
+- 不得跳过编译步骤、不得在编译未通过时声称修改完成。

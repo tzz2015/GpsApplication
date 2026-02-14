@@ -1,7 +1,10 @@
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TrackModel } from './TrackModel';
 
+const LOG_DOMAIN = 0x0000;
+const LOG_TAG = 'TrackStore';
 const PREF_NAME = 'track_prefs';
 const KEY_TRACKS = 'tracks_list';
 const KEY_TOMBSPOTS = 'tombspots_list';
@@ -25,7 +28,7 @@ export class TrackStore {
       const list = JSON.parse(json) as TrackModel.Track[];
       return (list || []).sort((a: TrackModel.Track, b: TrackModel.Track) => b.createdAt - a.createdAt);
     } catch (e) {
-      console.error('TrackStore getTracks: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'getTracks: %{public}s', JSON.stringify(e));
       return [];
     }
   }
@@ -73,7 +76,7 @@ export class TrackStore {
       await prefs.put(KEY_TRACKS, JSON.stringify(list));
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore saveTrack: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'saveTrack: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -114,7 +117,7 @@ export class TrackStore {
       await prefs.put(KEY_TRACKS, JSON.stringify(list));
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore updateTrack: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'updateTrack: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -141,7 +144,7 @@ export class TrackStore {
 
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore deleteTrack: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'deleteTrack: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -156,7 +159,7 @@ export class TrackStore {
       const json = await prefs.get(KEY_TOMBSPOTS, '[]') as string;
       return (JSON.parse(json) as TrackModel.TombSpot[]) || [];
     } catch (e) {
-      console.error('TrackStore getAllTombSpots: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'getAllTombSpots: %{public}s', JSON.stringify(e));
       return [];
     }
   }
@@ -196,7 +199,7 @@ export class TrackStore {
       await prefs.put(KEY_TOMBSPOTS, JSON.stringify(list));
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore saveTombSpot: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'saveTombSpot: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -230,7 +233,7 @@ export class TrackStore {
       await prefs.put(KEY_TOMBSPOTS, JSON.stringify(list));
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore updateTombSpot: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'updateTombSpot: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -245,7 +248,7 @@ export class TrackStore {
       await prefs.put(KEY_TOMBSPOTS, JSON.stringify(filtered));
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore deleteTombSpot: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'deleteTombSpot: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -260,7 +263,7 @@ export class TrackStore {
       const json = await prefs.get(KEY_TRACKPOINTS, '[]') as string;
       return (JSON.parse(json) as TrackModel.TrackPointItem[]) || [];
     } catch (e) {
-      console.error('TrackStore getAllTrackPoints: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'getAllTrackPoints: %{public}s', JSON.stringify(e));
       return [];
     }
   }
@@ -289,7 +292,7 @@ export class TrackStore {
       await prefs.put(KEY_TRACKPOINTS, JSON.stringify(merged));
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore saveTrackPoints: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'saveTrackPoints: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -322,7 +325,7 @@ export class TrackStore {
       await prefs.put(KEY_TRACKPOINTS, JSON.stringify(all));
       await prefs.flush();
     } catch (e) {
-      console.error('TrackStore markPointsSynced: ' + JSON.stringify(e));
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'markPointsSynced: %{public}s', JSON.stringify(e));
     }
   }
 }

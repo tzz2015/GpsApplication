@@ -1,4 +1,3 @@
-import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { NavBar } from '../common/NavBar';
 import { Config } from '../common/Config';
@@ -43,13 +42,10 @@ struct TestLab {
     await TestEnvStore.setUseTestData(context, enable);
     CloudDBService.resetZoneCache();
     this.useTestData = enable;
-    try {
-      promptAction.showToast({
-        message: enable ? '已切换到测试数据' : '已切换到正式数据',
-        alignment: Alignment.Center
-      });
-    } catch (_e) {
-    }
+    this.getUIContext().getPromptAction().showToast({
+      message: enable ? '已切换到测试数据' : '已切换到正式数据',
+      alignment: Alignment.Center
+    });
   }
 
   private runDiagnosis(): void {

@@ -193,18 +193,12 @@ struct PrivacySettings {
 
       // 4. 跳转登录页
       this.isDeleting = false;
-      try {
-        promptAction.showToast({ message: '账户已注销', alignment: Alignment.Center });
-      } catch (_t) {
-      }
+      this.getUIContext().getPromptAction().showToast({ message: '账户已注销', alignment: Alignment.Center });
       this.getUIContext().getRouter().replaceUrl({ url: 'pages/Login' });
     } catch (e) {
       this.isDeleting = false;
       hilog.error(LOG_DOMAIN, LOG_TAG, 'deleteAccountAndData error: %{public}s', JSON.stringify(e));
-      try {
-        promptAction.showToast({ message: '注销失败，请重试', alignment: Alignment.Center });
-      } catch (_t) {
-      }
+      this.getUIContext().getPromptAction().showToast({ message: '注销失败，请重试', alignment: Alignment.Center });
     }
   }
 }

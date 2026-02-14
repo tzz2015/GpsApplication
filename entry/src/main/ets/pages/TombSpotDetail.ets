@@ -95,6 +95,7 @@ struct TombSpotDetail {
       try {
         this.imageUris = JSON.parse(s.imageUris) as string[];
       } catch (e) {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'parse imageUris: %{public}s', JSON.stringify(e));
         this.imageUris = [];
       }
     }
@@ -197,7 +198,7 @@ struct TombSpotDetail {
         try {
           fileIo.mkdirSync(dir, false);
         } catch (e) {
-          // 已存在则忽略
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'mkdir Download (http): %{public}s', JSON.stringify(e));
         }
         const name = 'img_' + Date.now() + '.jpg';
         savedPath = dir + '/' + name;
@@ -209,7 +210,7 @@ struct TombSpotDetail {
         try {
           fileIo.mkdirSync(dir, false);
         } catch (e) {
-          // ignore
+          hilog.info(LOG_DOMAIN, LOG_TAG, 'mkdir Download (file): %{public}s', JSON.stringify(e));
         }
         const name = 'img_' + Date.now() + '.jpg';
         savedPath = dir + '/' + name;
@@ -267,7 +268,9 @@ struct TombSpotDetail {
           this.getUIContext().getRouter().back();
         });
       }
-    }).catch(() => {});
+    }).catch((e: Error) => {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'showDeleteConfirm: %{public}s', e.message);
+    });
   }
 
   /** 全屏图片预览：Swiper 左右滑动多图，底部关闭/下载便于点击 */

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>遨游轨迹 - HarmonyOS App 原型 v3 (蓝色主题)</title>
+    <title>遨游轨迹 - HarmonyOS App 原型 v4 (与当前 App UI 对齐)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -442,17 +442,7 @@
           color: var(--text-primary);
           letter-spacing: -0.02em;
         }
-        .home-header-search {
-          width: 36px; height: 36px;
-          display: flex; align-items: center; justify-content: center;
-          background: var(--bg);
-          border-radius: var(--radius-sm);
-          cursor: pointer;
-          color: var(--text-secondary);
-          transition: all 0.2s;
-        }
-        .home-header-search:hover { background: var(--primary-light); color: var(--primary); }
-        .home-header-search svg { width: 18px; height: 18px; }
+        /* 首页无搜索入口，与当前 App 一致 */
 
         .home-tabs {
           display: flex;
@@ -531,13 +521,17 @@
           transition: transform 0.2s ease-out, box-shadow 0.2s;
         }
         .track-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-        .track-card-map {
-          height: 120px;
+        .track-card-cover {
+          height: 140px;
           background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #FEF3C7 100%);
           position: relative; overflow: hidden;
+          border-radius: var(--radius) var(--radius) 0 0;
         }
-        .track-card-map svg { width: 100%; height: 100%; }
-        .track-card-info { padding: 12px 14px; }
+        .track-card-cover svg { width: 100%; height: 100%; }
+        .track-card-info { padding: 12px 16px; }
+        .track-card-info.no-cover { padding: 16px; }
+        .track-card-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .proto-note { font-size: 11px; color: var(--text-hint); text-align: center; padding: 8px 16px 24px; }
         .track-card-title {
           font-size: 15px; font-weight: 700;
           margin-bottom: 4px;
@@ -949,7 +943,8 @@
         }
         .menu-icon svg { width: 18px; height: 18px; color: #fff; }
         .menu-icon.blue { background: var(--primary); }
-        .menu-icon.green { background: #0EA5E9; }
+        .menu-icon.green { background: var(--success); }
+        .menu-icon.sky { background: #0EA5E9; }
         .menu-icon.amber { background: var(--accent); }
         .menu-text { flex: 1; font-size: 15px; font-weight: 500; }
         .menu-arrow { color: var(--text-hint); }
@@ -1046,6 +1041,13 @@
     <a class="pn-item" onclick="goPage('editProfile')">P3-2 编辑信息</a>
 </div>
 
+<!--
+  原型 v4：已按当前鸿蒙 App UI 反向同步（设计稿跟随 App）
+  - 首页：无搜索、无统计卡片（统计在个人中心）；顶部「我的轨迹|公开轨迹」；按钮「新建扫墓轨迹」（点击先申请定位权限）；轨迹卡片含封面(140px)/无封面两种；列表支持下拉刷新、上拉自动加载更多
+  - 个人中心：头部渐变+头像+昵称+统计（轨迹数/打卡点/总里程）；编辑资料 | 隐私设置 | 关于 V1.0 | 意见反馈 | 测试入口 | 退出登录
+  - 公开轨迹 Tab：卡片带「公开」标签与作者·日期；空态「暂无公开轨迹」
+  - 详情页：非创建者仅可查看与分享，不可编辑/删除/改可见范围
+-->
 <!-- ============ 手机壳 ============ -->
 <div class="phone-frame">
 
@@ -1106,51 +1108,32 @@
         <div class="home-header">
             <div class="home-header-top">
                 <div class="home-header-title">遨游轨迹</div>
-                <div class="home-header-search" title="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
             </div>
             <div class="home-tabs">
                 <div class="home-tab active" id="tab-my" onclick="switchHomeTab('my')">我的轨迹</div>
-                <div class="home-tab" id="tab-public" onclick="switchHomeTab('public')">所有轨迹</div>
+                <div class="home-tab" id="tab-public" onclick="switchHomeTab('public')">公开轨迹</div>
             </div>
         </div>
 
-        <!-- 我的轨迹 -->
+        <!-- 我的轨迹（支持下拉刷新、上拉自动加载更多） -->
         <div class="page-content" id="tab-content-my">
-            <div class="stats-card">
-                <div class="stat-block">
-                    <div class="stat-value">3</div>
-                    <div class="stat-label">轨迹</div>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-block">
-                    <div class="stat-value">12</div>
-                    <div class="stat-label">打卡点</div>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-block">
-                    <div class="stat-value">8.5</div>
-                    <div class="stat-label">总里程km</div>
-                </div>
-            </div>
-
             <div class="create-btn-area">
                 <div class="btn-create" onclick="goPage('create')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    新建轨迹
+                    新建扫墓轨迹
                 </div>
             </div>
 
             <div class="track-list">
                 <div class="track-card" onclick="goPage('detail')">
-                    <div class="track-card-map">
-                        <svg viewBox="0 0 375 120" preserveAspectRatio="none">
+                    <div class="track-card-cover">
+                        <svg viewBox="0 0 375 140" preserveAspectRatio="xMidYMid slice">
                             <defs><linearGradient id="tc1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#EFF6FF"/><stop offset="55%" style="stop-color:#DBEAFE"/><stop offset="100%" style="stop-color:#FEF3C7"/></linearGradient></defs>
-                            <rect fill="url(#tc1)" width="375" height="120"/>
-                            <path d="M20,100 Q80,70 140,65 L200,45 Q250,30 300,40 L360,30" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
-                            <circle cx="20" cy="100" r="4" fill="#059669" stroke="#fff" stroke-width="1.5"/>
-                            <circle cx="140" cy="65" r="3" fill="#F59E0B" stroke="#fff" stroke-width="1.5"/>
-                            <circle cx="250" cy="33" r="3" fill="#F59E0B" stroke="#fff" stroke-width="1.5"/>
-                            <circle cx="360" cy="30" r="4" fill="#EF4444" stroke="#fff" stroke-width="1.5"/>
+                            <rect fill="url(#tc1)" width="375" height="140"/>
+                            <path d="M20,110 Q80,80 140,75 L200,55 Q250,40 300,50 L360,40" stroke="#2563EB" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+                            <circle cx="20" cy="110" r="4" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                            <circle cx="140" cy="75" r="3" fill="#F59E0B" stroke="#fff" stroke-width="1.5"/>
+                            <circle cx="360" cy="40" r="4" fill="#EF4444" stroke="#fff" stroke-width="1.5"/>
                         </svg>
                     </div>
                     <div class="track-card-info">
@@ -1159,6 +1142,7 @@
                             <span class="badge badge-success">已完成</span>
                         </div>
                         <div class="track-card-date">2026-02-05</div>
+                        <div class="track-card-desc">2026年清明节，带领全家前往横县大山祭扫祖先墓地。</div>
                         <div class="track-card-stats">
                             <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 3.2km</span>
                             <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg> 180m</span>
@@ -1168,10 +1152,10 @@
                 </div>
 
                 <div class="track-card" onclick="goPage('detailEditing')">
-                    <div class="track-card-info">
+                    <div class="track-card-info no-cover">
                         <div class="track-card-title">
                             横县祭祖路线
-                            <span class="badge badge-accent">编辑中</span>
+                            <span class="badge badge-warning">编辑中</span>
                         </div>
                         <div class="track-card-date">2026-01-29</div>
                         <div class="track-card-desc">2026年春节回乡祭祖，横县北部山区。</div>
@@ -1182,16 +1166,36 @@
                     </div>
                 </div>
             </div>
+            <p class="proto-note">列表支持下拉刷新、滚动到底自动加载更多</p>
         </div>
 
-        <!-- 公开轨迹 -->
+        <!-- 公开轨迹（卡片带「公开」标签与作者·日期） -->
         <div class="page-content" id="tab-content-public" style="display:none">
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <div class="track-list">
+                <div class="track-card" onclick="goPage('detail')">
+                    <div class="track-card-cover">
+                        <svg viewBox="0 0 375 140" preserveAspectRatio="xMidYMid slice">
+                            <defs><linearGradient id="tc2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#EFF6FF"/><stop offset="60%" style="stop-color:#DBEAFE"/></linearGradient></defs>
+                            <rect fill="url(#tc2)" width="375" height="140"/>
+                        </svg>
+                    </div>
+                    <div class="track-card-info">
+                        <div class="track-card-title">
+                            某用户公开路线
+                            <span class="badge badge-primary">公开</span>
+                        </div>
+                        <div class="track-card-meta">张三 · 2026-02-01</div>
+                        <div class="track-card-stats">
+                            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 5.0km</span>
+                            <span>4个打卡点</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
+            <div class="empty-state" style="display:none">
+                <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
                 <div class="empty-title">暂无公开轨迹</div>
-                <div class="empty-desc">把轨迹设为公开后<br>其他用户就能看到了</div>
+                <div class="empty-desc">把轨迹设为公开后，其他用户就能看到了</div>
             </div>
         </div>
 
@@ -1535,26 +1539,31 @@
                 <div class="menu-group">
                     <div class="menu-item" onclick="goPage('editProfile')">
                         <div class="menu-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-                        <span class="menu-text">编辑个人信息</span>
+                        <span class="menu-text">编辑资料</span>
                         <span class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
                 </div>
 
                 <div class="menu-group">
                     <div class="menu-item">
-                        <div class="menu-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
-                        <span class="menu-text">隐私政策与用户协议</span>
+                        <div class="menu-icon sky"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                        <span class="menu-text">隐私设置</span>
                         <span class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
                     <div class="menu-item">
                         <div class="menu-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
-                        <span class="menu-text">关于遨游轨迹</span>
+                        <span class="menu-text">关于</span>
                         <span class="menu-value">V1.0</span>
                         <span class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
                     <div class="menu-item">
                         <div class="menu-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                         <span class="menu-text">意见反馈</span>
+                        <span class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+                        <span class="menu-text">测试入口</span>
                         <span class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
                 </div>
