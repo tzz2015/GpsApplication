@@ -603,90 +603,104 @@ struct Main {
   @Builder
   PublicTrackCard(item: TrackModel.Track) {
     Column() {
-      Row({ space: 8 }) {
-        Text(item.title)
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.label_primary'))
-          .layoutWeight(1)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text($r('app.string.visibility_public'))
-          .fontSize(11)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.primary'))
-          .backgroundColor($r('app.color.menu_selected_bg'))
-          .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-          .borderRadius(10);
-      }
-      .width('100%');
-
-      // 作者信息
-      Row({ space: 4 }) {
-        Image($r('app.media.ic_user'))
-          .width(12)
-          .height(12)
-          .fillColor($r('app.color.label_secondary'));
-        Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : $r('app.string.profile_default_user'))
-          .fontSize(12)
-          .fontColor($r('app.color.label_secondary'));
-        Text('·')
-          .fontSize(12)
-          .fontColor($r('app.color.label_tertiary'));
-        Text(TrackModel.formatDate(item.createdAt))
-          .fontSize(12)
-          .fontColor($r('app.color.label_tertiary'));
-      }
-      .width('100%')
-      .margin({ top: 4 });
-
-      if (item.description.length > 0) {
-        Text(item.description)
-          .fontSize(13)
-          .fontColor($r('app.color.label_secondary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 4 });
+      // 封面图（如有）
+      if (item.coverImageUrl.length > 0) {
+        Image(item.coverImageUrl)
+          .width('100%')
+          .height(140)
+          .objectFit(ImageFit.Cover)
+          .borderRadius({ topLeft: 12, topRight: 12 })
+          .alt($r('app.color.separator'));
       }
 
-      Row({ space: 16 }) {
+      Column() {
+        Row({ space: 8 }) {
+          Text(item.title)
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.label_primary'))
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+          Text($r('app.string.visibility_public'))
+            .fontSize(11)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.primary'))
+            .backgroundColor($r('app.color.menu_selected_bg'))
+            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+            .borderRadius(10);
+        }
+        .width('100%');
+
+        // 作者信息
         Row({ space: 4 }) {
-          Image($r('app.media.ic_location_pin'))
-            .width(14)
-            .height(14)
+          Image($r('app.media.ic_user'))
+            .width(12)
+            .height(12)
             .fillColor($r('app.color.label_secondary'));
-          Text(TrackModel.formatDistance(item.totalDistance))
+          Text(item.ownerDisplayName && item.ownerDisplayName.length > 0 ? item.ownerDisplayName : $r('app.string.profile_default_user'))
             .fontSize(12)
             .fontColor($r('app.color.label_secondary'));
+          Text('·')
+            .fontSize(12)
+            .fontColor($r('app.color.label_tertiary'));
+          Text(TrackModel.formatDate(item.createdAt))
+            .fontSize(12)
+            .fontColor($r('app.color.label_tertiary'));
         }
-        if (item.spotCount > 0) {
+        .width('100%')
+        .margin({ top: 4 });
+
+        if (item.description.length > 0) {
+          Text(item.description)
+            .fontSize(13)
+            .fontColor($r('app.color.label_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 4 });
+        }
+
+        Row({ space: 16 }) {
           Row({ space: 4 }) {
-            Image($r('app.media.ic_flag_finish'))
+            Image($r('app.media.ic_location_pin'))
               .width(14)
               .height(14)
               .fillColor($r('app.color.label_secondary'));
-            Text(item.spotCount.toString() + '个打卡点')
+            Text(TrackModel.formatDistance(item.totalDistance))
               .fontSize(12)
               .fontColor($r('app.color.label_secondary'));
           }
-        }
-        if (item.maxAltitude > 0) {
-          Row({ space: 4 }) {
-            Image($r('app.media.ic_mountain'))
-              .width(14)
-              .height(14)
-              .fillColor($r('app.color.label_secondary'));
-            Text(item.maxAltitude.toString() + 'm')
-              .fontSize(12)
-              .fontColor($r('app.color.label_secondary'));
+          if (item.spotCount > 0) {
+            Row({ space: 4 }) {
+              Image($r('app.media.ic_flag_finish'))
+                .width(14)
+                .height(14)
+                .fillColor($r('app.color.label_secondary'));
+              Text(item.spotCount.toString() + '个打卡点')
+                .fontSize(12)
+                .fontColor($r('app.color.label_secondary'));
+            }
+          }
+          if (item.maxAltitude > 0) {
+            Row({ space: 4 }) {
+              Image($r('app.media.ic_mountain'))
+                .width(14)
+                .height(14)
+                .fillColor($r('app.color.label_secondary'));
+              Text(item.maxAltitude.toString() + 'm')
+                .fontSize(12)
+                .fontColor($r('app.color.label_secondary'));
+            }
           }
         }
+        .width('100%')
+        .margin({ top: 8 });
       }
       .width('100%')
-      .margin({ top: 8 });
+      .padding(item.coverImageUrl.length > 0 ? { left: 16, right: 16, top: 12, bottom: 16 } :
+        { left: 16, right: 16, top: 16, bottom: 16 });
     }
     .width('100%')
-    .padding(16)
     .backgroundColor($r('app.color.card_background'))
     .borderRadius(12)
     .shadow({ radius: 4, color: $r('app.color.shadow_light'), offsetX: 0, offsetY: 2 })
